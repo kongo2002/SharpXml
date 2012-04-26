@@ -62,8 +62,8 @@ module Reflection =
 
     let determineDefaultValue (t : Type) =
         if not t.IsValueType then null
-        elif t.IsEnum then Enum.ToObject(t, 0)
-        else match Type.GetTypeCode(t) with
+        elif t.IsEnum then Enum.ToObject(t, 0) else
+        match Type.GetTypeCode(t) with
         | TypeCode.Empty
         | TypeCode.DBNull
         | TypeCode.String -> null
@@ -85,8 +85,8 @@ module Reflection =
         | _ -> Activator.CreateInstance t
 
     let getDefaultValue (t : Type) =
-        if not t.IsValueType then null
-        else match (!defaultValueCache).TryGetValue t with
+        if not t.IsValueType then null else
+        match (!defaultValueCache).TryGetValue t with
         | true, value -> value
         | _ ->
             let defVal = determineDefaultValue t
