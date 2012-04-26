@@ -38,5 +38,35 @@ module Extensions =
         member x.IsDataMember() =
             hasAttribute x dataMember
 
+    let getUnderlyingType (t : Type) =
+        let nullable = Nullable.GetUnderlyingType(t)
+        if nullable <> null then nullable else t
 
+    type System.Type with
 
+        member x.HasInterface(interfaceType : Type) =
+            x.GetInterfaces()
+            |> Array.exists ((=) interfaceType)
+
+        member x.IsNumericType() =
+            if not x.IsValueType then false else
+            x.IsIntegerType() || x.IsRealNumberType()
+
+        member x.IsIntegerType() =
+            if not x.IsValueType then false else
+            let underlying = getUnderlyingType x
+            underlying = typeof<byte> ||
+            underlying = typeof<sbyte> ||
+            underlying = typeof<int16> ||
+            underlying = typeof<uint16> ||
+            underlying = typeof<int> ||
+            underlying = typeof<uint32> ||
+            underlying = typeof<int64> ||
+            underlying = typeof<uint64>
+
+        member x.IsRealNumberType() =
+            if not x.IsValueType then false else
+            let underlying = getUnderlyingType x
+            underlying = typeof<float> ||
+            underlying = typeof<double> ||
+            underlying = typeof<decimal>

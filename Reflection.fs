@@ -58,6 +58,18 @@ module Reflection =
             // this one is for anonymous types that do not have empty constructors
             System.Runtime.Serialization.FormatterServices.GetUninitializedObject(t) :?> EmptyConstructor
 
+    let constructorCache = ref (Dictionary<Type, EmptyConstructor>())
+
+    let getConstructorMethod (t : Type) =
+        match (!constructorCache).TryGetValue t with
+        | true, ctor -> ctor
+        | _ ->
+            let ctor = getEmptyConstructor t
+            Atom.updateAtomDict constructorCache t ctor
+
+    let areStringOrValueTypes types =
+        Seq.forall (fun t -> t = typeof<string> || t.IsValueType) types
+
     let defaultValueCache = ref (Dictionary<Type, obj>())
 
     let determineDefaultValue (t : Type) =
@@ -90,8 +102,6 @@ module Reflection =
         | true, value -> value
         | _ ->
             let defVal = determineDefaultValue t
-            let newCache = new Dictionary<Type, obj>(!defaultValueCache)
-            Utils.swapRef defaultValueCache newCache
-            defVal
+            Atom.updateAtomDict defaultValueCache t defVal
 
 
