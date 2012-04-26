@@ -57,3 +57,41 @@ module Reflection =
         else
             // this one is for anonymous types that do not have empty constructors
             System.Runtime.Serialization.FormatterServices.GetUninitializedObject(t) :?> EmptyConstructor
+
+    let defaultValueCache = ref (Dictionary<Type, obj>())
+
+    let determineDefaultValue (t : Type) =
+        if not t.IsValueType then null
+        elif t.IsEnum then Enum.ToObject(t, 0)
+        else match Type.GetTypeCode(t) with
+        | TypeCode.Empty
+        | TypeCode.DBNull
+        | TypeCode.String -> null
+        | TypeCode.Boolean -> box false
+        | TypeCode.Byte -> box 0uy
+        | TypeCode.Char -> box '\000'
+        | TypeCode.DateTime -> box DateTime.MinValue
+        | TypeCode.Decimal -> box 0m
+        | TypeCode.Double -> box 0.0
+        | TypeCode.Int16 -> box 0s
+        | TypeCode.Int32 -> box 0l
+        | TypeCode.Int64 -> box 0L
+        | TypeCode.SByte -> box 0y
+        | TypeCode.Single -> box 0.0f
+        | TypeCode.UInt16 -> box 0us
+        | TypeCode.UInt32 -> box 0ul
+        | TypeCode.UInt64 -> box 0UL
+        | TypeCode.Object
+        | _ -> Activator.CreateInstance t
+
+    let getDefaultValue (t : Type) =
+        if not t.IsValueType then null
+        else match (!defaultValueCache).TryGetValue t with
+        | true, value -> value
+        | _ ->
+            let defVal = determineDefaultValue t
+            let newCache = new Dictionary<Type, obj>(!defaultValueCache)
+            Utils.swapRef defaultValueCache newCache
+            defVal
+
+

@@ -40,6 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Script.fsx" />
+    <Compile Include="Utils.fs" />
     <Compile Include="TypeParser.fs" />
     <Compile Include="XmlSerializer.fs" />
     <Compile Include="Extensions.fs" />

@@ -1,0 +1,10 @@
+﻿namespace SharpXml
+
+module Utils =
+
+    open System.Threading
+
+    let rec swapRef<'T when 'T : not struct> reference newValue =
+        let current = !reference
+        let result = Interlocked.CompareExchange<'T>(reference, newValue, current)
+        if not (obj.ReferenceEquals(result, current)) then swapRef reference newValue
