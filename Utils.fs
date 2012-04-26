@@ -1,5 +1,9 @@
 ﻿namespace SharpXml
 
+module Utils =
+
+    let toOption item = if item = null then None else Some item
+
 module Atom =
 
     open System.Collections.Generic
@@ -41,12 +45,10 @@ module Assembly =
             path
 
     let loadAssembly asm =
-        let assembly = Assembly.LoadFrom(asm)
-        if assembly <> null then Some assembly else None
+        Assembly.LoadFrom(asm) |> Utils.toOption
 
     let getType (typeName : string) (asm : Assembly)  =
-        let t = asm.GetType(typeName)
-        if t <> null then Some t else None
+        asm.GetType(typeName) |> Utils.toOption
 
     let findTypeFromLoadedAssembly (typeName : string) =
         AppDomain.CurrentDomain.GetAssemblies()
