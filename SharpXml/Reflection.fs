@@ -6,6 +6,8 @@ module Reflection =
     open System.Collections.Generic
     open System.Reflection
     open System.Reflection.Emit
+    open System.Runtime.Serialization
+
     open SharpXml.Extensions
 
     type EmptyConstructor = delegate of unit -> obj
@@ -56,7 +58,7 @@ module Reflection =
             dm.CreateDelegate(typeof<EmptyConstructor>) :?> EmptyConstructor
         else
             // this one is for anonymous types that do not have empty constructors
-            System.Runtime.Serialization.FormatterServices.GetUninitializedObject(t) :?> EmptyConstructor
+            EmptyConstructor(fun () -> FormatterServices.GetUninitializedObject(t))
 
     let constructorCache = ref (Dictionary<Type, EmptyConstructor>())
 
