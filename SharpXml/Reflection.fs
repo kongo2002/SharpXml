@@ -57,7 +57,7 @@ module Reflection =
 
             dm.CreateDelegate(typeof<EmptyConstructor>) :?> EmptyConstructor
         else
-            // this one is for anonymous types that do not have empty constructors
+            // this one is for types that do not have an empty constructor
             EmptyConstructor(fun () -> FormatterServices.GetUninitializedObject(t))
 
     let constructorCache = ref (Dictionary<Type, EmptyConstructor>())
@@ -67,7 +67,19 @@ module Reflection =
         | true, ctor -> ctor
         | _ ->
             let ctor = getEmptyConstructor t
-            Atom.updateAtomDict constructorCache t ctor
+            if ctor <> null then Atom.updateAtomDict constructorCache t ctor else null
+
+    let constructorNameCache = ref (Dictionary<string, EmptyConstructor>())
+
+    let getConstructorMethodByName (name : string) =
+        match (!constructorNameCache).TryGetValue name with
+        | true, ctor -> ctor
+        | _ ->
+            let ctor =
+                match Assembly.findType name with
+                | Some t -> getEmptyConstructor t
+                | _ -> null
+            if ctor <> null then Atom.updateAtomDict constructorNameCache name ctor else null
 
     let areStringOrValueTypes types =
         Seq.forall (fun t -> t = typeof<string> || t.IsValueType) types

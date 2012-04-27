@@ -29,7 +29,7 @@ module Assembly =
     open System.Reflection
     open System.Text.RegularExpressions
 
-    let asmRegex = Regex(@"\S+\s*,\s*(\S+)", RegexOptions.Compiled)
+    let asmRegex = Regex(@"^\S+\s*,\s*([^ \t,]+)", RegexOptions.Compiled)
 
     let getAssemblyName (typeName : string) =
         let m = asmRegex.Match(typeName)
@@ -75,3 +75,20 @@ module Assembly =
         match getAssemblyName typeName with
         | Some asm -> findTypeFromAssembly typeName asm
         | _ -> findTypeFromLoadedAssembly typeName
+
+module Attempt =
+
+    let bind proc f =
+        let value = proc()
+        match value with
+        | Some _ -> value
+        | _ -> f()
+
+    type AttemptBuilder() =
+        member this.Return(v) = Some v
+        member this.Bind(p, f) = bind p f
+        member this.Delay(f) = f()
+        member this.Zero() = None
+        member this.ReturnFrom(v) = v
+
+    let attempt = AttemptBuilder()

@@ -68,8 +68,15 @@ let stringOrValueTypes() =
     Assert.IsFalse(Reflection.areStringOrValueTypes [ typeof<TestClass> ])
 
 [<Test>]
-let getEmptyConstructor() =
+let getEmptyConstructor01() =
     let ctor1 = Reflection.getConstructorMethod typeof<TestClass>
     let ctor2 = Reflection.getConstructorMethod typeof<TestClass2>
+    Assert.IsNotNull(ctor1)
+    Assert.IsNotNull(ctor2)
+
+[<Test>]
+let getEmptyConstructor02() =
+    let ctor1 = Reflection.getConstructorMethodByName "System.String"
+    let ctor2 = Reflection.getConstructorMethodByName "ReflectionTests+TestClass2"
     Assert.IsNotNull(ctor1)
     Assert.IsNotNull(ctor2)

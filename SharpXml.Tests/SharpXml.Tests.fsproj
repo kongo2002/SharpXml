@@ -44,6 +44,8 @@
   <ItemGroup>
     <Compile Include="TypeParserTests.fs" />
     <Compile Include="ReflectionTests.fs" />
+    <Compile Include="AssemblyTests.fs" />
+    <Compile Include="UtilsTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SharpXml\SharpXml.fsproj">
