@@ -44,6 +44,9 @@ module Extensions =
 
     type System.Type with
 
+        member x.NullableUnderlying() =
+            getUnderlyingType x
+
         member x.HasInterface(interfaceType : Type) =
             x.GetInterfaces()
             |> Array.exists ((=) interfaceType)

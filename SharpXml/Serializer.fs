@@ -26,8 +26,15 @@ module DateTimeSerializer =
 module Serializer =
 
     open System
+    open System.Collections.Generic
     open System.Globalization
     open System.IO
+
+    open SharpXml.Extensions
+
+    type WriterFunc = TextWriter -> string -> obj -> unit
+
+    let serializerCache = ref (Dictionary<Type, WriterFunc>())
 
     let writeTag (writer : TextWriter) (name : string) value writeFunc =
         writer.Write("<{0}>", name)
@@ -39,6 +46,10 @@ module Serializer =
 
     let nullableWriter writer name value func =
         if value <> null then func writer name value
+
+    let writeStringObject writer name (value : obj) =
+        let v : string = unbox value
+        writeString writer name v
 
     let writeObject writer name (value : obj) =
         writeTag writer name value (writer.Write)
@@ -74,6 +85,10 @@ module Serializer =
 
     let writeByte writer name (value : obj) =
         let v : byte = unbox value
+        writeTag writer name v writer.Write
+
+    let writeSByte writer name (value : obj) =
+        let v : sbyte = unbox value
         writeTag writer name v writer.Write
 
     let writeBytes writer name (value : obj) =
@@ -127,3 +142,36 @@ module Serializer =
     let writeEnumNames writer name (value : obj) =
         let v : int = unbox value
         writeTag writer name v (writer.Write)
+
+    let getValueTypeWriter (t : Type) =
+        match Type.GetTypeCode(t.NullableUnderlying()) with
+        | TypeCode.Boolean -> writeBool
+        | TypeCode.Byte -> writeByte
+        | TypeCode.Char -> writeChar
+        | TypeCode.DateTime -> writeDateTime
+        | TypeCode.Decimal -> writeDecimal
+        | TypeCode.Double -> writeFloat32
+        | TypeCode.Int16 -> writeInt16
+        | TypeCode.Int32 -> writeInt32
+        | TypeCode.Int64 -> writeInt64
+        | TypeCode.SByte -> writeSByte
+        | TypeCode.Single -> writeFloat
+        | TypeCode.UInt16 -> writeUInt16
+        | TypeCode.UInt32 -> writeUInt32
+        | TypeCode.UInt64 -> writeUInt64
+        | _ -> writeObject
+
+    let determineWriter (t : Type) =
+        if t = typeof<string> then
+            writeStringObject
+        elif t.IsValueType then
+            getValueTypeWriter t
+        else
+            writeObject
+
+    let getWriterFunc (t : Type) =
+        match (!serializerCache).TryGetValue t with
+        | true, serializer -> serializer
+        | _ ->
+            let serializer = determineWriter t
+            Atom.updateAtomDict serializerCache t serializer
