@@ -1,2 +1,4 @@
+*.crunchsolution.cache
 *.ncrunchsolution
+*.ncrunchsolution.user
 *.suo

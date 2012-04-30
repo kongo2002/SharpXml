@@ -70,3 +70,7 @@ module Extensions =
             underlying = typeof<float> ||
             underlying = typeof<double> ||
             underlying = typeof<decimal>
+
+    type System.DateTime with
+
+        member x.ToUniversal() = TimeZoneInfo.ConvertTimeToUtc(x)
