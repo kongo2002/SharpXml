@@ -39,128 +39,129 @@ module Serializer =
     open SharpXml.Extensions
 
     /// Writer function delegate
-    type WriterFunc = TextWriter -> string -> obj -> unit
+    type WriterFunc = TextWriter -> obj -> unit
 
     let serializerCache = ref (Dictionary<Type, WriterFunc>())
 
     let writeTag (writer : TextWriter) (name : string) value writeFunc =
         writer.Write("<{0}>", name)
-        writeFunc value
+        writeFunc writer value
         writer.Write("</{0}>", name)
 
-    let writeString (writer : TextWriter) (name : string) (content : string) =
-        writer.Write("<{0}>{1}</{0}>", name, content)
+    let writeString (writer : TextWriter) (content : string) =
+        writer.Write(content)
 
-    let nullableWriter writer name value func =
-        if value <> null then func writer name value
+    let nullableWriter writer value func =
+        if value <> null then func writer value
 
-    let writeStringObject writer name (value : obj) =
+    let writeStringObject writer (value : obj) =
         let v : string = unbox value
-        writeString writer name v
+        writeString writer v
 
-    let writeObject writer name (value : obj) =
-        writeTag writer name value (writer.Write)
+    let writeObject (writer : TextWriter) (value : obj) =
+        writer.Write(value)
 
-    let writeFloat2f writer name (value : obj) =
+    let writeFloat2f (writer : TextWriter) (value : obj) =
         let v = sprintf "%.2f" (unbox value)
-        writeString writer name v
+        writeString writer v
 
-    let writeDateTime writer name (value : obj) =
+    let writeDateTime writer (value : obj) =
         let v = DateTimeSerializer.toShortestXsdFormat (unbox value)
-        writeString writer name v
+        writeString writer v
 
-    let writeNullableDateTime writer name (value : obj) =
-        nullableWriter writer name value writeDateTime
+    let writeNullableDateTime writer (value : obj) =
+        nullableWriter writer value writeDateTime
 
-    let writeDateTimeOffset writer name (value : obj) =
+    let writeDateTimeOffset writer (value : obj) =
         let v : DateTimeOffset = unbox value
-        writeString writer name (v.ToString("o"))
+        writeString writer (v.ToString("o"))
 
-    let writeNullableDateTimeOffset writer name (value : obj) =
-        nullableWriter writer name value writeDateTimeOffset
+    let writeNullableDateTimeOffset writer (value : obj) =
+        nullableWriter writer value writeDateTimeOffset
 
-    let writeGuid writer name (value : obj) =
+    let writeGuid writer (value : obj) =
         let v : Guid = unbox value
-        writeString writer name (v.ToString("N"))
+        writeString writer (v.ToString("N"))
 
-    let writeNullableGuid writer name (value : obj) =
-        nullableWriter writer name value writeGuid
+    let writeNullableGuid writer (value : obj) =
+        nullableWriter writer value writeGuid
 
-    let writeChar writer name (value : obj) =
+    let writeChar (writer : TextWriter) (value : obj) =
         let v : char = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeChars writer name (value : obj) =
+    let writeChars (writer : TextWriter) (value : obj) =
         let v : char[] = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeByte writer name (value : obj) =
+    let writeByte (writer : TextWriter) (value : obj) =
         let v : byte = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeSByte writer name (value : obj) =
+    let writeSByte (writer : TextWriter) (value : obj) =
         let v : sbyte = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeBytes writer name (value : obj) =
+    let writeBytes (writer : TextWriter) (value : obj) =
         let v = Convert.ToBase64String(unbox value)
-        writeString writer name v
+        writer.Write(v)
 
-    let writeUInt16 writer name (value : obj) =
+    let writeUInt16 (writer : TextWriter) (value : obj) =
         let v : uint16 = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeInt16 writer name (value : obj) =
+    let writeInt16 (writer : TextWriter) (value : obj) =
         let v : int16 = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeInt32 writer name (value : obj) =
+    let writeInt32 (writer : TextWriter) (value : obj) =
         let v : int = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeUInt32 writer name (value : obj) =
+    let writeUInt32 (writer : TextWriter) (value : obj) =
         let v : uint32 = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeInt64 writer name (value : obj) =
+    let writeInt64 (writer : TextWriter) (value : obj) =
         let v : int64 = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeUInt64 writer name (value : obj) =
+    let writeUInt64 (writer : TextWriter) (value : obj) =
         let v : uint64 = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeFloat writer name (value : obj) =
+    let writeFloat (writer : TextWriter) (value : obj) =
         let v : float = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeFloat32 writer name (value : obj) =
+    let writeFloat32 (writer : TextWriter) (value : obj) =
         let v : float32 = unbox value
-        writeTag writer name v writer.Write
+        writer.Write(v)
 
-    let writeBool writer name (value : obj) =
+    let writeBool (writer : TextWriter) (value : obj) =
         let v : bool = unbox value
-        // TODO: maybe these should be written in lowercase instead
-        writeTag writer name v writer.Write
+        match v with
+        | true -> writer.Write("true")
+        | false -> writer.Write("false")
 
-    let writeDecimal writer name (value : obj) =
+    let writeDecimal writer (value : obj) =
         let v : decimal = unbox value
-        writeString writer name (v.ToString(CultureInfo.InvariantCulture))
+        writeString writer (v.ToString(CultureInfo.InvariantCulture))
 
-    let writeEnum writer name (value : obj) =
-        writeObject writer name value
+    let writeEnum writer (value : obj) =
+        writeObject writer value
 
-    let writeEnumNames writer name (value : obj) =
+    let writeEnumNames (writer : TextWriter) (value : obj) =
         let v : int = unbox value
-        writeTag writer name v (writer.Write)
+        writer.Write(v)
 
-    let writeType writer name (value : obj) =
+    let writeType writer (value : obj) =
         let v : Type = unbox value
-        writeString writer name v.AssemblyQualifiedName
+        writeString writer v.AssemblyQualifiedName
 
-    let writeException writer name (value : obj) =
+    let writeException writer (value : obj) =
         let v : Exception = unbox value
-        writeString writer name v.Message
+        writeString writer v.Message
 
     /// Get the appropriate writer function for the
     /// specified value type
