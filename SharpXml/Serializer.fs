@@ -1,5 +1,7 @@
 ﻿namespace SharpXml
 
+/// Module containing all DateTime related
+/// serialization functions
 module DateTimeSerializer =
 
     open System
@@ -13,16 +15,19 @@ module DateTimeSerializer =
     let xsdFormat3F = "yyyy-MM-ddTHH:mm:ss.fffZ"
     let xsdFormatSeconds = "yyyy-MM-ddTHH:mm:ssZ"
 
+    /// Convert the given DateTime into XSD format
     let toXsdFormat (date : DateTime) =
         // TODO: replace this with own logic
         XmlConvert.ToString(date.ToUniversal(), XmlDateTimeSerializationMode.Utc)
 
+    /// Convert the given DateTime into the shortest possible XSD format
     let toShortestXsdFormat (date : DateTime) =
         let day = date.TimeOfDay
         if day.Ticks = 0L then date.ToString(shortDateTimeFormat)
         elif day.Milliseconds = 0 then date.ToUniversal().ToString(xsdFormatSeconds)
         else toXsdFormat date
 
+/// Module containing the basic XML serialization logic
 module Serializer =
 
     open System
@@ -33,6 +38,7 @@ module Serializer =
     open SharpXml.Attempt
     open SharpXml.Extensions
 
+    /// Writer function delegate
     type WriterFunc = TextWriter -> string -> obj -> unit
 
     let serializerCache = ref (Dictionary<Type, WriterFunc>())
@@ -156,6 +162,8 @@ module Serializer =
         let v : Exception = unbox value
         writeString writer name v.Message
 
+    /// Get the appropriate writer function for the
+    /// specified value type
     let getValueTypeWriter (t : Type) =
         if t = typeof<Nullable<DateTime>> then
             Some writeNullableDateTime
@@ -187,12 +195,16 @@ module Serializer =
             | TypeCode.UInt64 -> Some writeUInt64
             | _ -> None
 
+    /// Try to determine one of a special serialization
+    /// function, i.e. Exception, Uri
     let getSpecialWriters (t : Type) =
         if t = typeof<Uri> then Some writeStringObject
         elif t = typeof<Exception> then Some writeException
         elif t = typeof<Type> then Some writeType
         else None
 
+    /// Determine the associated serialization writer
+    /// function for the specified type
     let determineWriter (t : Type) =
         let none = fun () -> None
         let func f = fun () -> Some f
@@ -210,6 +222,8 @@ module Serializer =
             arrayWriter }
         writer
 
+    /// Get the writer function to serialize the
+    /// specified type
     let getWriterFunc (t : Type) =
         match (!serializerCache).TryGetValue t with
         | true, serializer -> serializer
