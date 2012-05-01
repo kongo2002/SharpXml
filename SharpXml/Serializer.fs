@@ -1,5 +1,8 @@
 ﻿namespace SharpXml
 
+/// Writer function delegate
+type WriterFunc = System.IO.TextWriter -> obj -> unit
+
 /// Module containing all DateTime related
 /// serialization functions
 module DateTimeSerializer =
@@ -27,19 +30,36 @@ module DateTimeSerializer =
         elif day.Milliseconds = 0 then date.ToUniversal().ToString(xsdFormatSeconds)
         else toXsdFormat date
 
+/// Module containing serialization logic for
+/// list and enumerable types
+module ListSerializer =
+
+    open System
+    open System.Collections
+    open System.IO
+
+    let writeEnumerable (determineFunc : Type -> WriterFunc option) (writer : TextWriter) (value : obj) =
+        let collection : IEnumerable = unbox value
+        let write func elem =
+            let f = match func with | None -> determineFunc (elem.GetType()) | _ -> func
+            f.Value writer elem
+            f
+        collection
+        |> Seq.cast
+        |> Seq.fold write None
+        |> ignore
+
 /// Module containing the basic XML serialization logic
 module Serializer =
 
     open System
+    open System.Collections
     open System.Collections.Generic
     open System.Globalization
     open System.IO
 
     open SharpXml.Attempt
     open SharpXml.Extensions
-
-    /// Writer function delegate
-    type WriterFunc = TextWriter -> obj -> unit
 
     let serializerCache = ref (Dictionary<Type, WriterFunc>())
 
@@ -204,9 +224,16 @@ module Serializer =
         elif t = typeof<Type> then Some writeType
         else None
 
+    /// Try to determine a enumerable serialization function
+    let getEnumerableWriter (t : Type) determineFunc =
+        if t.HasInterface typeof<IEnumerable> &&
+            t.IsAssignableFrom typeof<IEnumerable> then
+            Some(ListSerializer.writeEnumerable determineFunc)
+        else None
+
     /// Determine the associated serialization writer
     /// function for the specified type
-    let determineWriter (t : Type) =
+    let rec determineWriter (t : Type) =
         let none = fun () -> None
         let func f = fun () -> Some f
         let iff p f = if p t then (fun () -> f) else none
@@ -220,7 +247,11 @@ module Serializer =
                     // TODO: often used arrays like string[] and int[]
                     else none
                 else none
-            arrayWriter }
+            let! genericWriter =
+                if t.IsGenericType then none
+                else none
+            let! enumerableWriter = fun () -> getEnumerableWriter t determineWriter
+            enumerableWriter }
         writer
 
     /// Get the writer function to serialize the

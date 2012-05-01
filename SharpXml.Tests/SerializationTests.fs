@@ -6,7 +6,6 @@ open NUnit.Framework
 
 open SharpXml.Serializer
 
-
 [<Test>]
 let serializeDateTime01() =
     let writer = new StringWriter()
