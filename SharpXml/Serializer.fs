@@ -30,6 +30,7 @@ module Serializer =
     open System.Globalization
     open System.IO
 
+    open SharpXml.Attempt
     open SharpXml.Extensions
 
     type WriterFunc = TextWriter -> string -> obj -> unit
@@ -81,6 +82,10 @@ module Serializer =
 
     let writeChar writer name (value : obj) =
         let v : char = unbox value
+        writeTag writer name v writer.Write
+
+    let writeChars writer name (value : obj) =
+        let v : char[] = unbox value
         writeTag writer name v writer.Write
 
     let writeByte writer name (value : obj) =
@@ -143,35 +148,72 @@ module Serializer =
         let v : int = unbox value
         writeTag writer name v (writer.Write)
 
+    let writeType writer name (value : obj) =
+        let v : Type = unbox value
+        writeString writer name v.AssemblyQualifiedName
+
+    let writeException writer name (value : obj) =
+        let v : Exception = unbox value
+        writeString writer name v.Message
+
     let getValueTypeWriter (t : Type) =
-        match Type.GetTypeCode(t.NullableUnderlying()) with
-        | TypeCode.Boolean -> writeBool
-        | TypeCode.Byte -> writeByte
-        | TypeCode.Char -> writeChar
-        | TypeCode.DateTime -> writeDateTime
-        | TypeCode.Decimal -> writeDecimal
-        | TypeCode.Double -> writeFloat32
-        | TypeCode.Int16 -> writeInt16
-        | TypeCode.Int32 -> writeInt32
-        | TypeCode.Int64 -> writeInt64
-        | TypeCode.SByte -> writeSByte
-        | TypeCode.Single -> writeFloat
-        | TypeCode.UInt16 -> writeUInt16
-        | TypeCode.UInt32 -> writeUInt32
-        | TypeCode.UInt64 -> writeUInt64
-        | _ -> writeObject
+        if t = typeof<Nullable<DateTime>> then
+            Some writeNullableDateTime
+        elif t = typeof<Guid> then
+            Some writeGuid
+        elif t = typeof<Nullable<Guid>> then
+            Some writeNullableGuid
+        elif t = typeof<DateTimeOffset> then
+            Some writeDateTimeOffset
+        elif t = typeof<Nullable<DateTimeOffset>> then
+            Some writeNullableDateTimeOffset
+        elif t.IsEnum || t.UnderlyingSystemType.IsEnum then
+            if hasAttribute t "FlagsAttribute" then Some writeEnumNames else Some writeEnum
+        else
+            match Type.GetTypeCode(t.NullableUnderlying()) with
+            | TypeCode.Boolean -> Some writeBool
+            | TypeCode.Byte -> Some writeByte
+            | TypeCode.Char -> Some writeChar
+            | TypeCode.DateTime -> Some writeDateTime
+            | TypeCode.Decimal -> Some writeDecimal
+            | TypeCode.Double -> Some writeFloat32
+            | TypeCode.Int16 -> Some writeInt16
+            | TypeCode.Int32 -> Some writeInt32
+            | TypeCode.Int64 -> Some writeInt64
+            | TypeCode.SByte -> Some writeSByte
+            | TypeCode.Single -> Some writeFloat
+            | TypeCode.UInt16 -> Some writeUInt16
+            | TypeCode.UInt32 -> Some writeUInt32
+            | TypeCode.UInt64 -> Some writeUInt64
+            | _ -> None
+
+    let getSpecialWriters (t : Type) =
+        if t = typeof<Uri> then Some writeStringObject
+        elif t = typeof<Exception> then Some writeException
+        elif t = typeof<Type> then Some writeType
+        else None
 
     let determineWriter (t : Type) =
-        if t = typeof<string> then
-            writeStringObject
-        elif t.IsValueType then
-            getValueTypeWriter t
-        else
-            writeObject
+        let none = fun () -> None
+        let func f = fun () -> Some f
+        let iff p f = if p t then (fun () -> f) else none
+        let writer = attempt {
+            let! strWriter = iff ((=) typeof<string>) (Some writeStringObject)
+            let! valueWriter = iff (fun x -> x.IsValueType) (getValueTypeWriter t)
+            let! arrayWriter =
+                if t.IsArray then
+                    if t = typeof<byte[]> then (func writeBytes)
+                    elif t = typeof<char[]> then (func writeChars)
+                    // TODO: often used arrays like string[] and int[]
+                    else none
+                else none
+            arrayWriter }
+        writer
 
     let getWriterFunc (t : Type) =
         match (!serializerCache).TryGetValue t with
         | true, serializer -> serializer
         | _ ->
-            let serializer = determineWriter t
-            Atom.updateAtomDict serializerCache t serializer
+            match determineWriter t with
+            | Some s -> Atom.updateAtomDict serializerCache t s
+            | _ -> invalidOp "No serializer available for type %s" t.FullName

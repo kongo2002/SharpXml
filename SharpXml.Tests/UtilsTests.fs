@@ -40,3 +40,16 @@ let attempt03() =
         v3 }
     Assert.AreEqual(None, result)
     Assert.AreEqual(3, !runs)
+
+[<Test>]
+let attempt04() =
+    let runs = ref 0
+    let func v = fun () -> runs := !runs + 1; v
+    let result = attempt {
+        let! v1 = func None
+        let! v2 = if false then func None else func <| Some 400
+        let! v3 = func None
+        let! v4 = func None
+        v4 }
+    Assert.AreEqual(Some 400, result)
+    Assert.AreEqual(2, !runs)
