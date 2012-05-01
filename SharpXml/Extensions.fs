@@ -7,6 +7,7 @@ module Extensions =
 
     let caseDiff = (int 'A') - (int 'a')
 
+    /// Extension methods for System.String
     type System.String with
 
         /// Convert the given string to CamelCase form
@@ -30,6 +31,7 @@ module Extensions =
         let attr = t.GetCustomAttributes(typeof<'a>, true)
         if attr.Length > 0 then Some (attr.[0] :?> 'a) else None
 
+    /// Extension methods for System.Reflection.MemberInfo
     type System.Reflection.MemberInfo with
 
         member x.IsDTO() =
@@ -38,10 +40,17 @@ module Extensions =
         member x.IsDataMember() =
             hasAttribute x dataMember
 
+        member x.HasAttribute(attributeName : string) =
+            hasAttribute x attributeName
+
+        member x.HasAttribute(attributeType : Type) =
+            hasAttributeType x attributeType
+
     let getUnderlyingType (t : Type) =
         let nullable = Nullable.GetUnderlyingType(t)
         if nullable <> null then nullable else t
 
+    /// Extension methods for System.Type
     type System.Type with
 
         member x.NullableUnderlying() =
@@ -74,6 +83,7 @@ module Extensions =
             underlying = typeof<double> ||
             underlying = typeof<decimal>
 
+    /// Extension methods for System.DateTime
     type System.DateTime with
 
         member x.ToUniversal() = TimeZoneInfo.ConvertTimeToUtc(x)

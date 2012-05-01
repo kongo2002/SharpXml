@@ -176,7 +176,7 @@ module Serializer =
         elif t = typeof<Nullable<DateTimeOffset>> then
             Some writeNullableDateTimeOffset
         elif t.IsEnum || t.UnderlyingSystemType.IsEnum then
-            if hasAttribute t "FlagsAttribute" then Some writeEnumNames else Some writeEnum
+            if t.HasAttribute("FlagsAttribute") then Some writeEnumNames else Some writeEnum
         else
             match Type.GetTypeCode(t.NullableUnderlying()) with
             | TypeCode.Boolean -> Some writeBool
