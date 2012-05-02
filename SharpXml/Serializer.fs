@@ -65,21 +65,17 @@ module ClassSerializer =
         OriginalName : string
         ClsName : string
         GetFunc : obj -> obj
-        WriteFunc : WriterFunc
+        WriteFunc : WriterFunc option
         Default : obj }
 
     let propertyCache = ref (Dictionary<Type, PropertyWriterInfo[]>())
 
     let buildPropertyWriterInfo (determineFunc : Type -> WriterFunc option) (propInfo : PropertyInfo) =
-        let wFunc =
-            match determineFunc propInfo.PropertyType with
-            | Some w -> w
-            | _ -> fun _ _ -> ()
         { Info = propInfo
           OriginalName = propInfo.Name
           ClsName = propInfo.Name.ToCamelCase()
           GetFunc = fun o -> o // TODO
-          WriteFunc = wFunc
+          WriteFunc = determineFunc propInfo.PropertyType
           Default = Reflection.getDefaultValue propInfo.PropertyType }
 
     let getProperties (determineFunc : Type -> WriterFunc option) (t : Type) =
@@ -98,9 +94,12 @@ module ClassSerializer =
         let t = value.GetType()
         getProperties determineFunc t
         |> Seq.iter (fun p ->
-            let v = p.GetFunc value
-            if v <> null then
-                p.WriteFunc writer v)
+            match p.WriteFunc with
+            | Some write ->
+                let v = p.GetFunc value
+                if v <> null then
+                    write writer v
+            | _ -> ())
 
 /// Module containing the basic XML serialization logic
 module Serializer =
