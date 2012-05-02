@@ -32,7 +32,7 @@ module DateTimeSerializer =
 
 /// Module containing serialization logic for
 /// list and enumerable types
-module ListSerializer =
+module CollectionSerializer =
 
     open System
     open System.Collections
@@ -48,6 +48,59 @@ module ListSerializer =
         |> Seq.cast
         |> Seq.fold write None
         |> ignore
+
+/// Module containing serialization logic for classes,
+/// interfaces and other reference types
+module ClassSerializer =
+
+    open System
+    open System.Collections.Generic
+    open System.IO
+    open System.Reflection
+
+    open SharpXml.Extensions
+
+    type PropertyWriterInfo = {
+        Info : PropertyInfo
+        OriginalName : string
+        ClsName : string
+        GetFunc : obj -> obj
+        WriteFunc : WriterFunc
+        Default : obj }
+
+    let propertyCache = ref (Dictionary<Type, PropertyWriterInfo[]>())
+
+    let buildPropertyWriterInfo (determineFunc : Type -> WriterFunc option) (propInfo : PropertyInfo) =
+        let wFunc =
+            match determineFunc propInfo.PropertyType with
+            | Some w -> w
+            | _ -> fun _ _ -> ()
+        { Info = propInfo
+          OriginalName = propInfo.Name
+          ClsName = propInfo.Name.ToCamelCase()
+          GetFunc = fun o -> o // TODO
+          WriteFunc = wFunc
+          Default = Reflection.getDefaultValue propInfo.PropertyType }
+
+    let getProperties (determineFunc : Type -> WriterFunc option) (t : Type) =
+        match (!propertyCache).TryGetValue t with
+        | true, props -> props
+        | _ ->
+            let buildWriter = buildPropertyWriterInfo determineFunc
+            let props =
+                Reflection.getSerializableProperties t
+                |> Seq.filter (fun p -> p.GetIndexParameters().Length = 0)
+                |> Seq.map buildWriter
+                |> Array.ofSeq
+            Atom.updateAtomDict propertyCache t props
+
+    let writeClass (determineFunc : Type -> WriterFunc option) (writer : TextWriter) (value : obj) =
+        let t = value.GetType()
+        getProperties determineFunc t
+        |> Seq.iter (fun p ->
+            let v = p.GetFunc value
+            if v <> null then
+                p.WriteFunc writer v)
 
 /// Module containing the basic XML serialization logic
 module Serializer =
@@ -228,7 +281,7 @@ module Serializer =
     let getEnumerableWriter (t : Type) determineFunc =
         if t.HasInterface typeof<IEnumerable> &&
             t.IsAssignableFrom typeof<IEnumerable> then
-            Some(ListSerializer.writeEnumerable determineFunc)
+            Some(CollectionSerializer.writeEnumerable determineFunc)
         else None
 
     /// Determine the associated serialization writer
