@@ -194,11 +194,12 @@ module Serializer =
     open System.Collections.Generic
     open System.IO
     open System.Reflection
-    open System.Xml
 
     open SharpXml.Attempt
     open SharpXml.Extensions
 
+    /// Record type containing the serialization information
+    /// for a specific property member
     type PropertyWriterInfo = {
         Info : PropertyInfo
         OriginalName : string
@@ -218,7 +219,18 @@ module Serializer =
         elif t = typeof<Type> then Some ValueTypeSerializer.writeType
         else None
 
-    let rec writeEnumerable (writer : TextWriter) (value : obj) =
+    /// Build a PropertyWriterInfo object based on the
+    /// specified PropertyInfo
+    let rec buildPropertyWriterInfo (propInfo : PropertyInfo) =
+        { Info = propInfo
+          OriginalName = propInfo.Name
+          ClsName = propInfo.Name.ToCamelCase()
+          GetFunc = fun o -> o // TODO
+          WriteFunc = determineWriter propInfo.PropertyType
+          Default = Reflection.getDefaultValue propInfo.PropertyType }
+
+    /// Writer function for IEnumerable
+    and writeEnumerable (writer : TextWriter) (value : obj) =
         let collection : IEnumerable = unbox value
         let write func elem =
             let f = match func with | None -> determineWriter (elem.GetType()) | _ -> func
@@ -228,37 +240,6 @@ module Serializer =
         |> Seq.cast
         |> Seq.fold write None
         |> ignore
-
-    and buildPropertyWriterInfo (propInfo : PropertyInfo) =
-        { Info = propInfo
-          OriginalName = propInfo.Name
-          ClsName = propInfo.Name.ToCamelCase()
-          GetFunc = fun o -> o // TODO
-          WriteFunc = determineWriter propInfo.PropertyType
-          Default = Reflection.getDefaultValue propInfo.PropertyType }
-
-    and getProperties (t : Type) =
-        match (!propertyCache).TryGetValue t with
-        | true, props -> props
-        | _ ->
-            let buildWriter = buildPropertyWriterInfo
-            let props =
-                Reflection.getSerializableProperties t
-                |> Seq.filter (fun p -> p.GetIndexParameters().Length = 0)
-                |> Seq.map buildWriter
-                |> Array.ofSeq
-            Atom.updateAtomDict propertyCache t props
-
-    and writeClass (writer : TextWriter) (value : obj) =
-        let t = value.GetType()
-        getProperties t
-        |> Seq.iter (fun p ->
-            match p.WriteFunc with
-            | Some write ->
-                let v = p.GetFunc value
-                if v <> null then
-                    write writer v
-            | _ -> ())
 
     /// Try to determine a enumerable serialization function
     and getEnumerableWriter (t : Type) =
@@ -299,3 +280,28 @@ module Serializer =
             match determineWriter t with
             | Some s -> Atom.updateAtomDict serializerCache t s
             | _ -> invalidOp "No serializer available for type %s" t.FullName
+
+    /// Get the PropertyWriterInfo array for the given type
+    let getProperties (t : Type) =
+        match (!propertyCache).TryGetValue t with
+        | true, props -> props
+        | _ ->
+            let buildWriter = buildPropertyWriterInfo
+            let props =
+                Reflection.getSerializableProperties t
+                |> Seq.filter (fun p -> p.GetIndexParameters().Length = 0)
+                |> Seq.map buildWriter
+                |> Array.ofSeq
+            Atom.updateAtomDict propertyCache t props
+
+    /// Writer for classes and other reference types
+    let writeClass (writer : TextWriter) (value : obj) =
+        let t = value.GetType()
+        getProperties t
+        |> Seq.iter (fun p ->
+            match p.WriteFunc with
+            | Some write ->
+                let v = p.GetFunc value
+                if v <> null then
+                    write writer v
+            | _ -> ())
