@@ -3,6 +3,7 @@
 /// General purpose utility functions
 module Utils =
 
+    /// Wrap a reference (nullable) type into an Option
     let toOption item = if item = null then None else Some item
 
 /// Module containing atomic operations like
@@ -17,7 +18,6 @@ module Atom =
         let current = !reference
         let result = Interlocked.CompareExchange<'T>(reference, newValue, current)
         if not (obj.ReferenceEquals(result, current)) then
-            Thread.SpinWait 20
             swapRef reference newValue
 
     /// Atomically update the specified dictionary

@@ -80,3 +80,23 @@ let getEmptyConstructor02() =
     let ctor2 = Reflection.getConstructorMethodByName "ReflectionTests+TestClass2"
     Assert.IsNotNull(ctor1)
     Assert.IsNotNull(ctor2)
+
+[<Test>]
+let getGetter01() =
+    let cls = TestClass(200, "foobar")
+    [ "V1", box 200; "V2", box "foobar" ]
+    |> List.iter (fun (n, v) ->
+        let pi = typeof<TestClass>.GetProperty(n)
+        let getter = Reflection.getGetter pi
+        let ret = getter.Invoke(cls)
+        Assert.AreEqual(v, ret))
+
+[<Test>]
+let getSetter01() =
+    let cls = TestClass(200, "foobar")
+    [ "V1", box 42, (fun (x:TestClass) -> box x.V1) ; "V2", box "barfoo", (fun (x:TestClass) -> box x.V2) ]
+    |> List.iter (fun (n, v, g) ->
+        let pi = typeof<TestClass>.GetProperty(n)
+        let setter = Reflection.getSetter pi
+        setter.Invoke(cls, v)
+        Assert.AreEqual(v, g(cls)))

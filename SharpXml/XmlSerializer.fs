@@ -21,10 +21,10 @@ type XmlSerializer() =
         use writer = new StringWriter(sb, CultureInfo.InvariantCulture)
         match Type.GetTypeCode(t) with
         | TypeCode.String ->
-            ValueTypeSerializer.writeTag writer "value" element ValueTypeSerializer.writeStringObject
+            Serializer.writeTag writer "value" element ValueTypeSerializer.writeStringObject
         | _ ->
             let serializer = Serializer.getWriterFunc t
-            ValueTypeSerializer.writeTag writer "value" element serializer
+            Serializer.writeTag writer "value" element serializer
 
     member x.DeserializeFromString<'T> input =
         deserializeFromString typeof<'T> input :?> 'T

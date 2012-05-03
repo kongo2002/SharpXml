@@ -33,11 +33,6 @@ module ValueTypeSerializer =
         elif day.Milliseconds = 0 then date.ToUniversal().ToString(xsdFormatSeconds)
         else toXsdFormat date
 
-    let writeTag (writer : TextWriter) (name : string) value writeFunc =
-        writer.Write("<{0}>", name)
-        writeFunc writer value
-        writer.Write("</{0}>", name)
-
     let writeString (writer : TextWriter) (content : string) =
         writer.Write(content)
 
@@ -210,6 +205,12 @@ module Serializer =
 
     let propertyCache = ref (Dictionary<Type, PropertyWriterInfo[]>())
     let serializerCache = ref (Dictionary<Type, WriterFunc>())
+
+    /// General purpose XML tags writer function
+    let writeTag (w : TextWriter) (name : string) value writeFunc =
+        w.Write("<{0}>", name)
+        writeFunc w value
+        w.Write("</{0}>", name)
 
     /// Try to determine one of a special serialization
     /// function, i.e. Exception, Uri

@@ -4,6 +4,7 @@ module Reflection =
 
     open System
     open System.Collections.Generic
+    open System.Linq.Expressions
     open System.Reflection
     open System.Reflection.Emit
     open System.Runtime.Serialization
@@ -13,6 +14,8 @@ module Reflection =
     type EmptyConstructor = delegate of unit -> obj
     type SetValueFunc = delegate of obj * obj -> unit
     type ParseFunc = delegate of string -> obj
+    type GetterFunc<'T> = delegate of 'T -> obj
+    type SetterFunc<'T> = delegate of 'T * obj -> unit
 
     let publicFlags =
         BindingFlags.FlattenHierarchy |||
@@ -118,4 +121,20 @@ module Reflection =
             let defVal = determineDefaultValue t
             Atom.updateAtomDict defaultValueCache t defVal
 
+    /// Build a getter expression function for the
+    /// specified PropertyInfo
+    let getGetter<'a> (p : PropertyInfo) =
+        let inst = Expression.Parameter(p.DeclaringType, "i")
+        let prop = Expression.Property(inst, p)
+        let conv = Expression.Convert(prop, typeof<obj>)
+        Expression.Lambda<GetterFunc<'a>>(conv, inst).Compile()
 
+    /// Build a setter expression function for the
+    /// specified PropertyInfo
+    let getSetter<'a> (p : PropertyInfo) =
+        if typeof<'a> <> p.DeclaringType then
+            invalidArg "p" "Type does not match the properties' declaring type"
+        let inst = Expression.Parameter(p.DeclaringType, "i")
+        let arg = Expression.Parameter(typeof<obj>, "a")
+        let setter = Expression.Call(inst, p.GetSetMethod(), Expression.Convert(arg, p.PropertyType))
+        Expression.Lambda<SetterFunc<'a>>(setter, inst, arg).Compile()
