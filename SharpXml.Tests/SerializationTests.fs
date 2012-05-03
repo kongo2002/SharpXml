@@ -4,7 +4,7 @@ open System
 open System.IO
 open NUnit.Framework
 
-open SharpXml.Serializer
+open SharpXml.ValueTypeSerializer
 
 [<Test>]
 let serializeDateTime01() =

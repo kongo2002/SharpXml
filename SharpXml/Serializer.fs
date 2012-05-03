@@ -3,12 +3,15 @@
 /// Writer function delegate
 type WriterFunc = System.IO.TextWriter -> obj -> unit
 
-/// Module containing all DateTime related
-/// serialization functions
-module DateTimeSerializer =
+/// Module containing the serialization logic
+/// for value types
+module ValueTypeSerializer =
 
     open System
+    open System.Globalization
+    open System.IO
     open System.Xml
+
     open SharpXml.Extensions
 
     let shortDateTimeFormat = "yyyy-MM-dd"
@@ -29,91 +32,6 @@ module DateTimeSerializer =
         if day.Ticks = 0L then date.ToString(shortDateTimeFormat)
         elif day.Milliseconds = 0 then date.ToUniversal().ToString(xsdFormatSeconds)
         else toXsdFormat date
-
-/// Module containing serialization logic for
-/// list and enumerable types
-module CollectionSerializer =
-
-    open System
-    open System.Collections
-    open System.IO
-
-    let writeEnumerable (determineFunc : Type -> WriterFunc option) (writer : TextWriter) (value : obj) =
-        let collection : IEnumerable = unbox value
-        let write func elem =
-            let f = match func with | None -> determineFunc (elem.GetType()) | _ -> func
-            f.Value writer elem
-            f
-        collection
-        |> Seq.cast
-        |> Seq.fold write None
-        |> ignore
-
-/// Module containing serialization logic for classes,
-/// interfaces and other reference types
-module ClassSerializer =
-
-    open System
-    open System.Collections.Generic
-    open System.IO
-    open System.Reflection
-
-    open SharpXml.Extensions
-
-    type PropertyWriterInfo = {
-        Info : PropertyInfo
-        OriginalName : string
-        ClsName : string
-        GetFunc : obj -> obj
-        WriteFunc : WriterFunc option
-        Default : obj }
-
-    let propertyCache = ref (Dictionary<Type, PropertyWriterInfo[]>())
-
-    let buildPropertyWriterInfo (determineFunc : Type -> WriterFunc option) (propInfo : PropertyInfo) =
-        { Info = propInfo
-          OriginalName = propInfo.Name
-          ClsName = propInfo.Name.ToCamelCase()
-          GetFunc = fun o -> o // TODO
-          WriteFunc = determineFunc propInfo.PropertyType
-          Default = Reflection.getDefaultValue propInfo.PropertyType }
-
-    let getProperties (determineFunc : Type -> WriterFunc option) (t : Type) =
-        match (!propertyCache).TryGetValue t with
-        | true, props -> props
-        | _ ->
-            let buildWriter = buildPropertyWriterInfo determineFunc
-            let props =
-                Reflection.getSerializableProperties t
-                |> Seq.filter (fun p -> p.GetIndexParameters().Length = 0)
-                |> Seq.map buildWriter
-                |> Array.ofSeq
-            Atom.updateAtomDict propertyCache t props
-
-    let writeClass (determineFunc : Type -> WriterFunc option) (writer : TextWriter) (value : obj) =
-        let t = value.GetType()
-        getProperties determineFunc t
-        |> Seq.iter (fun p ->
-            match p.WriteFunc with
-            | Some write ->
-                let v = p.GetFunc value
-                if v <> null then
-                    write writer v
-            | _ -> ())
-
-/// Module containing the basic XML serialization logic
-module Serializer =
-
-    open System
-    open System.Collections
-    open System.Collections.Generic
-    open System.Globalization
-    open System.IO
-
-    open SharpXml.Attempt
-    open SharpXml.Extensions
-
-    let serializerCache = ref (Dictionary<Type, WriterFunc>())
 
     let writeTag (writer : TextWriter) (name : string) value writeFunc =
         writer.Write("<{0}>", name)
@@ -138,7 +56,7 @@ module Serializer =
         writeString writer v
 
     let writeDateTime writer (value : obj) =
-        let v = DateTimeSerializer.toShortestXsdFormat (unbox value)
+        let v = toShortestXsdFormat (unbox value)
         writeString writer v
 
     let writeNullableDateTime writer (value : obj) =
@@ -268,41 +186,107 @@ module Serializer =
             | TypeCode.UInt64 -> Some writeUInt64
             | _ -> None
 
+/// Serialization logic
+module Serializer =
+
+    open System
+    open System.Collections
+    open System.Collections.Generic
+    open System.IO
+    open System.Reflection
+    open System.Xml
+
+    open SharpXml.Attempt
+    open SharpXml.Extensions
+
+    type PropertyWriterInfo = {
+        Info : PropertyInfo
+        OriginalName : string
+        ClsName : string
+        GetFunc : obj -> obj
+        WriteFunc : WriterFunc option
+        Default : obj }
+
+    let propertyCache = ref (Dictionary<Type, PropertyWriterInfo[]>())
+    let serializerCache = ref (Dictionary<Type, WriterFunc>())
+
     /// Try to determine one of a special serialization
     /// function, i.e. Exception, Uri
     let getSpecialWriters (t : Type) =
-        if t = typeof<Uri> then Some writeStringObject
-        elif t = typeof<Exception> then Some writeException
-        elif t = typeof<Type> then Some writeType
+        if t = typeof<Uri> then Some ValueTypeSerializer.writeStringObject
+        elif t = typeof<Exception> then Some ValueTypeSerializer.writeException
+        elif t = typeof<Type> then Some ValueTypeSerializer.writeType
         else None
 
+    let rec writeEnumerable (writer : TextWriter) (value : obj) =
+        let collection : IEnumerable = unbox value
+        let write func elem =
+            let f = match func with | None -> determineWriter (elem.GetType()) | _ -> func
+            f.Value writer elem
+            f
+        collection
+        |> Seq.cast
+        |> Seq.fold write None
+        |> ignore
+
+    and buildPropertyWriterInfo (propInfo : PropertyInfo) =
+        { Info = propInfo
+          OriginalName = propInfo.Name
+          ClsName = propInfo.Name.ToCamelCase()
+          GetFunc = fun o -> o // TODO
+          WriteFunc = determineWriter propInfo.PropertyType
+          Default = Reflection.getDefaultValue propInfo.PropertyType }
+
+    and getProperties (t : Type) =
+        match (!propertyCache).TryGetValue t with
+        | true, props -> props
+        | _ ->
+            let buildWriter = buildPropertyWriterInfo
+            let props =
+                Reflection.getSerializableProperties t
+                |> Seq.filter (fun p -> p.GetIndexParameters().Length = 0)
+                |> Seq.map buildWriter
+                |> Array.ofSeq
+            Atom.updateAtomDict propertyCache t props
+
+    and writeClass (writer : TextWriter) (value : obj) =
+        let t = value.GetType()
+        getProperties t
+        |> Seq.iter (fun p ->
+            match p.WriteFunc with
+            | Some write ->
+                let v = p.GetFunc value
+                if v <> null then
+                    write writer v
+            | _ -> ())
+
     /// Try to determine a enumerable serialization function
-    let getEnumerableWriter (t : Type) determineFunc =
+    and getEnumerableWriter (t : Type) =
         if t.HasInterface typeof<IEnumerable> &&
             t.IsAssignableFrom typeof<IEnumerable> then
-            Some(CollectionSerializer.writeEnumerable determineFunc)
+            Some writeEnumerable
         else None
 
     /// Determine the associated serialization writer
     /// function for the specified type
-    let rec determineWriter (t : Type) =
+    and determineWriter (t : Type) =
         let none = fun () -> None
         let func f = fun () -> Some f
         let iff p f = if p t then (fun () -> f) else none
         let writer = attempt {
-            let! strWriter = iff ((=) typeof<string>) (Some writeStringObject)
-            let! valueWriter = iff (fun x -> x.IsValueType) (getValueTypeWriter t)
+            let! strWriter = iff ((=) typeof<string>) (Some ValueTypeSerializer.writeStringObject)
+            let! valueWriter = iff (fun x -> x.IsValueType) (ValueTypeSerializer.getValueTypeWriter t)
             let! arrayWriter =
                 if t.IsArray then
-                    if t = typeof<byte[]> then (func writeBytes)
-                    elif t = typeof<char[]> then (func writeChars)
+                    if t = typeof<byte[]> then (func ValueTypeSerializer.writeBytes)
+                    elif t = typeof<char[]> then (func ValueTypeSerializer.writeChars)
                     // TODO: often used arrays like string[] and int[]
                     else none
                 else none
             let! genericWriter =
                 if t.IsGenericType then none
                 else none
-            let! enumerableWriter = fun () -> getEnumerableWriter t determineWriter
+            let! enumerableWriter = fun () -> getEnumerableWriter t
             enumerableWriter }
         writer
 
