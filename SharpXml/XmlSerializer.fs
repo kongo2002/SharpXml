@@ -10,25 +10,20 @@ type XmlSerializer() =
 
     let empty = String.IsNullOrWhiteSpace
 
-    let deserializeFromString (targetType : Type) (input : string) =
-        if empty input then null else
-            match TypeParser.getParser targetType with
-            | Some parser -> parser.Invoke input
-            | _ -> null
+    member x.DeserializeFromString<'T> input : 'T =
+        if empty input then Unchecked.defaultof<'T> else
+            match TypeParser.getParser typeof<'T> with
+            | Some parser -> unbox parser.Invoke input
+            | _ -> Unchecked.defaultof<'T>
 
-    let serializeToString t element =
+    member x.SerializeToString<'T> (element : 'T) =
         let sb = StringBuilder()
+        let t = typeof<'T>
         use writer = new StringWriter(sb, CultureInfo.InvariantCulture)
         match Type.GetTypeCode(t) with
         | TypeCode.String ->
-            Serializer.writeTag writer "value" element ValueTypeSerializer.writeStringObject
+            Serializer<'T>.WriteTag(writer, "value", element)
         | _ ->
-            let serializer = Serializer.getWriterFunc t
-            Serializer.writeTag writer "value" element serializer
-
-    member x.DeserializeFromString<'T> input =
-        deserializeFromString typeof<'T> input :?> 'T
-
-    member x.SerializeToString<'T> element =
-        serializeToString typeof<'T> element
+            let serializer = Serializer<'T>.GetWriterFunc()
+            serializer writer element
 
