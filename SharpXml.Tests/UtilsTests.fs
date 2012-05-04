@@ -6,6 +6,7 @@ module UtilsTests =
     open NUnit.Framework
 
     open SharpXml.Attempt
+    open SharpXml.Tests.TestHelpers
 
     [<Test>]
     let attempt01() =
@@ -16,8 +17,8 @@ module UtilsTests =
             let! v2 = func None
             let! v3 = func <| Some 20
             v3 }
-        Assert.AreEqual(Some 20, result)
-        Assert.AreEqual(3, !runs)
+        result |> should equal (Some 20)
+        !runs |> should equal 3
 
     [<Test>]
     let attempt02() =
@@ -28,8 +29,8 @@ module UtilsTests =
             let! v2 = func <| Some 42
             let! v3 = func None
             v3 }
-        Assert.AreEqual(Some 42, result)
-        Assert.AreEqual(2, !runs)
+        result |> should equal (Some 42)
+        !runs |> should equal 2
 
     [<Test>]
     let attempt03() =
@@ -40,8 +41,8 @@ module UtilsTests =
             let! v2 = func None
             let! v3 = func None
             v3 }
-        Assert.AreEqual(None, result)
-        Assert.AreEqual(3, !runs)
+        result |> should equal None
+        !runs |> should equal 3
 
     [<Test>]
     let attempt04() =
@@ -53,5 +54,5 @@ module UtilsTests =
             let! v3 = func None
             let! v4 = func None
             v4 }
-        Assert.AreEqual(Some 400, result)
-        Assert.AreEqual(2, !runs)
+        result |> should equal (Some 400)
+        !runs |> should equal 2

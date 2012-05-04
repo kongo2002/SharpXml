@@ -7,50 +7,51 @@ module ReflectionTests =
 
     open SharpXml
     open SharpXml.Tests.Types
+    open SharpXml.Tests.TestHelpers
 
     [<Test>]
     let getProperties01() =
         let props = Reflection.getPublicProperties typeof<TestClass>
-        Assert.AreEqual(2, props.Length)
+        props.Length |> should equal 2
 
     [<Test>]
     let getInterfaceProperties01() =
         let props = Reflection.getInterfaceProperties typeof<ITestInterface>
-        Assert.AreEqual(1, props.Length)
-        Assert.AreEqual("Member1", props.[0].Name)
-        Assert.AreEqual(typeof<int>, props.[0].PropertyType)
+        props.Length |> should equal 1
+        props.[0].Name |> should equal "Member1"
+        props.[0].PropertyType |> should equal typeof<int>
 
     [<Test>]
     let getInterfaceProperties02() =
         let props = Reflection.getInterfaceProperties typeof<IAnotherInterface>
-        Assert.AreEqual(2, props.Length)
+        props.Length |> should equal 2
 
     [<Test>]
     let getDefaultValue() =
-        Assert.AreEqual(null, Reflection.getDefaultValue typeof<TestClass>)
-        Assert.AreEqual(DateTime.MinValue, Reflection.getDefaultValue typeof<DateTime>)
-        Assert.AreEqual(0uy, Reflection.getDefaultValue typeof<byte>)
-        Assert.AreEqual(null, Reflection.getDefaultValue typeof<IAnotherInterface>)
+        Reflection.getDefaultValue typeof<TestClass> |> shouldBe Null
+        Reflection.getDefaultValue typeof<DateTime> |> should equal DateTime.MinValue
+        Reflection.getDefaultValue typeof<byte> |> should equal 0uy
+        Reflection.getDefaultValue typeof<IAnotherInterface> |> shouldBe Null
 
     [<Test>]
     let stringOrValueTypes() =
         let t = [ typeof<string>; typeof<int>; typeof<char> ]
-        Assert.IsTrue(Reflection.areStringOrValueTypes t)
-        Assert.IsFalse(Reflection.areStringOrValueTypes [ typeof<TestClass> ])
+        Reflection.areStringOrValueTypes t |> shouldBe True
+        Reflection.areStringOrValueTypes [ typeof<TestClass> ] |> shouldBe False
 
     [<Test>]
     let getEmptyConstructor01() =
         let ctor1 = Reflection.getConstructorMethod typeof<TestClass>
         let ctor2 = Reflection.getConstructorMethod typeof<TestClass2>
-        Assert.IsNotNull(ctor1)
-        Assert.IsNotNull(ctor2)
+        ctor1 |> shouldBe notNull
+        ctor2 |> shouldBe notNull
 
     [<Test>]
     let getEmptyConstructor02() =
         let ctor1 = Reflection.getConstructorMethodByName "System.String"
         let ctor2 = Reflection.getConstructorMethodByName "SharpXml.Tests.Types+TestClass2"
-        Assert.IsNotNull(ctor1)
-        Assert.IsNotNull(ctor2)
+        ctor1 |> shouldBe notNull
+        ctor2 |> shouldBe notNull
 
     [<Test>]
     let getGetter01() =
@@ -60,7 +61,7 @@ module ReflectionTests =
             let pi = typeof<TestClass>.GetProperty(n)
             let getter = Reflection.getGetter pi
             let ret = getter.Invoke(cls)
-            Assert.AreEqual(v, ret))
+            ret |> should equal v)
 
     [<Test>]
     let getSetter01() =
@@ -70,4 +71,4 @@ module ReflectionTests =
             let pi = typeof<TestClass>.GetProperty(n)
             let setter = Reflection.getSetter pi
             setter.Invoke(cls, v)
-            Assert.AreEqual(v, g(cls)))
+            g(cls) |> should equal v)

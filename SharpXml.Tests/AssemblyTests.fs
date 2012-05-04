@@ -6,10 +6,11 @@ module AssemblyTests =
     open NUnit.Framework
 
     open SharpXml
+    open SharpXml.Tests.TestHelpers
 
     [<Test>]
     let assemblyName() =
         let fullName = Assembly.getAssemblyName typeof<string>.AssemblyQualifiedName
         let name = Assembly.getAssemblyName typeof<string>.Name
-        Assert.AreEqual(Some "mscorlib", fullName)
-        Assert.AreEqual(None, name)
+        fullName |> should equal (Some "mscorlib")
+        name |> should equal None
