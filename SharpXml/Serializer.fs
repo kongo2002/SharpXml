@@ -220,8 +220,7 @@ type Serializer<'T> private() =
         elif t = typeof<Type> then Some ValueTypeSerializer.writeType
         else None
 
-    static let writeEmptyClass (writer : TextWriter) (value : obj) =
-        ()
+    static let writeEmpty (writer : TextWriter) _ = ()
 
     static let writeAbstractProperties (writer : TextWriter) (value : obj) =
         ()

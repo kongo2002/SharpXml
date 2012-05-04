@@ -1,13 +1,15 @@
-﻿module AssemblyTests
+﻿namespace SharpXml.Tests
 
-open System
-open NUnit.Framework
+module AssemblyTests =
 
-open SharpXml
+    open System
+    open NUnit.Framework
 
-[<Test>]
-let assemblyName() =
-    let fullName = Assembly.getAssemblyName typeof<string>.AssemblyQualifiedName
-    let name = Assembly.getAssemblyName typeof<string>.Name
-    Assert.AreEqual(Some "mscorlib", fullName)
-    Assert.AreEqual(None, name)
+    open SharpXml
+
+    [<Test>]
+    let assemblyName() =
+        let fullName = Assembly.getAssemblyName typeof<string>.AssemblyQualifiedName
+        let name = Assembly.getAssemblyName typeof<string>.Name
+        Assert.AreEqual(Some "mscorlib", fullName)
+        Assert.AreEqual(None, name)
