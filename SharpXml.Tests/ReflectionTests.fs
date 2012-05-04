@@ -6,7 +6,7 @@ module ReflectionTests =
     open NUnit.Framework
 
     open SharpXml
-    open Types
+    open SharpXml.Tests.Types
 
     [<Test>]
     let getProperties01() =

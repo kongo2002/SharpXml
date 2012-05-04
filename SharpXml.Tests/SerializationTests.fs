@@ -24,3 +24,11 @@ module SerializationTests =
         let value = 2.528
         Serializer.WriteTag(writer, "float", value)
         Assert.AreEqual(sprintf "<float>%.3f</float>" value, writer.ToString())
+
+    [<Test>]
+    let serializeClass01() =
+        let writer = new StringWriter()
+        let cls = TestClass(800, "foo bar")
+        let func = Serializer<TestClass>.GetWriterFunc()
+        func writer cls
+        Assert.AreEqual("<v1>800</v1><v2>foo bar</v2>", writer.ToString())

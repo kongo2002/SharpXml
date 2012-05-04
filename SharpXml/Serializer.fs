@@ -207,9 +207,9 @@ type Serializer<'T> private() =
     static let serializerCache = ref (Dictionary<Type, WriterFunc>())
 
     /// General purpose XML tags writer function
-    static let writeTag (w : TextWriter) (name : string) value writeFunc =
+    static let writeTag (w : TextWriter) (name : string) (value : obj) writeFunc =
         w.Write("<{0}>", name)
-        writeFunc w value
+        writeFunc w (box value)
         w.Write("</{0}>", name)
 
     /// Try to determine one of a special serialization
@@ -219,6 +219,12 @@ type Serializer<'T> private() =
         elif t = typeof<Exception> then Some ValueTypeSerializer.writeException
         elif t = typeof<Type> then Some ValueTypeSerializer.writeType
         else None
+
+    static let writeEmptyClass (writer : TextWriter) (value : obj) =
+        ()
+
+    static let writeAbstractProperties (writer : TextWriter) (value : obj) =
+        ()
 
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
@@ -249,6 +255,40 @@ type Serializer<'T> private() =
             Some writeEnumerable
         else None
 
+    /// Get the PropertyWriterInfo array for the given type
+    and getProperties (t : Type) =
+        match (!propertyCache).TryGetValue t with
+        | true, props -> props
+        | _ ->
+            let buildWriter = buildPropertyWriterInfo
+            let props =
+                Reflection.getSerializableProperties t
+                |> Seq.filter (fun p -> p.GetIndexParameters().Length = 0)
+                |> Seq.map buildWriter
+                |> Array.ofSeq
+            Atom.updateAtomDict propertyCache t props
+
+    /// Writer for classes and other reference types
+    and writeClass (writer : TextWriter) (value : obj) =
+        let t = value.GetType()
+        getProperties t
+        |> Seq.iter (fun p ->
+            match p.WriteFunc with
+            | Some write ->
+                let v = p.GetFunc.Invoke(value :?> 'T)
+                if v <> null then
+                    writeTag writer p.ClsName v write
+            | _ -> ())
+
+    /// Try to determine a class or interface serialization function
+    and getClassWriter (t : Type) =
+        if t.IsClass || t.IsInterface then
+            if t.IsAbstract && not t.IsInterface then
+                Some writeAbstractProperties
+            else
+                Some writeClass
+        else None
+
     /// Determine the associated serialization writer
     /// function for the specified type
     and determineWriter (t : Type) =
@@ -269,7 +309,8 @@ type Serializer<'T> private() =
                 if t.IsGenericType then none
                 else none
             let! enumerableWriter = fun () -> getEnumerableWriter t
-            enumerableWriter }
+            let! classWriter = fun () -> getClassWriter t
+            classWriter }
         writer
 
     /// Get the writer function to serialize the
@@ -280,32 +321,7 @@ type Serializer<'T> private() =
         | _ ->
             match determineWriter t with
             | Some s -> Atom.updateAtomDict serializerCache t s
-            | _ -> invalidOp "No serializer available for type %s" t.FullName
-
-    /// Get the PropertyWriterInfo array for the given type
-    static let getProperties (t : Type) =
-        match (!propertyCache).TryGetValue t with
-        | true, props -> props
-        | _ ->
-            let buildWriter = buildPropertyWriterInfo
-            let props =
-                Reflection.getSerializableProperties t
-                |> Seq.filter (fun p -> p.GetIndexParameters().Length = 0)
-                |> Seq.map buildWriter
-                |> Array.ofSeq
-            Atom.updateAtomDict propertyCache t props
-
-    /// Writer for classes and other reference types
-    static let writeClass (writer : TextWriter) (value : 'T) =
-        let t = value.GetType()
-        getProperties t
-        |> Seq.iter (fun p ->
-            match p.WriteFunc with
-            | Some write ->
-                let v = p.GetFunc.Invoke(value)
-                if v <> null then
-                    write writer v
-            | _ -> ())
+            | _ -> invalidOp <| sprintf "No serializer available for type '%s'" t.FullName
 
     static member WriteTag(writer : TextWriter, name : string, element : 'T) =
         writeTag writer name element (getWriterFunc typeof<'T>)
