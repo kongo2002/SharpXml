@@ -42,6 +42,7 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Types.fs" />
     <Compile Include="TypeParserTests.fs" />
     <Compile Include="ReflectionTests.fs" />
     <Compile Include="AssemblyTests.fs" />
