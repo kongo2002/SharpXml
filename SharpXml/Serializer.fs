@@ -209,7 +209,7 @@ type Serializer<'T> private() =
     /// General purpose XML tags writer function
     static let writeTag (w : TextWriter) (name : string) (value : obj) writeFunc =
         w.Write("<{0}>", name)
-        writeFunc w (box value)
+        writeFunc w value
         w.Write("</{0}>", name)
 
     /// Try to determine one of a special serialization
@@ -288,6 +288,25 @@ type Serializer<'T> private() =
                 Some writeClass
         else None
 
+    and getDictionaryWriter (t : Type) =
+        if t.HasInterface(typeof<IDictionary>) ||
+            t.IsAssignableFrom(typeof<IDictionary>) then
+            Some writeIDictionary
+        else None
+
+    and writeIDictionary (writer : TextWriter) (value : obj) =
+        let map : IDictionary = unbox value
+        let keyWriter : (WriterFunc option) ref = ref None
+        let valueWriter : (WriterFunc option) ref = ref None
+        map.Keys
+        |> Seq.cast
+        |> Seq.iter (fun key ->
+            let dictVal = map.[key]
+            if (!keyWriter).IsNone then keyWriter := determineWriter (key.GetType()) 
+            if (!valueWriter).IsNone then valueWriter := determineWriter (dictVal.GetType())
+            writeTag writer "key" key (!keyWriter).Value
+            writeTag writer "value" dictVal (!valueWriter).Value)
+
     /// Determine the associated serialization writer
     /// function for the specified type
     and determineWriter (t : Type) =
@@ -304,6 +323,7 @@ type Serializer<'T> private() =
                     // TODO: often used arrays like string[] and int[]
                     else none
                 else none
+            let! dictWriter = fun () -> getDictionaryWriter t
             let! genericWriter =
                 if t.IsGenericType then none
                 else none
