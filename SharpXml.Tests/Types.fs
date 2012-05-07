@@ -2,6 +2,9 @@
 
 module Types =
 
+    open System.Collections.Generic
+    open System.Runtime.Serialization
+
     type TestClass(val1 : int, val2 : string) =
 
         let mutable v1 = val1
@@ -22,6 +25,37 @@ module Types =
         member x.V1
             with get() = v1
             and set v = v1 <- v
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
+
+    [<DataContract(Name = "ContractClass", Namespace = "")>]
+    type ContractClass() =
+
+        let mutable v1 = Unchecked.defaultof<string>
+        let mutable v2 = Unchecked.defaultof<int>
+
+        [<DataMember>]
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        [<DataMember>]
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
+    [<DataContract(Name = "ContractClass2", Namespace = "")>]
+    type ContractClass2() =
+
+        let mutable v1 = Unchecked.defaultof<string>
+        let mutable v2 = Unchecked.defaultof<Dictionary<string,int>>
+
+        [<DataMember>]
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        [<DataMember>]
         member x.V2
             with get() = v2
             and set v = v2 <- v
