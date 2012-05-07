@@ -43,15 +43,15 @@ module SerializationTests =
         let writer = new StringWriter()
         let curr = DateTime.Now
         let date = curr.Date
-        Serializer<DateTime>.WriteTag(writer, "date", date)
-        writer.ToString() |> should equal (sprintf "<date>%s</date>" (date.ToString("yyyy-MM-dd")))
+        Serializer<DateTime>.WriteType(writer, date)
+        writer.ToString() |> should equal (sprintf "<dateTime>%s</dateTime>" (date.ToString("yyyy-MM-dd")))
 
     [<Test>]
     let serializeFloat() =
         let writer = new StringWriter()
         let value = 2.528
-        Serializer.WriteTag(writer, "float", value)
-        writer.ToString() |> should equal (sprintf "<float>%.3f</float>" value)
+        Serializer.WriteType(writer, value)
+        writer.ToString() |> should equal (sprintf "<double>%.3f</double>" value)
 
     [<Test>]
     let serializeClass01() =

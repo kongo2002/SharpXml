@@ -18,12 +18,7 @@ type XmlSerializer() =
 
     member x.SerializeToString<'T> (element : 'T) =
         let sb = StringBuilder()
-        let t = typeof<'T>
         use writer = new StringWriter(sb, CultureInfo.InvariantCulture)
-        match Type.GetTypeCode(t) with
-        | TypeCode.String ->
-            Serializer<'T>.WriteTag(writer, "value", element)
-        | _ ->
-            let serializer = Serializer<'T>.GetWriterFunc()
-            serializer writer element
+        if XmlConfig.Instance.WriteXmlHeader then writer.Write("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+        Serializer<'T>.WriteType(writer, element)
 

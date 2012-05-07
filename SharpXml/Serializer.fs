@@ -362,8 +362,12 @@ type Serializer<'T> private() =
             | Some s -> Atom.updateAtomDict serializerCache t s
             | _ -> invalidOp <| sprintf "No serializer available for type '%s'" t.FullName
 
-    static member WriteTag(writer : TextWriter, name : string, element : 'T) =
-        writeTag writer name element (getWriterFunc typeof<'T>)
+    static let writeType (writer : TextWriter) (element : 'T) =
+        let tInfo = getTypeInfo typeof<'T>
+        writeTag writer tInfo.ClsName element (getWriterFunc typeof<'T>)
+
+    static member WriteType(writer, element) =
+        writeType writer element
 
     static member GetWriterFunc() =
         getWriterFunc typeof<'T>
