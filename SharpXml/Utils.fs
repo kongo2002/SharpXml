@@ -3,8 +3,17 @@
 /// General purpose utility functions
 module Utils =
 
+    open System
+    open System.Text.RegularExpressions
+
+    let genericRegex = Regex("`\d+$", RegexOptions.Compiled)
+
     /// Wrap a reference (nullable) type into an Option
     let toOption item = if item = null then None else Some item
+
+    /// Remove the name suffix of a generic type name
+    let removeGenericSuffix input =
+        genericRegex.Replace(input, String.Empty)
 
 /// Module containing atomic operations like
 /// thread-safe dictionary update

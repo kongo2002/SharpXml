@@ -186,6 +186,7 @@ open System.Collections
 open System.Collections.Generic
 open System.IO
 open System.Reflection
+open System.Text.RegularExpressions
 
 open SharpXml.Attempt
 open SharpXml.Extensions
@@ -237,7 +238,7 @@ type Serializer<'T> private() =
     static let buildTypeInfo (t : Type) =
         { Type = t
           OriginalName = t.Name
-          ClsName = t.Name.ToCamelCase() }
+          ClsName = t.Name.ToCamelCase() |> Utils.removeGenericSuffix }
 
     /// Get the TypeInfo object associated with the given Type
     static let getTypeInfo (t : Type) =

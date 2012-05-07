@@ -38,55 +38,43 @@ module SerializationTests =
         Debug.WriteLine(output)
         output
 
+    let serialize<'a> (element : 'a) =
+        XmlSerializer.SerializeToString<'a>(element)
+
     [<Test>]
     let serializeDateTime01() =
-        let writer = new StringWriter()
         let curr = DateTime.Now
         let date = curr.Date
-        Serializer<DateTime>.WriteType(writer, date)
-        writer.ToString() |> should equal (sprintf "<dateTime>%s</dateTime>" (date.ToString("yyyy-MM-dd")))
+        serialize date |> should equal (sprintf "<dateTime>%s</dateTime>" (date.ToString("yyyy-MM-dd")))
 
     [<Test>]
     let serializeFloat() =
-        let writer = new StringWriter()
         let value = 2.528
-        Serializer.WriteType(writer, value)
-        writer.ToString() |> should equal (sprintf "<double>%.3f</double>" value)
+        serialize value |> should equal (sprintf "<double>%.3f</double>" value)
 
     [<Test>]
     let serializeClass01() =
-        let writer = new StringWriter()
         let cls = TestClass(800, "foo bar")
-        let func = Serializer<TestClass>.GetWriterFunc()
-        func writer cls
-        writer.ToString() |> should equal "<v1>800</v1><v2>foo bar</v2>"
+        serialize cls |> should equal "<testClass><v1>800</v1><v2>foo bar</v2></testClass>"
 
     [<Test>]
     let serializeClass02() =
-        let writer = new StringWriter()
         let cls = TestClass(800, "foo bar")
-        let func = Serializer<TestClass>.WriteType(writer, cls)
-        writer.ToString() |> should equal "<testClass><v1>800</v1><v2>foo bar</v2></testClass>"
+        serialize cls |> should equal "<testClass><v1>800</v1><v2>foo bar</v2></testClass>"
 
     [<Test>]
     let serializeDict01() =
-        let writer = new StringWriter()
         let dict = Dictionary<string, int>()
         dict.Add("foo", 42)
         dict.Add("bar", 200)
-        let func = Serializer<Dictionary<string,int>>.GetWriterFunc()
-        func writer dict
-        writer.ToString() |> should equal "<key>foo</key><value>42</value><key>bar</key><value>200</value>"
+        serialize dict |> should equal "<dictionary><key>foo</key><value>42</value><key>bar</key><value>200</value></dictionary>"
 
     [<Test>]
     let serializeDict02() =
-        let writer = new StringWriter()
-        let dict = Dictionary<string, int>()
-        dict.Add("foo", 42)
-        dict.Add("bar", 200)
-        let func = Serializer<obj>.GetWriterFunc()
-        func writer dict
-        writer.ToString() |> should equal "<key>foo</key><value>42</value><key>bar</key><value>200</value>"
+        let dict = Dictionary<int, string>()
+        dict.Add(42, "foo")
+        dict.Add(200, "bar")
+        serialize dict |> should equal "<dictionary><key>42</key><value>foo</value><key>200</key><value>bar</value></dictionary>"
 
     [<Test>]
     let compareSerialization01() =
