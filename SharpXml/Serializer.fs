@@ -190,6 +190,13 @@ open System.Reflection
 open SharpXml.Attempt
 open SharpXml.Extensions
 
+/// Record type containing the type specific information
+/// for the first element to serialize
+type internal TypeInfo = {
+    Type : Type
+    OriginalName : string
+    ClsName : string }
+
 /// Record type containing the serialization information
 /// for a specific property member
 type internal PropertyWriterInfo<'T> = {
@@ -205,6 +212,7 @@ type Serializer<'T> private() =
 
     static let propertyCache = ref (Dictionary<Type, PropertyWriterInfo<'T>[]>())
     static let serializerCache = ref (Dictionary<Type, WriterFunc>())
+    static let typeInfoCache = ref (Dictionary<Type, TypeInfo>())
 
     /// General purpose XML tags writer function
     static let writeTag (w : TextWriter) (name : string) (value : obj) writeFunc =
@@ -224,6 +232,18 @@ type Serializer<'T> private() =
 
     static let writeAbstractProperties (writer : TextWriter) (value : obj) =
         ()
+
+    /// Build a TypeInfo object based on the given Type
+    static let buildTypeInfo (t : Type) =
+        { Type = t
+          OriginalName = t.Name
+          ClsName = t.Name.ToCamelCase() }
+
+    /// Get the TypeInfo object associated with the given Type
+    static let getTypeInfo (t : Type) =
+        match (!typeInfoCache).TryGetValue t with
+        | true, ti -> ti
+        | _ -> Atom.updateAtomDict typeInfoCache t (buildTypeInfo t)
 
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
