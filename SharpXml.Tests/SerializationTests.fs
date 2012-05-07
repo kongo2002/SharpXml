@@ -62,6 +62,13 @@ module SerializationTests =
         writer.ToString() |> should equal "<v1>800</v1><v2>foo bar</v2>"
 
     [<Test>]
+    let serializeClass02() =
+        let writer = new StringWriter()
+        let cls = TestClass(800, "foo bar")
+        let func = Serializer<TestClass>.WriteType(writer, cls)
+        writer.ToString() |> should equal "<testClass><v1>800</v1><v2>foo bar</v2></testClass>"
+
+    [<Test>]
     let serializeDict01() =
         let writer = new StringWriter()
         let dict = Dictionary<string, int>()
