@@ -215,6 +215,15 @@ type Serializer<'T> private() =
     static let serializerCache = ref (Dictionary<Type, WriterFunc>())
     static let typeInfoCache = ref (Dictionary<Type, TypeInfo>())
 
+    static let serializerGenType = typedefof<Serializer<_>>
+
+    /// Call the generic 'determineWriter' function via reflection
+    static let genericDetermineWriter (t : Type) =
+        let flags = BindingFlags.NonPublic ||| BindingFlags.Static
+        let generic = serializerGenType.MakeGenericType([| t |])
+        let mtd = generic.GetMethod("determineWriter", flags)
+        mtd.Invoke(null, [| t |]) :?> WriterFunc option
+
     /// General purpose XML tags writer function
     static let writeTag (w : TextWriter) (name : string) (value : obj) writeFunc =
         w.Write("<{0}>", name)
@@ -379,7 +388,7 @@ type Serializer<'T> private() =
         match (!serializerCache).TryGetValue t with
         | true, serializer -> serializer
         | _ ->
-            match determineWriter t with
+            match genericDetermineWriter t with
             | Some s -> Atom.updateAtomDict serializerCache t s
             | _ -> invalidOp <| sprintf "No serializer available for type '%s'" t.FullName
 
