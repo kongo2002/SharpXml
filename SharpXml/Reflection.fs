@@ -14,7 +14,9 @@ module Reflection =
     type EmptyConstructor = delegate of unit -> obj
     type SetValueFunc = delegate of obj * obj -> unit
     type ParseFunc = delegate of string -> obj
+    type GetterFunc = delegate of obj -> obj
     type GetterFunc<'T> = delegate of 'T -> obj
+    type SetterFunc = delegate of obj * obj -> unit
     type SetterFunc<'T> = delegate of 'T * obj -> unit
 
     let publicFlags =
@@ -129,6 +131,15 @@ module Reflection =
         let conv = Expression.Convert(prop, typeof<obj>)
         Expression.Lambda<GetterFunc<'a>>(conv, inst).Compile()
 
+    /// Build an object based getter expression function for the
+    /// specified PropertyInfo
+    let getObjGetter (p : PropertyInfo) =
+        let inst = Expression.Parameter(typeof<obj>, "i")
+        let icon = Expression.TypeAs(inst, p.DeclaringType)
+        let prop = Expression.Property(icon, p)
+        let conv = Expression.Convert(prop, typeof<obj>)
+        Expression.Lambda<GetterFunc>(conv, inst).Compile()
+
     /// Build a setter expression function for the
     /// specified PropertyInfo
     let getSetter<'a> (p : PropertyInfo) =
@@ -138,3 +149,12 @@ module Reflection =
         let arg = Expression.Parameter(typeof<obj>, "a")
         let setter = Expression.Call(inst, p.GetSetMethod(), Expression.Convert(arg, p.PropertyType))
         Expression.Lambda<SetterFunc<'a>>(setter, inst, arg).Compile()
+
+    /// Build an object based setter expression function for the
+    /// specified PropertyInfo
+    let getObjSetter (p : PropertyInfo) =
+        let inst = Expression.Parameter(typeof<obj>, "i")
+        let icon = Expression.TypeAs(inst, p.DeclaringType)
+        let arg = Expression.Parameter(typeof<obj>, "a")
+        let setter = Expression.Call(icon, p.GetSetMethod(), Expression.Convert(arg, p.PropertyType))
+        Expression.Lambda<SetterFunc>(setter, inst, arg).Compile()
