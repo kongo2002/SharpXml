@@ -234,11 +234,16 @@ type Serializer<'T> private() =
     static let writeAbstractProperties (writer : TextWriter) (value : obj) =
         ()
 
+    /// Determine the name of the TypeInfo based on the given type
+    static let getTypeName (t : Type) =
+        if t.IsArray then "array"
+        else t.Name.ToCamelCase() |> Utils.removeGenericSuffix
+
     /// Build a TypeInfo object based on the given Type
-    static let buildTypeInfo (t : Type) =
+    static let buildTypeInfo t =
         { Type = t
           OriginalName = t.Name
-          ClsName = t.Name.ToCamelCase() |> Utils.removeGenericSuffix }
+          ClsName = getTypeName t }
 
     /// Get the TypeInfo object associated with the given Type
     static let getTypeInfo (t : Type) =
@@ -267,6 +272,18 @@ type Serializer<'T> private() =
         |> Seq.cast
         |> Seq.fold write None
         |> ignore
+
+    /// Writer function for integer arrays
+    and writeIntArray (writer : TextWriter) (value : obj) =
+        let array : int [] = unbox value
+        array
+        |> Array.iter (fun elem -> writeTag writer "item" elem ValueTypeSerializer.writeInt32)
+
+    /// Writer function for string arrays
+    and writeStrArray (writer : TextWriter) (value : obj) =
+        let array : string [] = unbox value
+        array
+        |> Array.iter (fun elem -> writeTag writer "item" elem ValueTypeSerializer.writeStringObject)
 
     /// Try to determine a enumerable serialization function
     and getEnumerableWriter (t : Type) =
@@ -309,13 +326,15 @@ type Serializer<'T> private() =
                 Some writeClass
         else None
 
+    /// Try to determine a writer function for a dictionary
     and getDictionaryWriter (t : Type) =
         if t.HasInterface(typeof<IDictionary>) ||
             t.IsAssignableFrom(typeof<IDictionary>) then
-            Some writeIDictionary
+            Some writeDictionary
         else None
 
-    and writeIDictionary (writer : TextWriter) (value : obj) =
+    /// Writer function for a dictionary
+    and writeDictionary (writer : TextWriter) (value : obj) =
         let map : IDictionary = unbox value
         let keyWriter : (WriterFunc option) ref = ref None
         let valueWriter : (WriterFunc option) ref = ref None
@@ -341,7 +360,8 @@ type Serializer<'T> private() =
                 if t.IsArray then
                     if t = typeof<byte[]> then (func ValueTypeSerializer.writeBytes)
                     elif t = typeof<char[]> then (func ValueTypeSerializer.writeChars)
-                    // TODO: often used arrays like string[] and int[]
+                    elif t = typeof<int[]> then (func writeIntArray)
+                    elif t = typeof<string[]> then (func writeStrArray)
                     else none
                 else none
             let! dictWriter = fun () -> getDictionaryWriter t

@@ -77,6 +77,11 @@ module SerializationTests =
         serialize dict |> should equal "<dictionary><key>42</key><value>foo</value><key>200</key><value>bar</value></dictionary>"
 
     [<Test>]
+    let serializeArray01() =
+        let array = [| 35; 200; 42 |]
+        serialize array |> should equal "<array><item>35</item><item>200</item><item>42</item></array>"
+
+    [<Test>]
     let compareSerialization01() =
         let cls = ContractClass(V1 = "foo", V2 = 42)
         contractSerialize cls |> should equal "<ContractClass><V1>foo</V1><V2>42</V2></ContractClass>"
