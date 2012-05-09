@@ -82,6 +82,26 @@ module SerializationTests =
         serialize array |> should equal "<array><item>35</item><item>200</item><item>42</item></array>"
 
     [<Test>]
+    let serializeNestedClass01() =
+        let cls = NestedClass(V1 = "foobar", V2 = TestClass2(V1 = "bar foo", V2 = 200))
+        serialize cls |> should equal "<nestedClass><v1>foobar</v1><v2><v1>bar foo</v1><v2>200</v2></v2></nestedClass>"
+
+    [<Test>]
+    let serializeNestedClass02() =
+        let cls = NestedClass2(V1 = "foobar", V2 = NestedClass2(V1 = "barfoo"))
+        serialize cls |> should equal "<nestedClass2><v1>foobar</v1><v2><v1>barfoo</v1></v2></nestedClass2>"
+
+    [<Test>]
+    let serializeNestedClass03() =
+        let cls = NestedClass2(V1 = "foobar", V2 = NestedClass2(V1 = "barfoo", V2 = NestedClass2(V1 = "ham eggs")))
+        serialize cls |> should equal "<nestedClass2><v1>foobar</v1><v2><v1>barfoo</v1><v2><v1>ham eggs</v1></v2></v2></nestedClass2>"
+
+    [<Test>]
+    let serializeNestedClass04() =
+        let cls = NestedClass2(V1 = "foobar", V2 = NestedClass2(V1 = "barfoo", V2 = NestedClass2()))
+        serialize cls |> should equal "<nestedClass2><v1>foobar</v1><v2><v1>barfoo</v1><v2></v2></v2></nestedClass2>"
+
+    [<Test>]
     let compareSerialization01() =
         let cls = ContractClass(V1 = "foo", V2 = 42)
         contractSerialize cls |> should equal "<ContractClass><V1>foo</V1><V2>42</V2></ContractClass>"

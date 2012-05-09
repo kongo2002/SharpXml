@@ -29,6 +29,29 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
+    type NestedClass() =
+
+        let mutable v1 = Unchecked.defaultof<string>
+        let mutable v2 = Unchecked.defaultof<TestClass2>
+
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
+    type NestedClass2() =
+
+        let mutable v1 = Unchecked.defaultof<string>
+        let mutable v2 = Unchecked.defaultof<NestedClass2>
+
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
 
     [<DataContract(Name = "ContractClass", Namespace = "")>]
     type ContractClass() =
