@@ -34,7 +34,12 @@ module ValueTypeSerializer =
         else toXsdFormat date
 
     let writeString (writer : TextWriter) (content : string) =
-        writer.Write(content)
+        let inline sanitize c =
+            match c with
+            | '<' -> writer.Write("&lt;")
+            | '>' -> writer.Write("&gt;")
+            | _ -> writer.Write(c)
+        Seq.iter sanitize content
 
     let nullableWriter writer value func =
         if value <> null then func writer value
@@ -229,7 +234,7 @@ module Serializer =
         elif t = typeof<Type> then Some ValueTypeSerializer.writeType
         else None
 
-    let writeEmpty (writer : TextWriter) _ = ()
+    let writeEmpty _ _ = ()
 
     let writeAbstractProperties (writer : TextWriter) (value : obj) =
         ()

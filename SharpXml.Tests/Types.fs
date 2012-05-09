@@ -68,6 +68,10 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
+    type TestRecord = {
+        Value : int
+        Name : string }
+
     [<DataContract(Name = "ContractClass2", Namespace = "")>]
     type ContractClass2() =
 

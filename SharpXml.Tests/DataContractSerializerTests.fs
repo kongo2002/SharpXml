@@ -54,3 +54,9 @@ module DataContractSerializerTests =
         let special = "foo\r\nbar"
         let cls = TestClass(200, special)
         contractSerialize cls |> should equal "<Types.TestClass><v1>200</v1><v2>foo\r\nbar</v2></Types.TestClass>"
+
+    [<Test>]
+    let serializeSpecialChars02() =
+        let special = "</v2>"
+        let cls = TestClass(210, special)
+        contractSerialize cls |> should equal "<Types.TestClass><v1>210</v1><v2>&lt;/v2&gt;</v2></Types.TestClass>"

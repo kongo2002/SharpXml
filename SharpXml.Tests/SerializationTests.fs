@@ -75,10 +75,26 @@ module SerializationTests =
         serialize cls |> should equal "<nestedClass2><v1>foobar</v1><v2><v1>barfoo</v1><v2></v2></v2></nestedClass2>"
 
     [<Test>]
+    let serializeRecord01() =
+        let record = { Value = 99; Name = "ham & eggs" }
+        serialize record |> should equal "<testRecord><value>99</value><name>ham & eggs</name></testRecord>"
+
+    [<Test>]
+    let serializeTuple01() =
+        let tuple = 406, "foo bar test"
+        serialize tuple |> should equal "<tuple><item1>406</item1><item2>foo bar test</item2></tuple>"
+
+    [<Test>]
     let serializeSpecialChars01() =
         let special = "foo\r\nbar"
         let cls = TestClass(305, special)
         serialize cls |> should equal "<testClass><v1>305</v1><v2>foo\r\nbar</v2></testClass>"
+
+    [<Test>]
+    let serializeSpecialChars02() =
+        let special = "</v2>"
+        let cls = TestClass(210, special)
+        serialize cls |> should equal "<testClass><v1>210</v1><v2>&lt;/v2&gt;</v2></testClass>"
 
     [<Test>]
     let serializeNonPrintable01() =
