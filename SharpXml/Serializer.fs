@@ -193,80 +193,71 @@ open SharpXml.Extensions
 
 /// Record type containing the type specific information
 /// for the first element to serialize
-type internal TypeInfo = {
+type TypeInfo = {
     Type : Type
     OriginalName : string
     ClsName : string }
 
 /// Record type containing the serialization information
 /// for a specific property member
-type internal PropertyWriterInfo<'T> = {
+type PropertyWriterInfo = {
     Info : PropertyInfo
     OriginalName : string
     ClsName : string
-    GetFunc : Reflection.GetterFunc<'T>
+    GetFunc : Reflection.GetterFunc
     WriteFunc : WriterFunc option
     Default : obj }
 
 /// Serialization logic
-type Serializer<'T> private() =
+module Serializer =
 
-    static let propertyCache = ref (Dictionary<Type, PropertyWriterInfo<'T>[]>())
-    static let serializerCache = ref (Dictionary<Type, WriterFunc>())
-    static let typeInfoCache = ref (Dictionary<Type, TypeInfo>())
-
-    static let serializerGenType = typedefof<Serializer<_>>
-
-    /// Call the generic 'determineWriter' function via reflection
-    static let genericDetermineWriter (t : Type) =
-        let flags = BindingFlags.NonPublic ||| BindingFlags.Static
-        let generic = serializerGenType.MakeGenericType([| t |])
-        let mtd = generic.GetMethod("determineWriter", flags)
-        mtd.Invoke(null, [| t |]) :?> WriterFunc option
+    let propertyCache = ref (Dictionary<Type, PropertyWriterInfo[]>())
+    let serializerCache = ref (Dictionary<Type, WriterFunc>())
+    let typeInfoCache = ref (Dictionary<Type, TypeInfo>())
 
     /// General purpose XML tags writer function
-    static let writeTag (w : TextWriter) (name : string) (value : obj) writeFunc =
+    let writeTag (w : TextWriter) (name : string) (value : obj) writeFunc =
         w.Write("<{0}>", name)
         writeFunc w value
         w.Write("</{0}>", name)
 
     /// Try to determine one of a special serialization
     /// function, i.e. Exception, Uri
-    static let getSpecialWriters (t : Type) =
+    let getSpecialWriters (t : Type) =
         if t = typeof<Uri> then Some ValueTypeSerializer.writeStringObject
         elif t = typeof<Exception> then Some ValueTypeSerializer.writeException
         elif t = typeof<Type> then Some ValueTypeSerializer.writeType
         else None
 
-    static let writeEmpty (writer : TextWriter) _ = ()
+    let writeEmpty (writer : TextWriter) _ = ()
 
-    static let writeAbstractProperties (writer : TextWriter) (value : obj) =
+    let writeAbstractProperties (writer : TextWriter) (value : obj) =
         ()
 
     /// Determine the name of the TypeInfo based on the given type
-    static let getTypeName (t : Type) =
+    let getTypeName (t : Type) =
         if t.IsArray then "array"
         else t.Name.ToCamelCase() |> Utils.removeGenericSuffix
 
     /// Build a TypeInfo object based on the given Type
-    static let buildTypeInfo t =
+    let buildTypeInfo t =
         { Type = t
           OriginalName = t.Name
           ClsName = getTypeName t }
 
     /// Get the TypeInfo object associated with the given Type
-    static let getTypeInfo (t : Type) =
+    let getTypeInfo (t : Type) =
         match (!typeInfoCache).TryGetValue t with
         | true, ti -> ti
         | _ -> Atom.updateAtomDict typeInfoCache t (buildTypeInfo t)
 
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
-    static let rec buildPropertyWriterInfo (propInfo : PropertyInfo) =
+    let rec buildPropertyWriterInfo (propInfo : PropertyInfo) =
         { Info = propInfo
           OriginalName = propInfo.Name
           ClsName = propInfo.Name.ToCamelCase()
-          GetFunc = Reflection.getGetter propInfo
+          GetFunc = Reflection.getObjGetter propInfo
           WriteFunc = determineWriter propInfo.PropertyType
           Default = Reflection.getDefaultValue propInfo.PropertyType }
 
@@ -384,20 +375,15 @@ type Serializer<'T> private() =
 
     /// Get the writer function to serialize the
     /// specified type
-    static let getWriterFunc (t : Type) =
+    let getWriterFunc (t : Type) =
         match (!serializerCache).TryGetValue t with
         | true, serializer -> serializer
         | _ ->
-            match genericDetermineWriter t with
+            match determineWriter t with
             | Some s -> Atom.updateAtomDict serializerCache t s
             | _ -> invalidOp <| sprintf "No serializer available for type '%s'" t.FullName
 
-    static let writeType (writer : TextWriter) (element : 'T) =
-        let tInfo = getTypeInfo typeof<'T>
-        writeTag writer tInfo.ClsName element (getWriterFunc typeof<'T>)
-
-    static member WriteType(writer, element) =
-        writeType writer element
-
-    static member GetWriterFunc() =
-        getWriterFunc typeof<'T>
+    /// Write the given type using the appropriate serialization logic
+    let writeType<'a> (writer : TextWriter) (element : 'a) =
+        let tInfo = getTypeInfo typeof<'a>
+        writeTag writer tInfo.ClsName element (getWriterFunc typeof<'a>)

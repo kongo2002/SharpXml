@@ -20,6 +20,6 @@ type XmlSerializer() =
         let sb = StringBuilder()
         use writer = new StringWriter(sb, CultureInfo.InvariantCulture)
         if XmlConfig.Instance.WriteXmlHeader then writer.Write("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
-        Serializer<'T>.WriteType(writer, element)
+        Serializer.writeType writer element
         sb.ToString()
 
