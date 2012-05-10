@@ -45,6 +45,7 @@
     <Compile Include="Reflection.fs" />
     <Compile Include="TypeParser.fs" />
     <Compile Include="Serializer.fs" />
+    <Compile Include="Deserializer.fs" />
     <Compile Include="XmlConfig.fs" />
     <Compile Include="XmlSerializer.fs" />
   </ItemGroup>
