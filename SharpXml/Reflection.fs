@@ -12,8 +12,6 @@ module Reflection =
     open SharpXml.Extensions
 
     type EmptyConstructor = delegate of unit -> obj
-    type SetValueFunc = delegate of obj * obj -> unit
-    type ParseFunc = delegate of string -> obj
     type GetterFunc = delegate of obj -> obj
     type GetterFunc<'T> = delegate of 'T -> obj
     type SetterFunc = delegate of obj * obj -> unit

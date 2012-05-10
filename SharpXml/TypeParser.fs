@@ -13,13 +13,17 @@ module TypeParser =
         | TagName of int
         | InTag of string
 
-    let mutable cachedParsers = Dictionary<Type, ParserFunc>()
+    let whitespaceChars =
+        let whitespace = [ ' '; '\t'; '\r'; '\n' ]
+        let max =  whitespace |> Seq.map int |> Seq.max
+        Array.init (max+1) (fun c -> List.exists ((=) (char c)) whitespace)
 
     let parseRawString (input : string) =
         box input
 
-    let isWhitespace c =
-        c = ' ' || c = '\t' || c = '\r' || c = '\n'
+    let isWhitespace (c : char) =
+        let i = int c
+        i < whitespaceChars.Length && whitespaceChars.[i]
 
     let rec skipWhitespace (input : string) index =
         if index >= input.Length || not (isWhitespace input.[index]) then index
@@ -51,21 +55,3 @@ module TypeParser =
                 | InTag tag ->
                     if input.[i] = '>' then i, tag else inner next state
         inner start Start
-
-    let parseArray (t : Type) (input : string) =
-        if not t.IsArray then
-            let typeName = t.FullName
-            failwithf "Type %s is not an array type" typeName
-
-    let getParser targetType =
-        match cachedParsers.TryGetValue targetType with
-        | true, p -> Some p
-        | _ ->
-            let nullable = Nullable.GetUnderlyingType(targetType)
-            let t = if nullable = null then targetType else nullable
-            if t = typeof<string> then
-                Some <| ParserFunc parseRawString
-            elif t.IsArray then
-                Some <| ParserFunc (fun x -> Enum.Parse(t, x, true))
-            else
-                None

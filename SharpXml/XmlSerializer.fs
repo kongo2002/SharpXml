@@ -12,8 +12,8 @@ type XmlSerializer() =
 
     static member DeserializeFromString<'T> input : 'T =
         if empty input then Unchecked.defaultof<'T> else
-            match TypeParser.getParser typeof<'T> with
-            | Some parser -> unbox parser.Invoke input
+            match Deserializer.determineReader typeof<'T> with
+            | Some reader -> reader input :?> 'T
             | _ -> Unchecked.defaultof<'T>
 
     static member SerializeToString<'T> (element : 'T) =

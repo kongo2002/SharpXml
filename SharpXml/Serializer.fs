@@ -186,27 +186,17 @@ module ValueTypeSerializer =
             | TypeCode.UInt64 -> Some writeUInt64
             | _ -> None
 
-open System
-open System.Collections
-open System.Collections.Generic
-open System.IO
-open System.Reflection
-open System.Text.RegularExpressions
-
-open SharpXml.Attempt
-open SharpXml.Extensions
-
 /// Record type containing the type specific information
 /// for the first element to serialize
 type TypeInfo = {
-    Type : Type
+    Type : System.Type
     OriginalName : string
     ClsName : string }
 
 /// Record type containing the serialization information
 /// for a specific property member
 type PropertyWriterInfo = {
-    Info : PropertyInfo
+    Info : System.Reflection.PropertyInfo
     OriginalName : string
     ClsName : string
     GetFunc : Reflection.GetterFunc
@@ -215,6 +205,16 @@ type PropertyWriterInfo = {
 
 /// Serialization logic
 module Serializer =
+
+    open System
+    open System.Collections
+    open System.Collections.Generic
+    open System.IO
+    open System.Reflection
+    open System.Text.RegularExpressions
+
+    open SharpXml.Attempt
+    open SharpXml.Extensions
 
     let propertyCache = ref (Dictionary<Type, PropertyWriterInfo[]>())
     let serializerCache = ref (Dictionary<Type, WriterFunc>())
@@ -302,11 +302,10 @@ module Serializer =
         match (!propertyCache).TryGetValue t with
         | true, props -> props
         | _ ->
-            let buildWriter = buildPropertyWriterInfo
             let props =
                 Reflection.getSerializableProperties t
                 |> Seq.filter (fun p -> p.GetIndexParameters().Length = 0)
-                |> Seq.map buildWriter
+                |> Seq.map buildPropertyWriterInfo
                 |> Array.ofSeq
             Atom.updateAtomDict propertyCache t props
 
@@ -317,7 +316,7 @@ module Serializer =
         |> Seq.iter (fun p ->
             match p.WriteFunc with
             | Some write ->
-                let v = p.GetFunc.Invoke(value :?> 'T)
+                let v = p.GetFunc.Invoke(value)
                 if v <> null then
                     writeTag writer p.ClsName v write
             | _ -> ())
