@@ -14,9 +14,9 @@ module TypeParser =
         | InTag of string
 
     let whitespaceChars =
-        let whitespace = [ ' '; '\t'; '\r'; '\n' ]
-        let max =  whitespace |> Seq.map int |> Seq.max
-        Array.init (max+1) (fun c -> List.exists ((=) (char c)) whitespace)
+        let whitespace = [| ' '; '\t'; '\r'; '\n' |]
+        let max =  Array.max whitespace |> int
+        Array.init (max+1) (fun c -> Array.exists ((=) (char c)) whitespace)
 
     let parseRawString (input : string) =
         box input
