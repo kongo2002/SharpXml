@@ -8,6 +8,7 @@ type XmlConfig private() =
     let mutable excludeTypeInfo = true
     let mutable emitCamelCaseNames = false
     let mutable writeXmlHeader = false
+    let mutable throwOnError = false
 
     static let mutable instance = lazy(XmlConfig())
 
@@ -36,3 +37,8 @@ type XmlConfig private() =
     member x.WriteXmlHeader
         with get() = writeXmlHeader
         and set(v) = writeXmlHeader <- v
+
+    /// Whether to throw exceptions on deserialization errors
+    member x.ThrowOnError
+        with get() = throwOnError
+        and set(v) = throwOnError <- v

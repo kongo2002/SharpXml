@@ -31,8 +31,8 @@ module TypeParser =
 
     let eatTag (input : string) index =
         let start = skipWhitespace input index
+        let len = input.Length
         let rec inner i state =
-            let len = input.Length
             let next = i + 1
             if next > len then 0, null else
                 match state with
@@ -55,3 +55,19 @@ module TypeParser =
                 | InTag tag ->
                     if input.[i] = '>' then i, tag else inner next state
         inner start Start
+
+    let eatContent (input : string) index =
+        let start = index
+        let len = input.Length
+        let replace (f : string) (t : string) (i : string) =
+            i.Replace(f, t)
+        let rec inner i =
+            let next = i + 1
+            // end of string, this is probably an error
+            if next > len then input.Substring(start)
+            elif input.[i] = '<' then input.Substring(start, i - start)
+            else inner next
+        // TODO: this replacements probably could be done more performant,
+        // like while doing the search for the end tag
+        inner index |> replace "&gt;" ">" |> replace "&lt;" "<"
+

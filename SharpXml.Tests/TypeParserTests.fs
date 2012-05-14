@@ -34,3 +34,13 @@ module TypeParserTests =
         let index, value = TypeParser.eatTag input 0
         value |> should equal "fooBar"
         index |> should equal 11
+
+    [<Test>]
+    let eatContent01() =
+        let input = "<one>this is a small test</test>"
+        TypeParser.eatContent input 5 |> should equal "this is a small test"
+
+    [<Test>]
+    let eatContent02() =
+        let input = "<one>this is &lt;b&gt;a&lt;/b&gt; small test</test>"
+        TypeParser.eatContent input 5 |> should equal "this is <b>a</b> small test"
