@@ -16,7 +16,7 @@ module TypeParser =
         | Start
         | TagStart
         | TagName of int
-        | InTag of string
+        | InTag of string * bool
 
     let whitespaceChars =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
@@ -49,19 +49,22 @@ module TypeParser =
                     else
                         inner next (TagName i)
                 | TagName s ->
-                    if isWhitespace input.[i] || input.[i] = '/' then
+                    if isWhitespace input.[i] then
                         let tag = input.Substring(s, (i-s))
-                        inner next (InTag tag)
+                        inner next (InTag (tag, false))
+                    elif input.[i] = '/' then
+                        let tag = input.Substring(s, (i-s))
+                        inner next (InTag (tag, true))
                     elif input.[i] = '>' then
                         let tag = input.Substring(s, (i-s))
-                        let isSingle = input.[i-1] = '/'
-                        i, tag, isSingle
+                        i, tag, false
                     else
                         inner next state
-                | InTag tag ->
+                | InTag (tag, isSingle) ->
                     if input.[i] = '>' then
-                        let isSingle = input.[i-1] = '/'
                         i, tag, isSingle
+                    elif input.[i] = '/' then
+                        inner next (InTag(tag, true))
                     else inner next state
         inner start Start
 
@@ -73,19 +76,39 @@ module TypeParser =
         let rec inner i =
             let next = i + 1
             // end of string, this is probably an error
-            if next > len then input.Substring(start)
-            elif input.[i] = '<' then input.Substring(start, i - start)
+            if next > len then input.Substring(start), len
+            elif input.[i] = '<' then
+                let endIndex = i - start
+                input.Substring(start, endIndex), endIndex
             else inner next
         // TODO: this replacements probably could be done more performant,
         // like while doing the search for the end tag
-        inner index |> replace "&gt;" ">" |> replace "&lt;" "<"
+        let result, index = inner index
+        result |> replace "&gt;" ">" |> replace "&lt;" "<", index
 
-    let parse (input : string) index =
-        let start = skipWhitespace input index
-        if input.[start] <> '<' then failwith "XML content does not start with '<'"
-        let inner i elements =
-            match eatTag input i with
-            | _, null, _ -> failwith "Unable to read XML tag"
-            | x, name, single -> ()
-        inner start []
+    let parseAST (input : string) index =
+        let db = System.Diagnostics.Debug.WriteLine
+        let len = input.Length
+        let rec inner i level elements =
+            sprintf "Inner %d %d %A" i level elements |> db
+            let next = i + 1
+            if level = 0 || next >= len then elements, next
+            else
+                let current = skipWhitespace input i
+                match eatTag input current with
+                | x, _, _ when (x+1) >= len -> elements, x
+                | _, null, _ -> failwith "Unable to read XML tag"
+                | x, name, false ->
+                    if input.[x+1] = '<' then
+                        let elems, endIndex = inner (x+1) 1 []
+                        inner endIndex (level + 1) (GroupElem(name, elems) :: elements)
+                    else
+                        // start of plain content
+                        let content, index = eatContent input (x+1)
+                        let endIndex, _, _ = eatTag input index
+                        inner endIndex (level - 1) (ContentElem(name, content) :: elements)
+                | x, name, true ->
+                    inner x level (SingleElem name :: elements)
+        if input.[index] <> '<' then failwith "XML content does not start with '<'"
+        inner index 1 []
 

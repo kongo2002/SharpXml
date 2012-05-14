@@ -2,10 +2,13 @@
 
 module TypeParserTests =
 
+    open System.Diagnostics
+
     open NUnit.Framework
 
     open SharpXml
     open SharpXml.Tests.TestHelpers
+    open SharpXml.TypeParser
 
     [<Test>]
     let eatTag01() =
@@ -41,11 +44,52 @@ module TypeParserTests =
         single |> should equal false
 
     [<Test>]
+    let eatTag05() =
+        let input = "< fooBar / >"
+        let index, value, single = TypeParser.eatTag input 0
+        value |> should equal "fooBar"
+        index |> should equal 11
+        single |> should equal true
+
+    [<Test>]
     let eatContent01() =
         let input = "<one>this is a small test</test>"
-        TypeParser.eatContent input 5 |> should equal "this is a small test"
+        let result, _ = TypeParser.eatContent input 5
+        result |> should equal "this is a small test"
 
     [<Test>]
     let eatContent02() =
         let input = "<one>this is &lt;b&gt;a&lt;/b&gt; small test</test>"
-        TypeParser.eatContent input 5 |> should equal "this is <b>a</b> small test"
+        let result, _ = TypeParser.eatContent input 5
+        result |> should equal "this is <b>a</b> small test"
+
+    let writeAst ast =
+        let rec inner ast level =
+            let debug str = System.Diagnostics.Debug.WriteLine(System.String(' ', level*2) + str)
+            match ast with
+            | ContentElem(name, content) :: t ->
+                sprintf "Content(%s): %s" name content |> debug
+                inner t level
+            | GroupElem(name, elems) :: t ->
+                sprintf "Group(%s):" name |> debug
+                inner elems (level+1)
+                inner t level
+            | SingleElem(name) :: t ->
+                sprintf "Single(%s)" name |> debug
+                inner t level
+            | [] -> ()
+        inner ast 0
+
+    [<Test>]
+    let parseAST01() =
+        let input = "<one>this is a small test</one>"
+        let result, _ = TypeParser.parseAST input 0
+        writeAst result
+        result |> should equal [ContentElem("one", "this is a small test")]
+
+    [<Test>]
+    let parseAST02() =
+        let input = "<one><two>this is a small test</two></one>"
+        let result, _ = TypeParser.parseAST input 0
+        writeAst result
+        result |> should equal [GroupElem("one", [ContentElem("two", "this is a small test")])]
