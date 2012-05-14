@@ -7,6 +7,11 @@ type ParserFunc = delegate of string -> obj
 
 module TypeParser =
 
+    type XmlElem =
+        | SingleElem of string
+        | ContentElem of string * string
+        | GroupElem of string * XmlElem list
+
     type ParseState =
         | Start
         | TagStart
@@ -34,7 +39,7 @@ module TypeParser =
         let len = input.Length
         let rec inner i state =
             let next = i + 1
-            if next > len then 0, null else
+            if next > len then 0, null, false else
                 match state with
                 | Start ->
                     if input.[i] = '<' then inner next TagStart else inner next state
@@ -49,11 +54,15 @@ module TypeParser =
                         inner next (InTag tag)
                     elif input.[i] = '>' then
                         let tag = input.Substring(s, (i-s))
-                        i, tag
+                        let isSingle = input.[i-1] = '/'
+                        i, tag, isSingle
                     else
                         inner next state
                 | InTag tag ->
-                    if input.[i] = '>' then i, tag else inner next state
+                    if input.[i] = '>' then
+                        let isSingle = input.[i-1] = '/'
+                        i, tag, isSingle
+                    else inner next state
         inner start Start
 
     let eatContent (input : string) index =
@@ -70,4 +79,13 @@ module TypeParser =
         // TODO: this replacements probably could be done more performant,
         // like while doing the search for the end tag
         inner index |> replace "&gt;" ">" |> replace "&lt;" "<"
+
+    let parse (input : string) index =
+        let start = skipWhitespace input index
+        if input.[start] <> '<' then failwith "XML content does not start with '<'"
+        let inner i elements =
+            match eatTag input i with
+            | _, null, _ -> failwith "Unable to read XML tag"
+            | x, name, single -> ()
+        inner start []
 

@@ -10,30 +10,35 @@ module TypeParserTests =
     [<Test>]
     let eatTag01() =
         let input = " foo <testTag rest/> <hamEggs/>"
-        let index, value = TypeParser.eatTag input 0
+        let index, value, single = TypeParser.eatTag input 0
         value |> should equal "testTag"
         index |> should equal 19
+        single |> should equal true
 
     [<Test>]
     let eatTag02() =
         let input = "<testTag />"
-        let index, value = TypeParser.eatTag input 0
+        let index, value, single = TypeParser.eatTag input 0
         value |> should equal "testTag"
         index |> should equal 10
+        single |> should equal true
+
 
     [<Test>]
     let eatTag03() =
         let input = "< fooBar /> < testTag />"
-        let index, value = TypeParser.eatTag input 10
+        let index, value, single = TypeParser.eatTag input 10
         value |> should equal "testTag"
         index |> should equal 23
+        single |> should equal true
 
     [<Test>]
     let eatTag04() =
         let input = "xxxx<fooBar>xxxxxxxxxx"
-        let index, value = TypeParser.eatTag input 0
+        let index, value, single = TypeParser.eatTag input 0
         value |> should equal "fooBar"
         index |> should equal 11
+        single |> should equal false
 
     [<Test>]
     let eatContent01() =
