@@ -106,7 +106,7 @@ module TypeParserTests =
         inner ast 0
 
     let parse input =
-        let result, _ = TypeParser.parseAST input 0
+        let result = TypeParser.parseAST input 0
         writeAst result
         result
 

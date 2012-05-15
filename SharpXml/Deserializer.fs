@@ -13,7 +13,7 @@ type PropertyReaderInfo = {
 /// of a specific type and all its members that have to deserialized
 type TypeBuilderInfo = {
     Type : System.Type
-    Props : Map<string, PropertyReaderInfo>
+    Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
     Ctor : Reflection.EmptyConstructor }
 
 /// Deserialization logic
@@ -29,6 +29,7 @@ module Deserializer =
     /// BindingFlags to find the static parse method
     let parseMethodFlags = BindingFlags.Public ||| BindingFlags.Static
 
+    /// TypeBuilder dictionary
     let propertyCache = ref (Dictionary<Type, TypeBuilderInfo>())
 
     /// Try to find a constructor of the specified type
@@ -64,9 +65,9 @@ module Deserializer =
         let map =
             Reflection.getSerializableProperties t
             |> Seq.map (fun p -> p.Name, buildReaderInfo p)
-            |> Map.ofSeq
+            |> dict
         { Type = t
-          Props = map
+          Props = System.Collections.Generic.Dictionary(map, StringComparer.OrdinalIgnoreCase)
           Ctor = Reflection.getEmptyConstructor t }
 
     and getTypeBuilderInfo (t : Type) =
@@ -79,7 +80,30 @@ module Deserializer =
     and readClass (builder : TypeBuilderInfo) (input : string) =
         let len = input.Length
         let inst = builder.Ctor.Invoke()
-        null
+        let content = TypeParser.parseAST input 0
+        let rec inner elems =
+            match elems with
+            | TypeParser.GroupElem(name, subElements) :: t ->
+                match builder.Props.TryGetValue name with
+                | true, prop ->
+                    // TODO
+                    inner t
+                | _ -> inner t
+            | TypeParser.ContentElem(name, content) :: t ->
+                match builder.Props.TryGetValue name with
+                | true, prop when prop.Reader.IsSome ->
+                    let reader = prop.Reader.Value
+                    printfn "Prop %s: %A" prop.Info.Name (reader(content))
+                    inner t
+                | _ -> inner t
+            | TypeParser.SingleElem _ :: t->
+                // TODO: maybe we want to set the default value in here
+                inner t
+            | [] -> ()
+        match content with
+        | [ TypeParser.GroupElem(name, subElements) ] -> inner subElements
+        | _ -> inner content
+        inst
 
     and determineReader (t : Type) =
-        None
+        readClass (getTypeBuilderInfo t) |> Some

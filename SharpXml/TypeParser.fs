@@ -110,21 +110,25 @@ module TypeParser =
             else
                 let current = skipWhitespace input i
                 match eatTag input current with
-                | _, null, _ -> failwith "Unable to read XML tag"
+                // open tag
                 | x, name, Open when len > x + 1 ->
                     if input.[x+1] = '<' then
+                        // nested group element
                         let elems, endIndex = inner (x+1) 1 []
                         inner endIndex level (GroupElem(name, elems) :: elements)
                     else
-                        // start of plain content
+                        // plain content tag
                         let content, ind = eatContent input (x+1)
                         let contentEnd, _, _ = eatTag input ind
                         inner (contentEnd+1) level (ContentElem(name, content) :: elements)
+                // single tag
                 | x, name, Single ->
                     inner (x+1) level (SingleElem name :: elements)
+                // closing tag
                 | x, name, Close ->
                     inner x (level-1) elements
+                | _, null, _ -> failwith "Unable to read XML tag"
                 | _ -> failwith "number of opening and closing XML tags does not match"
         if input.[index] <> '<' then failwith "XML content does not start with '<'"
-        inner index 1 []
+        inner index 1 [] |> fst
 
