@@ -100,7 +100,7 @@ module TypeParser =
                 | _, null, _ -> failwith "Unable to read XML tag"
                 | x, name, false ->
                     if input.[x+1] = '<' then
-                        let elems, endIndex = inner (x+1) 1 []
+                        let elems, endIndex = inner (x+1) 2 []
                         inner endIndex (level + 1) (GroupElem(name, elems) :: elements)
                     else
                         // start of plain content
