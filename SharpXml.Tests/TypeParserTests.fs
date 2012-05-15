@@ -80,16 +80,23 @@ module TypeParserTests =
             | [] -> ()
         inner ast 0
 
+    let parse input =
+        let result, _ = TypeParser.parseAST input 0
+        writeAst result
+        result
+
     [<Test>]
     let parseAST01() =
         let input = "<one>this is a small test</one>"
-        let result, _ = TypeParser.parseAST input 0
-        writeAst result
-        result |> should equal [ContentElem("one", "this is a small test")]
+        parse input |> should equal [ContentElem("one", "this is a small test")]
 
     [<Test>]
     let parseAST02() =
         let input = "<one><two>this is a small test</two></one>"
-        let result, _ = TypeParser.parseAST input 0
-        writeAst result
-        result |> should equal [GroupElem("one", [ContentElem("two", "this is a small test")])]
+        parse input |> should equal [GroupElem("one", [ContentElem("two", "this is a small test")])]
+
+    [<Test>]
+    let parseAST03() =
+        let input = "<one><two>this is a small test</two><three/></one>"
+        parse input
+        |> should equal [ GroupElem("one", [ SingleElem "three"; ContentElem("two", "this is a small test") ]) ]
