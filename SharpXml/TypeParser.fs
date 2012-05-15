@@ -89,39 +89,38 @@ module TypeParser =
             // end of string, this is probably an error
             if next > len then input.Substring(start), len
             elif input.[i] = '<' then
-                let endIndex = i - start
-                input.Substring(start, endIndex), endIndex
+                let length = i - start
+                input.Substring(start, length), i
             else inner next
         // TODO: this replacements probably could be done more performant,
         // like while doing the search for the end tag
-        let result, index = inner index
-        result |> replace "&gt;" ">" |> replace "&lt;" "<", index
+        let result, endIndex = inner index
+        result |> replace "&gt;" ">" |> replace "&lt;" "<", endIndex
 
     let parseAST (input : string) index =
         let db = System.Diagnostics.Debug.WriteLine
         let len = input.Length
         let rec inner i level elements =
-            sprintf "Inner %d %d %A" i level elements |> db
             let next = i + 1
             if level = 0 || next >= len then elements, next
             else
                 let current = skipWhitespace input i
                 match eatTag input current with
-                | x, _, _ when (x+1) >= len -> elements, x
                 | _, null, _ -> failwith "Unable to read XML tag"
-                | x, name, Open ->
+                | x, name, Open when len > x + 1 ->
                     if input.[x+1] = '<' then
-                        let elems, endIndex = inner (x+1) 2 []
-                        inner endIndex (level - 1) (GroupElem(name, elems) :: elements)
+                        let elems, endIndex = inner (x+1) 1 []
+                        inner endIndex level (GroupElem(name, elems) :: elements)
                     else
                         // start of plain content
-                        let content, index = eatContent input (x+1)
-                        let endIndex, _, _ = eatTag input index
-                        inner endIndex (level - 1) (ContentElem(name, content) :: elements)
+                        let content, ind = eatContent input (x+1)
+                        let contentEnd, _, _ = eatTag input ind
+                        inner (contentEnd+1) level (ContentElem(name, content) :: elements)
                 | x, name, Single ->
                     inner (x+1) level (SingleElem name :: elements)
                 | x, name, Close ->
-                    inner (x+1) (level-1) elements
+                    inner x (level-1) elements
+                | _ -> failwith "number of opening and closing XML tags does not match"
         if input.[index] <> '<' then failwith "XML content does not start with '<'"
         inner index 1 []
 
