@@ -39,6 +39,8 @@ module TypeParser =
         if index >= input.Length || not (isWhitespace input.[index]) then index
         else skipWhitespace input (index + 1)
 
+    /// Eat a XML tag and return its name, the end index and
+    /// type being one of Open, Close or Single
     let eatTag (input : string) index =
         let start = skipWhitespace input index
         let len = input.Length
@@ -79,26 +81,28 @@ module TypeParser =
                     else inner next state
         inner start Start
 
+    /// Eat the content of a XML tag and return the
+    /// string value as well as the end index
     let eatContent (input : string) index =
-        let start = index
         let len = input.Length
         let replace (f : string) (t : string) (i : string) =
             i.Replace(f, t)
         let rec inner i =
             let next = i + 1
             // end of string, this is probably an error
-            if next > len then input.Substring(start), len
+            if next > len then input.Substring(index), len
             elif input.[i] = '<' then
-                let length = i - start
-                input.Substring(start, length), i
+                let length = i - index
+                input.Substring(index, length), i
             else inner next
         // TODO: this replacements probably could be done more performant,
         // like while doing the search for the end tag
         let result, endIndex = inner index
         result |> replace "&gt;" ">" |> replace "&lt;" "<", endIndex
 
+    /// Parse the given input string starting from the specified
+    /// index into an XML AST
     let parseAST (input : string) index =
-        let db = System.Diagnostics.Debug.WriteLine
         let len = input.Length
         let rec inner i level elements =
             let next = i + 1
