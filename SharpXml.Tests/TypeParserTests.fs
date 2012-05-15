@@ -16,7 +16,7 @@ module TypeParserTests =
         let index, value, single = TypeParser.eatTag input 0
         value |> should equal "testTag"
         index |> should equal 19
-        single |> should equal true
+        single |> should equal Single
 
     [<Test>]
     let eatTag02() =
@@ -24,7 +24,7 @@ module TypeParserTests =
         let index, value, single = TypeParser.eatTag input 0
         value |> should equal "testTag"
         index |> should equal 10
-        single |> should equal true
+        single |> should equal Single
 
 
     [<Test>]
@@ -33,7 +33,7 @@ module TypeParserTests =
         let index, value, single = TypeParser.eatTag input 10
         value |> should equal "testTag"
         index |> should equal 23
-        single |> should equal true
+        single |> should equal Single
 
     [<Test>]
     let eatTag04() =
@@ -41,7 +41,7 @@ module TypeParserTests =
         let index, value, single = TypeParser.eatTag input 0
         value |> should equal "fooBar"
         index |> should equal 11
-        single |> should equal false
+        single |> should equal Open
 
     [<Test>]
     let eatTag05() =
@@ -49,7 +49,7 @@ module TypeParserTests =
         let index, value, single = TypeParser.eatTag input 0
         value |> should equal "fooBar"
         index |> should equal 11
-        single |> should equal true
+        single |> should equal Single
 
     [<Test>]
     let eatContent01() =
@@ -100,3 +100,15 @@ module TypeParserTests =
         let input = "<one><two>this is a small test</two><three/></one>"
         parse input
         |> should equal [ GroupElem("one", [ SingleElem "three"; ContentElem("two", "this is a small test") ]) ]
+
+    [<Test>]
+    let parseAST04() =
+        let input = "<one><two>this is a small test</two><three/><four>foo bar</four></one>"
+        parse input
+        |> should equal [ GroupElem("one", [ ContentElem("four", "foo bar"); SingleElem "three"; ContentElem("two", "this is a small test") ]) ]
+
+    [<Test>]
+    let parseAST05() =
+        let input = "<one><two>this is a small test</two><three/><four><five/><six/></four></one>"
+        parse input
+        |> should equal [ GroupElem("one", [ GroupElem("four", [ SingleElem "six"; SingleElem "five" ]); SingleElem "three"; ContentElem("two", "this is a small test") ]) ]

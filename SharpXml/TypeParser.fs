@@ -12,11 +12,16 @@ module TypeParser =
         | ContentElem of string * string
         | GroupElem of string * XmlElem list
 
+    type TagType =
+        | Open
+        | Single
+        | Close
+
     type ParseState =
         | Start
         | TagStart
-        | TagName of int
-        | InTag of string * bool
+        | TagName of int * bool
+        | InTag of string * TagType
 
     let whitespaceChars =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
@@ -39,32 +44,38 @@ module TypeParser =
         let len = input.Length
         let rec inner i state =
             let next = i + 1
-            if next > len then 0, null, false else
+            if next > len then 0, null, Open else
                 match state with
                 | Start ->
                     if input.[i] = '<' then inner next TagStart else inner next state
                 | TagStart ->
                     if isWhitespace input.[i] then
                         inner next state
+                    elif input.[i] = '/' then
+                        inner (next+1) (TagName(i+1, true))
                     else
-                        inner next (TagName i)
-                | TagName s ->
+                        inner next (TagName(i, false))
+                | TagName(s, close) ->
                     if isWhitespace input.[i] then
-                        let tag = input.Substring(s, (i-s))
-                        inner next (InTag (tag, false))
+                        if not close then
+                            let tag = input.Substring(s, (i-s))
+                            inner next (InTag (tag, Open))
+                        else
+                            inner next state
                     elif input.[i] = '/' then
                         let tag = input.Substring(s, (i-s))
-                        inner next (InTag (tag, true))
+                        inner next (InTag (tag, Single))
                     elif input.[i] = '>' then
                         let tag = input.Substring(s, (i-s))
-                        i, tag, false
+                        let tagType = if close then Close else Open
+                        i, tag, tagType
                     else
                         inner next state
-                | InTag (tag, isSingle) ->
+                | InTag (tag, tagType) ->
                     if input.[i] = '>' then
-                        i, tag, isSingle
+                        i, tag, tagType
                     elif input.[i] = '/' then
-                        inner next (InTag(tag, true))
+                        inner next (InTag(tag, Single))
                     else inner next state
         inner start Start
 
@@ -98,17 +109,19 @@ module TypeParser =
                 match eatTag input current with
                 | x, _, _ when (x+1) >= len -> elements, x
                 | _, null, _ -> failwith "Unable to read XML tag"
-                | x, name, false ->
+                | x, name, Open ->
                     if input.[x+1] = '<' then
                         let elems, endIndex = inner (x+1) 2 []
-                        inner endIndex (level + 1) (GroupElem(name, elems) :: elements)
+                        inner endIndex (level - 1) (GroupElem(name, elems) :: elements)
                     else
                         // start of plain content
                         let content, index = eatContent input (x+1)
                         let endIndex, _, _ = eatTag input index
                         inner endIndex (level - 1) (ContentElem(name, content) :: elements)
-                | x, name, true ->
-                    inner x level (SingleElem name :: elements)
+                | x, name, Single ->
+                    inner (x+1) level (SingleElem name :: elements)
+                | x, name, Close ->
+                    inner (x+1) (level-1) elements
         if input.[index] <> '<' then failwith "XML content does not start with '<'"
         inner index 1 []
 
