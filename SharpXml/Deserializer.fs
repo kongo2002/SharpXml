@@ -1,7 +1,7 @@
 ﻿namespace SharpXml
 
 /// Reader function delegate
-type ReaderFunc = string -> obj
+type ReaderFunc = TypeParser.XmlElem -> obj
 
 /// Record type containing the deserialization information
 /// for a specific property member
@@ -23,26 +23,41 @@ module ValueTypeDeserializer =
 
     open System
 
+    open SharpXml.TypeParser
+
+    let buildValueReader reader = fun xml ->
+        match xml with
+        | ContentElem(_, str) -> reader str
+        | _ -> null
+
     let getEnumReader (t : Type) = fun () ->
-        if t.IsEnum then Some (fun i -> Enum.Parse(t, i)) else None
+        if t.IsEnum then
+            fun i -> Enum.Parse(t, i)
+            |> buildValueReader
+            |> Some
+        else None
 
     let getValueReader (t : Type) = fun () ->
-        match Type.GetTypeCode(t) with
-        | TypeCode.Boolean -> Boolean.Parse >> box |> Some
-        | TypeCode.Byte -> Byte.Parse >> box |> Some
-        | TypeCode.Int16 -> Int16.Parse >> box |> Some
-        | TypeCode.Int32 -> Int32.Parse >> box |> Some
-        | TypeCode.Int64 -> Int64.Parse >> box |> Some
-        | TypeCode.Char -> Char.Parse >> box |> Some
-        | TypeCode.DateTime -> DateTime.Parse >> box |> Some
-        | TypeCode.Decimal -> Decimal.Parse >> box |> Some
-        | TypeCode.Double -> Double.Parse >> box |> Some
-        | TypeCode.SByte -> SByte.Parse >> box |> Some
-        | TypeCode.Single -> Single.Parse >> box |> Some
-        | TypeCode.UInt16 -> UInt16.Parse >> box |> Some
-        | TypeCode.UInt32 -> UInt32.Parse >> box |> Some
-        | TypeCode.UInt64 -> UInt64.Parse >> box |> Some
-        | TypeCode.String -> box |> Some
+        let reader =
+            match Type.GetTypeCode(t) with
+            | TypeCode.Boolean -> Boolean.Parse >> box |> Some
+            | TypeCode.Byte -> Byte.Parse >> box |> Some
+            | TypeCode.Int16 -> Int16.Parse >> box |> Some
+            | TypeCode.Int32 -> Int32.Parse >> box |> Some
+            | TypeCode.Int64 -> Int64.Parse >> box |> Some
+            | TypeCode.Char -> Char.Parse >> box |> Some
+            | TypeCode.DateTime -> DateTime.Parse >> box |> Some
+            | TypeCode.Decimal -> Decimal.Parse >> box |> Some
+            | TypeCode.Double -> Double.Parse >> box |> Some
+            | TypeCode.SByte -> SByte.Parse >> box |> Some
+            | TypeCode.Single -> Single.Parse >> box |> Some
+            | TypeCode.UInt16 -> UInt16.Parse >> box |> Some
+            | TypeCode.UInt32 -> UInt32.Parse >> box |> Some
+            | TypeCode.UInt64 -> UInt64.Parse >> box |> Some
+            | TypeCode.String -> box |> Some
+            | _ -> None
+        match reader with
+        | Some r -> Some(buildValueReader r)
         | _ -> None
 
 /// Deserialization logic
@@ -54,6 +69,7 @@ module Deserializer =
 
     open SharpXml.Attempt
     open SharpXml.Extensions
+    open SharpXml.TypeParser
 
     /// Name of the static parsing method
     let parseMethodName = "ParseXml"
@@ -78,7 +94,10 @@ module Deserializer =
     /// Try to get a reader based on a string value constructor
     let getStringTypeConstructor (t : Type) = fun () ->
         match findStringConstructor t with
-        | Some ctor -> Some (fun (v : string) -> ctor.Invoke([| v |]))
+        | Some ctor ->
+            fun (v : string) -> ctor.Invoke([| v |])
+            |> ValueTypeDeserializer.buildValueReader
+            |> Some
         | _ -> None
 
     /// Try to find the static 'ParseXml' method on the specified type
@@ -91,7 +110,9 @@ module Deserializer =
         match findStaticParseMethod t with
         | Some parse ->
             // TODO: maybe use Delegate.CreateDelegate()
-            Some (fun (v : string) -> parse.Invoke(null, [| v |]))
+            fun (v : string) -> parse.Invoke(null, [| v |])
+            |> ValueTypeDeserializer.buildValueReader
+            |> Some
         | _ -> None
 
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
@@ -117,10 +138,8 @@ module Deserializer =
             Atom.updateAtomDict propertyCache t builder
 
     /// Class reader function
-    and readClass (builder : TypeBuilderInfo) (input : string) =
-        let len = input.Length
+    and readClass (builder : TypeBuilderInfo) xml =
         let instance = builder.Ctor.Invoke()
-        let content = TypeParser.parseAST input 0
         let rec inner inst elems =
             match elems with
             | TypeParser.GroupElem(name, subElements) :: t ->
@@ -129,26 +148,28 @@ module Deserializer =
                     // TODO
                     inner inst t
                 | _ -> inner inst t
-            | TypeParser.ContentElem(name, content) :: t ->
+            | TypeParser.ContentElem(name, _) as h :: t ->
                 match builder.Props.TryGetValue name with
                 | true, prop when prop.Reader.IsSome ->
                     let reader = prop.Reader.Value
-                    prop.Setter.Invoke(inst, reader(content))
+                    prop.Setter.Invoke(inst, reader(h))
                     inner inst t
                 | _ -> inner inst t
             | TypeParser.SingleElem _ :: t ->
                 // TODO: maybe we want to set the default value in here
                 inner inst t
             | [] -> ()
-        match content with
-        | [ TypeParser.GroupElem(name, subElements) ] -> inner instance subElements
-        | _ -> inner instance content
+        match xml with
+        | TypeParser.GroupElem(_, subElements) -> inner instance subElements
+        | _ -> ()
         instance
 
     /// Try to determine a matching class reader function
     and getClassReader (t : Type) = fun () ->
-        if t.IsClass && not t.IsAbstract
-        then Some (readClass <| getTypeBuilderInfo t)
+        if t.IsClass && not t.IsAbstract then
+            getTypeBuilderInfo t
+            |> readClass
+            |> Some
         else None
 
     /// Determine the ReaderFunc delegate for the given Type

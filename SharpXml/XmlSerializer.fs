@@ -13,7 +13,10 @@ type XmlSerializer() =
     static member DeserializeFromString<'T> input : 'T =
         if empty input then Unchecked.defaultof<'T> else
             match Deserializer.determineReader typeof<'T> with
-            | Some reader -> reader input :?> 'T
+            | Some reader ->
+                match TypeParser.parseAST input 0 with
+                | [ xml ] -> reader xml :?> 'T
+                | _ -> invalidArg "the input XML has no root element" "input"
             | _ -> Unchecked.defaultof<'T>
 
     static member SerializeToString<'T> (element : 'T) =
