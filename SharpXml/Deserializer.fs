@@ -19,12 +19,33 @@ type TypeBuilderInfo = {
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
     Ctor : Reflection.EmptyConstructor }
 
+module ValueTypeDeserializer =
+
+    open System
+
+    let enumReader (t : Type) =
+        fun () -> if t.IsEnum then Some (fun i -> Enum.Parse(t, i)) else None
+
+    let valueReader (t : Type) =
+        fun () ->
+            match Type.GetTypeCode(t) with
+            | TypeCode.Boolean -> Boolean.Parse >> box |> Some
+            | TypeCode.Byte -> Byte.Parse >> box |> Some
+            | TypeCode.Int16 -> Int16.Parse >> box |> Some
+            | TypeCode.Int32 -> Int32.Parse >> box |> Some
+            | TypeCode.Int64 -> Int64.Parse >> box |> Some
+            | TypeCode.String -> box |> Some
+            | _ -> None
+
 /// Deserialization logic
 module Deserializer =
 
     open System
     open System.Collections.Generic
     open System.Reflection
+
+    open SharpXml.Attempt
+    open SharpXml.Extensions
 
     /// Name of the static parsing method
     let parseMethodName = "ParseXml"
@@ -34,6 +55,9 @@ module Deserializer =
 
     /// TypeBuilder dictionary
     let propertyCache = ref (Dictionary<Type, TypeBuilderInfo>())
+
+    /// Reader function cache
+    let readerCache = ref (Dictionary<Type, ReaderFunc>())
 
     /// Try to find a constructor of the specified type
     /// with a single string parameter
@@ -55,10 +79,11 @@ module Deserializer =
         |> Utils.toOption
 
     /// Try to get a reader based on the type's static 'ParseXml' method
-    let getStaticParseMethod (t : Type) =
-        // TODO: maybe use Delegate.CreateDelegate()
+    let getStaticParseMethod (t : Type) = fun () ->
         match findStaticParseMethod t with
-        | Some parse -> Some (fun (v : string) -> parse.Invoke(null, [| v |]))
+        | Some parse ->
+            // TODO: maybe use Delegate.CreateDelegate()
+            Some (fun (v : string) -> parse.Invoke(null, [| v |]))
         | _ -> None
 
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
@@ -72,7 +97,7 @@ module Deserializer =
             |> Seq.map (fun p -> p.Name, buildReaderInfo p)
             |> dict
         { Type = t
-          Props = System.Collections.Generic.Dictionary(map, StringComparer.OrdinalIgnoreCase)
+          Props = Dictionary(map, StringComparer.OrdinalIgnoreCase)
           Ctor = Reflection.getEmptyConstructor t }
 
     /// Determine the TypeBuilderInfo for the given Type
@@ -83,7 +108,7 @@ module Deserializer =
             let builder = buildTypeBuilderInfo t
             Atom.updateAtomDict propertyCache t builder
 
-    /// Class parsing function
+    /// Class reader function
     and readClass (builder : TypeBuilderInfo) (input : string) =
         let len = input.Length
         let instance = builder.Ctor.Invoke()
@@ -103,7 +128,7 @@ module Deserializer =
                     prop.Setter.Invoke(inst, reader(content))
                     inner inst t
                 | _ -> inner inst t
-            | TypeParser.SingleElem _ :: t->
+            | TypeParser.SingleElem _ :: t ->
                 // TODO: maybe we want to set the default value in here
                 inner inst t
             | [] -> ()
@@ -112,8 +137,29 @@ module Deserializer =
         | _ -> inner instance content
         instance
 
+    /// Try to determine a matching class reader function
+    and getClassReader (t : Type) = fun () ->
+        if t.IsClass && not t.IsAbstract
+        then Some (readClass <| getTypeBuilderInfo t)
+        else None
+
     /// Determine the ReaderFunc delegate for the given Type
-    and determineReader (t : Type) =
-        if t = typeof<string> then Some box
-        elif t = typeof<int> then Some (fun s -> Int32.Parse(s) |> box)
-        else readClass (getTypeBuilderInfo t) |> Some
+    and determineReader (objType : Type) =
+        let t = objType.NullableUnderlying()
+        let reader = attempt {
+            let! enumReader = ValueTypeDeserializer.enumReader t
+            let! valueReader = ValueTypeDeserializer.valueReader t
+            let! staticReader = getStaticParseMethod t
+            let! classReader = getClassReader t
+            classReader }
+        reader
+
+    and getReaderFunc (t : Type) =
+        match (!readerCache).TryGetValue t with
+        | true, reader -> reader
+        | _ ->
+            match determineReader t with
+            | Some reader -> Atom.updateAtomDict readerCache t reader
+            | _ ->
+                let err = sprintf "could not determine deserialization logic for type '%s'" t.FullName
+                invalidOp err

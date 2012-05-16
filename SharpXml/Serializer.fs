@@ -228,7 +228,7 @@ module Serializer =
 
     /// Try to determine one of a special serialization
     /// function, i.e. Exception, Uri
-    let getSpecialWriters (t : Type) =
+    let getSpecialWriters (t : Type) = fun () ->
         if t = typeof<Uri> then Some ValueTypeSerializer.writeStringObject
         elif t = typeof<Exception> then Some ValueTypeSerializer.writeException
         elif t = typeof<Type> then Some ValueTypeSerializer.writeType
@@ -255,6 +255,14 @@ module Serializer =
         match (!typeInfoCache).TryGetValue t with
         | true, ti -> ti
         | _ -> Atom.updateAtomDict typeInfoCache t (buildTypeInfo t)
+
+    /// Try to determine the string writer function
+    let getStringWriter (t : Type) = fun () ->
+        if t = typeof<string> then Some ValueTypeSerializer.writeStringObject else None
+
+    /// Try to determine a matching value type writer function
+    let getValueTypeWriter (t : Type) = fun () ->
+        if t.IsValueType then ValueTypeSerializer.getValueTypeWriter t else None
 
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
@@ -291,7 +299,7 @@ module Serializer =
         |> Array.iter (fun elem -> writeTag writer "item" elem ValueTypeSerializer.writeStringObject)
 
     /// Try to determine a enumerable serialization function
-    and getEnumerableWriter (t : Type) =
+    and getEnumerableWriter (t : Type) = fun () ->
         if t.HasInterface typeof<IEnumerable> &&
             t.IsAssignableFrom typeof<IEnumerable> then
             Some writeEnumerable
@@ -322,7 +330,7 @@ module Serializer =
             | _ -> ())
 
     /// Try to determine a class or interface serialization function
-    and getClassWriter (t : Type) =
+    and getClassWriter (t : Type) = fun () ->
         if t.IsClass || t.IsInterface then
             if t.IsAbstract && not t.IsInterface then
                 Some writeAbstractProperties
@@ -331,10 +339,21 @@ module Serializer =
         else None
 
     /// Try to determine a writer function for a dictionary
-    and getDictionaryWriter (t : Type) =
+    and getDictionaryWriter (t : Type) = fun () ->
         if t.HasInterface(typeof<IDictionary>) ||
             t.IsAssignableFrom(typeof<IDictionary>) then
             Some writeDictionary
+        else None
+
+    /// Try to determine a writer function for array types
+    and getArrayWriter (t : Type) = fun () ->
+        if t.IsArray then
+            if t = typeof<byte[]> then Some ValueTypeSerializer.writeBytes
+            elif t = typeof<char[]> then Some ValueTypeSerializer.writeChars
+            elif t = typeof<int[]> then Some writeIntArray
+            elif t = typeof<string[]> then Some writeStrArray
+            // other array types will be handled by the IEnumerable writer
+            else None
         else None
 
     /// Writer function for a dictionary
@@ -351,29 +370,22 @@ module Serializer =
             writeTag writer "key" key (!keyWriter).Value
             writeTag writer "value" dictVal (!valueWriter).Value)
 
+    and getGenericWriter (t : Type) = fun () ->
+        // TODO: generic writer
+        None
+
     /// Determine the associated serialization writer
     /// function for the specified type
     and determineWriter (t : Type) =
-        let none = fun () -> None
-        let func f = fun () -> Some f
-        let iff p f = if p t then (fun () -> f) else none
         let writer = attempt {
-            let! strWriter = iff ((=) typeof<string>) (Some ValueTypeSerializer.writeStringObject)
-            let! valueWriter = iff (fun x -> x.IsValueType) (ValueTypeSerializer.getValueTypeWriter t)
-            let! arrayWriter =
-                if t.IsArray then
-                    if t = typeof<byte[]> then (func ValueTypeSerializer.writeBytes)
-                    elif t = typeof<char[]> then (func ValueTypeSerializer.writeChars)
-                    elif t = typeof<int[]> then (func writeIntArray)
-                    elif t = typeof<string[]> then (func writeStrArray)
-                    else none
-                else none
-            let! dictWriter = fun () -> getDictionaryWriter t
-            let! genericWriter =
-                if t.IsGenericType then none
-                else none
-            let! enumerableWriter = fun () -> getEnumerableWriter t
-            let! classWriter = fun () -> getClassWriter t
+            let! strWriter = getStringWriter t
+            let! valueWriter = getValueTypeWriter t
+            let! specialWriter = getSpecialWriters t
+            let! arrayWriter = getArrayWriter t
+            let! dictWriter = getDictionaryWriter t
+            let! genericWriter = getGenericWriter t
+            let! enumerableWriter = getEnumerableWriter t
+            let! classWriter = getClassWriter t
             classWriter }
         writer
 
@@ -385,7 +397,9 @@ module Serializer =
         | _ ->
             match determineWriter t with
             | Some s -> Atom.updateAtomDict serializerCache t s
-            | _ -> invalidOp <| sprintf "No serializer available for type '%s'" t.FullName
+            | _ ->
+                let err = sprintf "could not determine serialization logic for type '%s'" t.FullName
+                invalidOp err
 
     /// Write the given type using the appropriate serialization logic
     let writeType<'a> (writer : TextWriter) (element : 'a) =
