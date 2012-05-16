@@ -14,7 +14,7 @@ type XmlSerializer() =
         if empty input then Unchecked.defaultof<'T> else
             match Deserializer.determineReader typeof<'T> with
             | Some reader ->
-                match TypeParser.parseAST input 0 with
+                match XmlParser.parseAST input 0 with
                 | [ xml ] -> reader xml :?> 'T
                 | _ -> invalidArg "the input XML has no root element" "input"
             | _ -> Unchecked.defaultof<'T>

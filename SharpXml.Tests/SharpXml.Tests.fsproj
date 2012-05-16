@@ -46,7 +46,7 @@
   <ItemGroup>
     <Compile Include="TestHelpers.fs" />
     <Compile Include="Types.fs" />
-    <Compile Include="TypeParserTests.fs" />
+    <Compile Include="XmlParserTests.fs" />
     <Compile Include="ReflectionTests.fs" />
     <Compile Include="AssemblyTests.fs" />
     <Compile Include="UtilsTests.fs" />

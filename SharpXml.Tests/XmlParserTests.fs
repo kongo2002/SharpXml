@@ -1,6 +1,6 @@
 ﻿namespace SharpXml.Tests
 
-module TypeParserTests =
+module XmlParserTests =
 
     open System.Diagnostics
 
@@ -8,12 +8,12 @@ module TypeParserTests =
 
     open SharpXml
     open SharpXml.Tests.TestHelpers
-    open SharpXml.TypeParser
+    open SharpXml.XmlParser
 
     [<Test>]
     let eatTag01() =
         let input = " foo <testTag rest/> <hamEggs/>"
-        let index, value, t = TypeParser.eatTag input 0
+        let index, value, t = eatTag input 0
         value |> should equal "testTag"
         index |> should equal 19
         t |> should equal Single
@@ -21,7 +21,7 @@ module TypeParserTests =
     [<Test>]
     let eatTag02() =
         let input = "<testTag />"
-        let index, value, t = TypeParser.eatTag input 0
+        let index, value, t = eatTag input 0
         value |> should equal "testTag"
         index |> should equal 10
         t |> should equal Single
@@ -30,7 +30,7 @@ module TypeParserTests =
     [<Test>]
     let eatTag03() =
         let input = "< fooBar /> < testTag />"
-        let index, value, t = TypeParser.eatTag input 10
+        let index, value, t = eatTag input 10
         value |> should equal "testTag"
         index |> should equal 23
         t |> should equal Single
@@ -38,7 +38,7 @@ module TypeParserTests =
     [<Test>]
     let eatTag04() =
         let input = "xxxx<fooBar>xxxxxxxxxx"
-        let index, value, t = TypeParser.eatTag input 0
+        let index, value, t = eatTag input 0
         value |> should equal "fooBar"
         index |> should equal 11
         t |> should equal Open
@@ -46,7 +46,7 @@ module TypeParserTests =
     [<Test>]
     let eatTag05() =
         let input = "< fooBar / >"
-        let index, value, t = TypeParser.eatTag input 0
+        let index, value, t = eatTag input 0
         value |> should equal "fooBar"
         index |> should equal 11
         t |> should equal Single
@@ -54,7 +54,7 @@ module TypeParserTests =
     [<Test>]
     let eatTag06() =
         let input = "</fooBar>"
-        let index, value, t = TypeParser.eatTag input 0
+        let index, value, t = eatTag input 0
         value |> should equal "fooBar"
         index |> should equal 8
         t |> should equal Close
@@ -62,7 +62,7 @@ module TypeParserTests =
     [<Test>]
     let eatTag07() =
         let input = "<one/><two/><three/><four/>"
-        let index, value, t = TypeParser.eatTag input 12
+        let index, value, t = eatTag input 12
         value |> should equal "three"
         index |> should equal 19
         t |> should equal Single
@@ -70,21 +70,21 @@ module TypeParserTests =
     [<Test>]
     let eatContent01() =
         let input = "<one>this is a small test</test>"
-        let result, index = TypeParser.eatContent input 5
+        let result, index = eatContent input 5
         result |> should equal "this is a small test"
         index |> should equal 25
 
     [<Test>]
     let eatContent02() =
         let input = "<one>this is &lt;b&gt;a&lt;/b&gt; small test</test>"
-        let result, index = TypeParser.eatContent input 5
+        let result, index = eatContent input 5
         result |> should equal "this is <b>a</b> small test"
         index |> should equal 44
 
     [<Test>]
     let eatContent03() =
         let input = "<one>foo bar</one><two>ham eggs</two>"
-        let result, index = TypeParser.eatContent input 23
+        let result, index = eatContent input 23
         result |> should equal "ham eggs"
         index |> should equal 31
 
@@ -106,7 +106,7 @@ module TypeParserTests =
         inner ast 0
 
     let parse input =
-        let result = TypeParser.parseAST input 0
+        let result = parseAST input 0
         writeAst result
         result
 

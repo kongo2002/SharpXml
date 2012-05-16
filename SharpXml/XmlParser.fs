@@ -1,11 +1,9 @@
 ﻿namespace SharpXml
 
-open System
-open System.Collections.Generic
+module XmlParser =
 
-type ParserFunc = delegate of string -> obj
-
-module TypeParser =
+    open System
+    open System.Collections.Generic
 
     type XmlElem =
         | SingleElem of string

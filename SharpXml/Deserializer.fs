@@ -1,7 +1,7 @@
 ﻿namespace SharpXml
 
 /// Reader function delegate
-type ReaderFunc = TypeParser.XmlElem -> obj
+type ReaderFunc = XmlParser.XmlElem -> obj
 
 /// Record type containing the deserialization information
 /// for a specific property member
@@ -23,7 +23,7 @@ module ValueTypeDeserializer =
 
     open System
 
-    open SharpXml.TypeParser
+    open SharpXml.XmlParser
 
     let buildValueReader reader = fun xml ->
         match xml with
@@ -69,7 +69,7 @@ module Deserializer =
 
     open SharpXml.Attempt
     open SharpXml.Extensions
-    open SharpXml.TypeParser
+    open SharpXml.XmlParser
 
     /// Name of the static parsing method
     let parseMethodName = "ParseXml"
@@ -142,25 +142,25 @@ module Deserializer =
         let instance = builder.Ctor.Invoke()
         let rec inner inst elems =
             match elems with
-            | TypeParser.GroupElem(name, subElements) :: t ->
+            | GroupElem(name, subElements) :: t ->
                 match builder.Props.TryGetValue name with
                 | true, prop ->
                     // TODO
                     inner inst t
                 | _ -> inner inst t
-            | TypeParser.ContentElem(name, _) as h :: t ->
+            | ContentElem(name, _) as h :: t ->
                 match builder.Props.TryGetValue name with
                 | true, prop when prop.Reader.IsSome ->
                     let reader = prop.Reader.Value
                     prop.Setter.Invoke(inst, reader(h))
                     inner inst t
                 | _ -> inner inst t
-            | TypeParser.SingleElem _ :: t ->
+            | SingleElem _ :: t ->
                 // TODO: maybe we want to set the default value in here
                 inner inst t
             | [] -> ()
         match xml with
-        | TypeParser.GroupElem(_, subElements) -> inner instance subElements
+        | GroupElem(_, subElements) -> inner instance subElements
         | _ -> ()
         instance
 
