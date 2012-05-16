@@ -23,19 +23,27 @@ module ValueTypeDeserializer =
 
     open System
 
-    let enumReader (t : Type) =
-        fun () -> if t.IsEnum then Some (fun i -> Enum.Parse(t, i)) else None
+    let getEnumReader (t : Type) = fun () ->
+        if t.IsEnum then Some (fun i -> Enum.Parse(t, i)) else None
 
-    let valueReader (t : Type) =
-        fun () ->
-            match Type.GetTypeCode(t) with
-            | TypeCode.Boolean -> Boolean.Parse >> box |> Some
-            | TypeCode.Byte -> Byte.Parse >> box |> Some
-            | TypeCode.Int16 -> Int16.Parse >> box |> Some
-            | TypeCode.Int32 -> Int32.Parse >> box |> Some
-            | TypeCode.Int64 -> Int64.Parse >> box |> Some
-            | TypeCode.String -> box |> Some
-            | _ -> None
+    let getValueReader (t : Type) = fun () ->
+        match Type.GetTypeCode(t) with
+        | TypeCode.Boolean -> Boolean.Parse >> box |> Some
+        | TypeCode.Byte -> Byte.Parse >> box |> Some
+        | TypeCode.Int16 -> Int16.Parse >> box |> Some
+        | TypeCode.Int32 -> Int32.Parse >> box |> Some
+        | TypeCode.Int64 -> Int64.Parse >> box |> Some
+        | TypeCode.Char -> Char.Parse >> box |> Some
+        | TypeCode.DateTime -> DateTime.Parse >> box |> Some
+        | TypeCode.Decimal -> Decimal.Parse >> box |> Some
+        | TypeCode.Double -> Double.Parse >> box |> Some
+        | TypeCode.SByte -> SByte.Parse >> box |> Some
+        | TypeCode.Single -> Single.Parse >> box |> Some
+        | TypeCode.UInt16 -> UInt16.Parse >> box |> Some
+        | TypeCode.UInt32 -> UInt32.Parse >> box |> Some
+        | TypeCode.UInt64 -> UInt64.Parse >> box |> Some
+        | TypeCode.String -> box |> Some
+        | _ -> None
 
 /// Deserialization logic
 module Deserializer =
@@ -68,7 +76,7 @@ module Deserializer =
             ps.Length = 1 && ps.[0].ParameterType = typeof<string>)
 
     /// Try to get a reader based on a string value constructor
-    let getStringTypeConstructor (t : Type) =
+    let getStringTypeConstructor (t : Type) = fun () ->
         match findStringConstructor t with
         | Some ctor -> Some (fun (v : string) -> ctor.Invoke([| v |]))
         | _ -> None
@@ -147,9 +155,10 @@ module Deserializer =
     and determineReader (objType : Type) =
         let t = objType.NullableUnderlying()
         let reader = attempt {
-            let! enumReader = ValueTypeDeserializer.enumReader t
-            let! valueReader = ValueTypeDeserializer.valueReader t
+            let! enumReader = ValueTypeDeserializer.getEnumReader t
+            let! valueReader = ValueTypeDeserializer.getValueReader t
             let! staticReader = getStaticParseMethod t
+            let! stringCtor = getStringTypeConstructor t
             let! classReader = getClassReader t
             classReader }
         reader
