@@ -7,8 +7,7 @@ type ReaderFunc = XmlParser.XmlElem -> obj
 /// for a specific property member
 type PropertyReaderInfo = {
     Info : System.Reflection.PropertyInfo
-    // TODO: I guess I could get rid of the Option in here
-    Reader : ReaderFunc option
+    Reader : ReaderFunc
     Setter : Reflection.SetterFunc }
 
 /// Record type containing the deserialization information
@@ -117,7 +116,7 @@ module Deserializer =
 
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
     let rec buildReaderInfo (p : PropertyInfo) =
-        { Info = p; Reader = determineReader p.PropertyType; Setter = Reflection.getObjSetter p }
+        { Info = p; Reader = getReaderFunc p.PropertyType; Setter = Reflection.getObjSetter p }
 
     /// Build the TypeBuilderInfo record for the given Type
     and buildTypeBuilderInfo (t : Type) =
@@ -150,8 +149,8 @@ module Deserializer =
                 | _ -> inner inst t
             | ContentElem(name, _) as h :: t ->
                 match builder.Props.TryGetValue name with
-                | true, prop when prop.Reader.IsSome ->
-                    let reader = prop.Reader.Value
+                | true, prop ->
+                    let reader = prop.Reader
                     prop.Setter.Invoke(inst, reader(h))
                     inner inst t
                 | _ -> inner inst t
