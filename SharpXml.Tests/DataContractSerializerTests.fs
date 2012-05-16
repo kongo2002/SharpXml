@@ -7,6 +7,7 @@ module DataContractSerializerTests =
     open System.Diagnostics
     open System.IO
     open System.Runtime.Serialization
+    open System.Text
     open System.Text.RegularExpressions
     open System.Xml
 
@@ -25,6 +26,8 @@ module DataContractSerializerTests =
 
     let strip = stripXmlHeader >> stripNamespaces
 
+    let maxQuotas = XmlDictionaryReaderQuotas(MaxStringContentLength = 1024 * 1024)
+
     let contractSerialize<'a> (element : 'a) =
         use ms = new MemoryStream()
         use xw = XmlWriter.Create(ms)
@@ -36,6 +39,13 @@ module DataContractSerializerTests =
         let output = reader.ReadToEnd() |> strip
         Debug.WriteLine(output)
         output
+
+    let contractDeserialize<'a> (input : string) =
+        let bytes = Encoding.UTF8.GetBytes(input)
+        let t = typeof<'a>
+        use reader = XmlDictionaryReader.CreateTextReader(bytes, maxQuotas)
+        let serializer = DataContractSerializer(t)
+        serializer.ReadObject(reader) :?> 'a
 
     [<Test>]
     let compareClass() =
@@ -60,3 +70,14 @@ module DataContractSerializerTests =
         let special = "</v2>"
         let cls = TestClass(210, special)
         contractSerialize cls |> should equal "<Types.TestClass><v1>210</v1><v2>&lt;/v2&gt;</v2></Types.TestClass>"
+
+    [<Test>]
+    let deserialize01() =
+        let cls = contractDeserialize<ContractClass> "<ContractClass><V1>foo</V1><V2>42</V2></ContractClass>"
+        cls.V1 |> should equal "foo"
+        cls.V2 |> should equal 42
+
+    [<Test>]
+    let time01() =
+        time (fun () -> contractDeserialize<ContractClass> "<ContractClass><V1>foo</V1><V2>42</V2></ContractClass>" |> ignore) 1000
+        time (fun () -> contractDeserialize<ContractClass> "<ContractClass><V1>foo</V1><V2>42</V2></ContractClass>" |> ignore) 10000

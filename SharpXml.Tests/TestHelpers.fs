@@ -2,8 +2,21 @@
 
 module TestHelpers =
 
+    open System.Diagnostics
     open NUnit.Framework
     open NUnit.Framework.Constraints
+
+    let time func iterations =
+        let sw = Stopwatch.StartNew()
+        let rec loop f i =
+            if i > 0 then f(); loop f (i-1)
+        loop func iterations
+        sw.Stop()
+#if DEBUG
+        Debug.WriteLine <| sprintf "Iterations: %d; Elapsed: %A" iterations sw.Elapsed
+#else
+        System.Console.WriteLine("Iterations: {0}; Elapsed: {1}", iterations, sw.Elapsed)
+#endif
 
     let should (func : 'a -> #Constraint) x (actual : obj) =
         let constr = func x
