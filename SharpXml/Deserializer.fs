@@ -15,6 +15,7 @@ type PropertyReaderInfo = {
 /// of a specific type and all its members that have to deserialized
 type TypeBuilderInfo = {
     Type : System.Type
+    // TODO: I would love to use a case-insensitive FSharpMap instead
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
     Ctor : Reflection.EmptyConstructor }
 
@@ -60,9 +61,11 @@ module Deserializer =
         | Some parse -> Some (fun (v : string) -> parse.Invoke(null, [| v |]))
         | _ -> None
 
+    /// Build the PropertyReaderInfo record based on the given PropertyInfo
     let rec buildReaderInfo (p : PropertyInfo) =
         { Info = p; Reader = determineReader p.PropertyType; Setter = Reflection.getObjSetter p }
 
+    /// Build the TypeBuilderInfo record for the given Type
     and buildTypeBuilderInfo (t : Type) =
         let map =
             Reflection.getSerializableProperties t
@@ -72,6 +75,7 @@ module Deserializer =
           Props = System.Collections.Generic.Dictionary(map, StringComparer.OrdinalIgnoreCase)
           Ctor = Reflection.getEmptyConstructor t }
 
+    /// Determine the TypeBuilderInfo for the given Type
     and getTypeBuilderInfo (t : Type) =
         match (!propertyCache).TryGetValue t with
         | true, builder -> builder
@@ -79,6 +83,7 @@ module Deserializer =
             let builder = buildTypeBuilderInfo t
             Atom.updateAtomDict propertyCache t builder
 
+    /// Class parsing function
     and readClass (builder : TypeBuilderInfo) (input : string) =
         let len = input.Length
         let instance = builder.Ctor.Invoke()
@@ -107,6 +112,7 @@ module Deserializer =
         | _ -> inner instance content
         instance
 
+    /// Determine the ReaderFunc delegate for the given Type
     and determineReader (t : Type) =
         if t = typeof<string> then Some box
         elif t = typeof<int> then Some (fun s -> Int32.Parse(s) |> box)
