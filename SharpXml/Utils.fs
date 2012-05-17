@@ -15,6 +15,9 @@ module Utils =
     let removeGenericSuffix input =
         genericRegex.Replace(input, String.Empty)
 
+    /// Throw a NotImplementedException
+    let notImplemented msg = NotImplementedException(msg) |> raise
+
 /// Module containing atomic operations like
 /// thread-safe dictionary update
 module Atom =

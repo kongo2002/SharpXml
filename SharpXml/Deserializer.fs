@@ -136,6 +136,31 @@ module Deserializer =
             let builder = buildTypeBuilderInfo t
             Atom.updateAtomDict propertyCache t builder
 
+    and listReader<'a> (reader : ReaderFunc) xml =
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (function | ContentElem _ as c -> Some(reader(c) :?> 'a) | _ -> None)
+        | _ -> []
+
+    and getTypedListReader (t : Type) =
+        // TODO: this does not look good sane at all
+        let reader = Type.GetType("SharpXml.Deserializer").GetMethod("listReader")
+        reader.MakeGenericMethod([| t |])
+
+    and stringArrayReader xml =
+        listReader<string> box xml |> List.toArray |> box
+
+    and byteArrayReader xml =
+        let byteReader = Byte.Parse >> box |> ValueTypeDeserializer.buildValueReader
+        listReader<byte> byteReader xml |> List.toArray |> box
+
+    and getArrayReader (t : Type) = fun () ->
+        if not t.IsArray then None else
+            if t = typeof<string[]> then Some stringArrayReader
+            elif t = typeof<byte[]> then Some byteArrayReader
+            else None
+
     /// Class reader function
     and readClass (builder : TypeBuilderInfo) xml =
         let instance = builder.Ctor.Invoke()
@@ -177,6 +202,7 @@ module Deserializer =
         let reader = attempt {
             let! enumReader = ValueTypeDeserializer.getEnumReader t
             let! valueReader = ValueTypeDeserializer.getValueReader t
+            let! arrayReader = getArrayReader t
             let! staticReader = getStaticParseMethod t
             let! stringCtor = getStringTypeConstructor t
             let! classReader = getClassReader t
