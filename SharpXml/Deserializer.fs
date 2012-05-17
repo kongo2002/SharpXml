@@ -24,7 +24,7 @@ module ValueTypeDeserializer =
 
     open SharpXml.XmlParser
 
-    let buildValueReader reader = fun xml ->
+    let inline buildValueReader reader = fun xml ->
         match xml with
         | ContentElem(_, str) -> reader str
         | _ -> null

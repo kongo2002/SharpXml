@@ -29,7 +29,7 @@ module XmlParser =
     let parseRawString (input : string) =
         box input
 
-    let isWhitespace (c : char) =
+    let inline isWhitespace (c : char) =
         let i = int c
         i < whitespaceChars.Length && whitespaceChars.[i]
 
@@ -40,7 +40,6 @@ module XmlParser =
     /// Eat a XML tag and return its name, the end index and
     /// type being one of Open, Close or Single
     let eatTag (input : string) index =
-        let start = skipWhitespace input index
         let len = input.Length
         let rec inner i state =
             let next = i + 1
@@ -77,7 +76,7 @@ module XmlParser =
                     elif input.[i] = '/' then
                         inner next (InTag(tag, Single))
                     else inner next state
-        inner start Start
+        inner index Start
 
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index
@@ -85,18 +84,23 @@ module XmlParser =
         let len = input.Length
         let replace (f : string) (t : string) (i : string) =
             i.Replace(f, t)
-        let rec inner i =
+        let rec inner i esc =
             let next = i + 1
             // end of string, this is probably an error
-            if next > len then input.Substring(index), len
+            if next > len then input.Substring(index), len, esc
             elif input.[i] = '<' then
                 let length = i - index
-                input.Substring(index, length), i
-            else inner next
+                input.Substring(index, length), i, esc
+            elif input.[i] = '&' then
+                inner next true
+            else inner next esc
         // TODO: this replacements probably could be done more performant,
         // like while doing the search for the end tag
-        let result, endIndex = inner index
-        result |> replace "&gt;" ">" |> replace "&lt;" "<", endIndex
+        let result, endIndex, escaped = inner index false
+        if escaped then
+            result |> replace "&gt;" ">" |> replace "&lt;" "<", endIndex
+        else
+            result, endIndex
 
     /// Parse the given input string starting from the specified
     /// index into an XML AST
@@ -106,8 +110,7 @@ module XmlParser =
             let next = i + 1
             if level = 0 || next >= len then elements, next
             else
-                let current = skipWhitespace input i
-                match eatTag input current with
+                match eatTag input i with
                 // open tag
                 | x, name, Open when len > x + 1 ->
                     if input.[x+1] = '<' then
