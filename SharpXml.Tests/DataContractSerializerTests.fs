@@ -53,6 +53,12 @@ module DataContractSerializerTests =
         contractSerialize cls |> should equal "<ContractClass><V1>foo</V1><V2>42</V2></ContractClass>"
 
     [<Test>]
+    let compareArray01() =
+        let arr = [| "foo"; "bar" |]
+        let cls = ContractClass3(V1 = arr, V2 = 99)
+        contractSerialize cls |> should equal "<ContractClass3><V1><d2p1:string>foo</d2p1:string><d2p1:string>bar</d2p1:string></V1><V2>99</V2></ContractClass3>"
+
+    [<Test>]
     let compareDictionary() =
         let dict = Dictionary<string,int>()
         dict.Add("foo", 42)
