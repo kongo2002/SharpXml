@@ -211,11 +211,12 @@ module Deserializer =
     /// Try to determine a reader function for list types
     and getListReader (t : Type) = fun () ->
         if t.IsGenericType then
-            let isGenericListType = TypeHelper.isTypeWithGenericType t typedefof<List<_>>
-            if isGenericListType then
-                let elem = t.GetGenericArguments().[0]
+            let listInterface = TypeHelper.getTypeWithGenericType t typedefof<IList<_>>
+            match listInterface with
+            | Some listType ->
+                let elem = listType.GetGenericArguments().[0]
                 Some <| getTypedListReader elem
-            else None
+            | _ -> None
         else None
 
     /// Class reader function

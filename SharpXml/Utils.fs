@@ -141,7 +141,7 @@ module TypeHelper =
     let getTypeWithGenericType (t : Type) (genericType : Type) =
         let genInterface =
             t.GetInterfaces()
-            |> Array.tryFind(fun x -> x.IsGenericType && t.GetGenericTypeDefinition() = genericType)
+            |> Array.tryFind(fun x -> x.IsGenericType && x.GetGenericTypeDefinition() = genericType)
         match genInterface with
         | Some _ -> genInterface
         | _ ->
