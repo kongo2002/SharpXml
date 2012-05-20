@@ -114,6 +114,7 @@ module Deserializer =
             |> Some
         | _ -> None
 
+    /// Parse one element for a deserialised list structure
     let parseListElement<'a> (reader : ReaderFunc) element =
         match reader(element) with
         | null -> None
@@ -141,12 +142,14 @@ module Deserializer =
             let builder = buildTypeBuilderInfo t
             Atom.updateAtomDict propertyCache t builder
 
+    /// Reader function for immutable F# lists
     and listReader<'a> (reader : ReaderFunc) xml =
         match xml with
         | GroupElem(_, elems) ->
             elems |> List.choose (parseListElement<'a> reader)
         | _ -> []
 
+    /// Reader function for CLR list (System.Collections.Generic.List<T>)
     and clrListReader<'a> (reader : ReaderFunc) xml =
         let list = List<'a>()
         match xml with
@@ -164,6 +167,7 @@ module Deserializer =
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
 
+    /// Reader function for arrays
     and arrayReader<'a> (reader : ReaderFunc) xml =
         match xml with
         | GroupElem(_, elems) ->
@@ -179,22 +183,32 @@ module Deserializer =
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
 
+    /// Specialized reader function for string arrays
     and stringArrayReader xml =
         let stringReader = box |> ValueTypeDeserializer.buildValueReader
         listReader<string> stringReader xml |> List.toArray |> box
 
+    /// Specialized reader function for byte arrays
     and byteArrayReader xml =
         let byteReader = Byte.Parse >> box |> ValueTypeDeserializer.buildValueReader
         listReader<byte> byteReader xml |> List.toArray |> box
 
+    /// Specialized reader function for integer arrays
+    and intArrayReader xml =
+        let intReader = Int32.Parse >> box |> ValueTypeDeserializer.buildValueReader
+        listReader<int> intReader xml |> List.toArray |> box
+
+    /// Try to determine a reader function for array types
     and getArrayReader (t : Type) = fun () ->
         if not t.IsArray then None else
             if t = typeof<string[]> then Some stringArrayReader
+            elif t = typeof<int[]> then Some intArrayReader
             elif t = typeof<byte[]> then Some byteArrayReader
             else
                 let elem = t.GetElementType()
                 Some <| getTypedArrayReader elem
 
+    /// Try to determine a reader function for list types
     and getListReader (t : Type) = fun () ->
         if t.IsGenericType then
             let isGenericListType = TypeHelper.isTypeWithGenericType t typedefof<List<_>>
@@ -254,6 +268,8 @@ module Deserializer =
             classReader }
         reader
 
+    /// Get the ReaderFunc for the specified type.
+    /// The function is either obtained from the cache or built on request
     and getReaderFunc (t : Type) =
         match (!readerCache).TryGetValue t with
         | true, reader -> reader
