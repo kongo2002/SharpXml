@@ -6,6 +6,11 @@ module Utils =
     open System
     open System.Text.RegularExpressions
 
+    open Microsoft.FSharp.Quotations
+    open Microsoft.FSharp.Quotations.DerivedPatterns
+    open Microsoft.FSharp.Quotations.Patterns
+    open Microsoft.FSharp.Reflection
+
     let genericRegex = Regex("`\d+$", RegexOptions.Compiled)
 
     /// Wrap a reference (nullable) type into an Option
@@ -17,6 +22,14 @@ module Utils =
 
     /// Throw a NotImplementedException
     let notImplemented msg = NotImplementedException(msg) |> raise
+
+    /// Generete a Union type predicate function
+    let isUnionCase (c : Expr<_ -> 'T>) =
+        match c with
+        | Lambdas(_, NewUnionCase(uc, _)) ->
+            let tagReader = FSharpValue.PreComputeUnionTagReader(uc.DeclaringType)
+            fun (v : 'T) -> (tagReader v) = uc.Tag
+        | _ -> failwith "invalid expression"
 
 /// Module containing atomic operations like
 /// thread-safe dictionary update
