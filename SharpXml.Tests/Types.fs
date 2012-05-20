@@ -65,6 +65,18 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
+    type DictClass() =
+
+        let mutable v1 = Unchecked.defaultof<Dictionary<string, int>>
+        let mutable v2 = Unchecked.defaultof<int>
+
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
     type NestedClass() =
 
         let mutable v1 = Unchecked.defaultof<string>

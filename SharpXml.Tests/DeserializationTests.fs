@@ -43,6 +43,14 @@ module DeserializationTests =
         out.V2 |> should equal 99
 
     [<Test>]
+    let ``Can deserialize string-keyed dictionaries``() =
+        let out = deserialize<DictClass> "<dictClass><v1><item><key>foo</key><value>100</value></item><item><key>bar</key><value>200</value></item></v1><v2>99</v2></dictClass>"
+        out.V1.Count |> should equal 2
+        out.V1.["foo"] |> should equal 100
+        out.V1.["bar"] |> should equal 200
+        out.V2 |> should equal 99
+
+    [<Test>]
     let ``Profile simple deserialization``() =
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000

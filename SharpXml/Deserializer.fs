@@ -59,10 +59,37 @@ module ValueTypeDeserializer =
         | Some r -> Some(buildValueReader r)
         | _ -> None
 
+/// Dictionary related deserialization logic
+module DictionaryDeserializer =
+
+    open System.Collections.Generic
+
+    open SharpXml.XmlParser
+
+    /// Dictionary reader function
+    let dictReader<'a, 'b when 'a : equality> (keyReader : ReaderFunc) (valueReader : ReaderFunc) xml =
+        let readDictElem element =
+            match element with
+            // TODO: key and value tags are reversed
+            | GroupElem(_, [ v; k ]) ->
+                let key = keyReader(k) :?> 'a
+                let value = valueReader(v) :?> 'b
+                (key, value) |> Some
+            | _ -> None
+        let dictionary = Dictionary<'a, 'b>()
+        match xml with
+        | GroupElem(_, elements) ->
+            elements
+            |> List.choose readDictElem
+            |> List.iter (fun (k, v) -> dictionary.[k] <- v)
+        | _ -> ()
+        dictionary
+
 /// Deserialization logic
 module Deserializer =
 
     open System
+    open System.Collections
     open System.Collections.Generic
     open System.Reflection
 
@@ -219,6 +246,28 @@ module Deserializer =
             | _ -> None
         else None
 
+    and getDictTypeArguments (t : Type) =
+        let arguments = t.GetGenericArguments()
+        arguments.[0], arguments.[1]
+
+    and getTypedDictionaryReader (t : Type) =
+        // TODO: this does not look sane at all
+        let reader = Type.GetType("SharpXml.DictionaryDeserializer").GetMethod("dictReader")
+        let key, value = getDictTypeArguments t
+        let mtd = reader.MakeGenericMethod([| key; value |])
+        let keyReader = getReaderFunc key
+        let valueReader = getReaderFunc value
+        fun (xml : XmlElem) -> mtd.Invoke(null, [| keyReader; valueReader; xml |])
+
+    and getDictionaryReader (t : Type) = fun () ->
+        let dictInterface = typeof<IDictionary>
+        if t.IsAssignableFrom(dictInterface) || t.HasInterface(dictInterface) then
+            match TypeHelper.getTypeWithGenericType t typedefof<Dictionary<_,_>> with
+            | Some d ->
+                Some <| getTypedDictionaryReader t
+            | _ -> None
+        else None
+
     /// Class reader function
     and readClass (builder : TypeBuilderInfo) xml =
         let instance = builder.Ctor.Invoke()
@@ -262,6 +311,7 @@ module Deserializer =
             let! enumReader = ValueTypeDeserializer.getEnumReader t
             let! valueReader = ValueTypeDeserializer.getValueReader t
             let! arrayReader = getArrayReader t
+            let! dictReader = getDictionaryReader t
             let! listReader = getListReader t
             let! staticReader = getStaticParseMethod t
             let! stringCtor = getStringTypeConstructor t
