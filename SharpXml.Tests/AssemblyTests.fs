@@ -9,7 +9,7 @@ module AssemblyTests =
     open SharpXml.Tests.TestHelpers
 
     [<Test>]
-    let assemblyName() =
+    let ``Can determine the correct assembly name``() =
         let fullName = Assembly.getAssemblyName typeof<string>.AssemblyQualifiedName
         let name = Assembly.getAssemblyName typeof<string>.Name
         fullName |> should equal (Some "mscorlib")

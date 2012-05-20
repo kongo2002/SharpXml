@@ -43,6 +43,6 @@ module DeserializationTests =
         out.V2 |> should equal 99
 
     [<Test>]
-    let time01() =
+    let ``Profile simple deserialization``() =
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000
