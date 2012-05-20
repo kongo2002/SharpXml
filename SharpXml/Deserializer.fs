@@ -147,9 +147,19 @@ module Deserializer =
             elems |> List.choose (parseListElement<'a> reader)
         | _ -> []
 
+    and clrListReader<'a> (reader : ReaderFunc) xml =
+        let list = List<'a>()
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (parseListElement<'a> reader)
+            |> list.AddRange
+        | _ -> ()
+        list
+
     and getTypedListReader (t : Type) =
         // TODO: this does not look sane at all
-        let reader = Type.GetType("SharpXml.Deserializer").GetMethod("listReader")
+        let reader = Type.GetType("SharpXml.Deserializer").GetMethod("clrListReader")
         let mtd = reader.MakeGenericMethod([| t |])
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
@@ -184,6 +194,15 @@ module Deserializer =
             else
                 let elem = t.GetElementType()
                 Some <| getTypedArrayReader elem
+
+    and getListReader (t : Type) = fun () ->
+        if t.IsGenericType then
+            let isGenericListType = TypeHelper.isTypeWithGenericType t typedefof<List<_>>
+            if isGenericListType then
+                let elem = t.GetGenericArguments().[0]
+                Some <| getTypedListReader elem
+            else None
+        else None
 
     /// Class reader function
     and readClass (builder : TypeBuilderInfo) xml =
@@ -228,6 +247,7 @@ module Deserializer =
             let! enumReader = ValueTypeDeserializer.getEnumReader t
             let! valueReader = ValueTypeDeserializer.getValueReader t
             let! arrayReader = getArrayReader t
+            let! listReader = getListReader t
             let! staticReader = getStaticParseMethod t
             let! stringCtor = getStringTypeConstructor t
             let! classReader = getClassReader t

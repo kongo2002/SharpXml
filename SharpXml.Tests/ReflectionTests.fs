@@ -42,14 +42,14 @@ module ReflectionTests =
     [<Test>]
     let getEmptyConstructor01() =
         let ctor1 = Reflection.getConstructorMethod typeof<TestClass>
-        let ctor2 = Reflection.getConstructorMethod typeof<TestClass2>
+        let ctor2 = Reflection.getConstructorMethod typeof<SimpleClass>
         ctor1 |> shouldBe notNull
         ctor2 |> shouldBe notNull
 
     [<Test>]
     let getEmptyConstructor02() =
         let ctor1 = Reflection.getConstructorMethodByName "System.String"
-        let ctor2 = Reflection.getConstructorMethodByName "SharpXml.Tests.Types+TestClass2"
+        let ctor2 = Reflection.getConstructorMethodByName "SharpXml.Tests.Types+SimpleClass"
         ctor1 |> shouldBe notNull
         ctor2 |> shouldBe notNull
 

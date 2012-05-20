@@ -17,7 +17,7 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
-    type TestClass2() =
+    type SimpleClass() =
 
         let mutable v1 = Unchecked.defaultof<string>
         let mutable v2 = Unchecked.defaultof<int>
@@ -53,10 +53,22 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
+    type ListClass() =
+
+        let mutable v1 = Unchecked.defaultof<List<TestClass>>
+        let mutable v2 = Unchecked.defaultof<int>
+
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
     type NestedClass() =
 
         let mutable v1 = Unchecked.defaultof<string>
-        let mutable v2 = Unchecked.defaultof<TestClass2>
+        let mutable v2 = Unchecked.defaultof<SimpleClass>
 
         member x.V1
             with get() = v1

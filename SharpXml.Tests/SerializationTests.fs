@@ -56,7 +56,7 @@ module SerializationTests =
 
     [<Test>]
     let serializeNestedClass01() =
-        let cls = NestedClass(V1 = "foobar", V2 = TestClass2(V1 = "bar foo", V2 = 200))
+        let cls = NestedClass(V1 = "foobar", V2 = SimpleClass(V1 = "bar foo", V2 = 200))
         serialize cls |> should equal "<nestedClass><v1>foobar</v1><v2><v1>bar foo</v1><v2>200</v2></v2></nestedClass>"
 
     [<Test>]

@@ -125,3 +125,29 @@ module Attempt =
         member this.ReturnFrom(v) = v
 
     let attempt = AttemptBuilder()
+
+/// Module containing various helper functions related to types
+module TypeHelper =
+
+    open System
+
+    let getGenericType (t : Type) =
+        let rec inner (typeToTest : Type) =
+            if typeToTest = null then None
+            elif typeToTest.IsGenericType then Some typeToTest
+            else inner typeToTest.BaseType
+        inner t
+
+    let getTypeWithGenericType (t : Type) (genericType : Type) =
+        let genInterface =
+            t.GetInterfaces()
+            |> Array.tryFind(fun x -> x.IsGenericType && t.GetGenericTypeDefinition() = genericType)
+        match genInterface with
+        | Some _ -> genInterface
+        | _ ->
+            match getGenericType t with
+            | Some genType as gt when genType.GetGenericTypeDefinition() = genericType -> gt
+            | _ -> None
+
+    let isTypeWithGenericType (t : Type) (genericType : Type) =
+        (getTypeWithGenericType t genericType).IsSome
