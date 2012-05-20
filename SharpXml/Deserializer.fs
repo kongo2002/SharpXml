@@ -141,7 +141,6 @@ module ListDeserializer =
         let intReader = Int32.Parse >> box |> ValueTypeDeserializer.buildValueReader
         listReader<int> intReader xml |> List.toArray |> box
 
-
 /// Deserialization logic
 module Deserializer =
 

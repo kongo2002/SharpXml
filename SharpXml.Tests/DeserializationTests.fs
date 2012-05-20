@@ -51,6 +51,12 @@ module DeserializationTests =
         out.V2 |> should equal 99
 
     [<Test>]
+    let ``Can deserialize enums``() =
+        let out = deserialize<EnumClass> "<enumClass><v1>Foo</v1><v2>99</v2></enumClass>"
+        out.V1 |> should equal TestEnum.Foo
+        out.V2 |> should equal 99
+
+    [<Test>]
     let ``Profile simple deserialization``() =
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000
