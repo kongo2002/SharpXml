@@ -137,22 +137,31 @@ module Deserializer =
             Atom.updateAtomDict propertyCache t builder
 
     and listReader<'a> (reader : ReaderFunc) xml =
+        let parse element =
+            match reader(element) with
+            | null -> None
+            | x -> Some(x :?> 'a)
         match xml with
         | GroupElem(_, elems) ->
-            elems |> List.choose (function ContentElem _ as c -> Some(reader(c) :?> 'a) | _ -> None)
+            elems |> List.choose parse
         | _ -> []
 
     and getTypedListReader (t : Type) =
         // TODO: this does not look good sane at all
         let reader = Type.GetType("SharpXml.Deserializer").GetMethod("listReader")
         let mtd = reader.MakeGenericMethod([| t |])
-        fun (xml : XmlElem) -> mtd.Invoke(null, [| xml |])
+        let elemReader = getReaderFunc t
+        fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
 
     and arrayReader<'a> (reader : ReaderFunc) xml =
+        let parse element =
+            match reader(element) with
+            | null -> None
+            | x -> Some(x :?> 'a)
         match xml with
         | GroupElem(_, elems) ->
             elems
-            |> List.choose (function ContentElem _ as c -> Some(reader(c) :?> 'a) | _ -> None)
+            |> List.choose parse
             |> Array.ofList
         | _ -> [| |]
 
@@ -160,7 +169,8 @@ module Deserializer =
         // TODO: this does not look good sane at all
         let reader = Type.GetType("SharpXml.Deserializer").GetMethod("arrayReader")
         let mtd = reader.MakeGenericMethod([| t |])
-        fun (xml : XmlElem) -> mtd.Invoke(null, [| xml |])
+        let elemReader = getReaderFunc t
+        fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
 
     and stringArrayReader xml =
         let stringReader = box |> ValueTypeDeserializer.buildValueReader
@@ -176,7 +186,7 @@ module Deserializer =
             elif t = typeof<byte[]> then Some byteArrayReader
             else
                 let elem = t.GetElementType()
-                Some <| getTypedListReader elem
+                Some <| getTypedArrayReader elem
 
     /// Class reader function
     and readClass (builder : TypeBuilderInfo) xml =
