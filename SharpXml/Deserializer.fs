@@ -148,7 +148,7 @@ module Deserializer =
         | _ -> []
 
     and getTypedListReader (t : Type) =
-        // TODO: this does not look good sane at all
+        // TODO: this does not look sane at all
         let reader = Type.GetType("SharpXml.Deserializer").GetMethod("listReader")
         let mtd = reader.MakeGenericMethod([| t |])
         let elemReader = getReaderFunc t
@@ -163,7 +163,7 @@ module Deserializer =
         | _ -> [| |]
 
     and getTypedArrayReader (t : Type) =
-        // TODO: this does not look good sane at all
+        // TODO: this does not look sane at all
         let reader = Type.GetType("SharpXml.Deserializer").GetMethod("arrayReader")
         let mtd = reader.MakeGenericMethod([| t |])
         let elemReader = getReaderFunc t
