@@ -85,6 +85,63 @@ module DictionaryDeserializer =
         | _ -> ()
         dictionary
 
+/// List related deserialization logic
+module ListDeserializer =
+
+    open System
+    open System.Collections.Generic
+
+    open SharpXml.XmlParser
+
+    /// Parse one element for a deserialised list structure
+    let parseListElement<'a> (reader : ReaderFunc) element =
+        match reader(element) with
+        | null -> None
+        | x -> Some(x :?> 'a)
+
+    /// Reader function for immutable F# lists
+    let listReader<'a> (reader : ReaderFunc) xml =
+        match xml with
+        | GroupElem(_, elems) ->
+            elems |> List.choose (parseListElement<'a> reader)
+        | _ -> []
+
+    /// Reader function for CLR list (System.Collections.Generic.List<T>)
+    let clrListReader<'a> (reader : ReaderFunc) xml =
+        let list = List<'a>()
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (parseListElement<'a> reader)
+            |> list.AddRange
+        | _ -> ()
+        list
+
+    /// Reader function for arrays
+    let arrayReader<'a> (reader : ReaderFunc) xml =
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (parseListElement<'a> reader)
+            |> Array.ofList
+        | _ -> [| |]
+
+    /// Specialized reader function for string arrays
+    let stringArrayReader xml =
+        let stringReader = box |> ValueTypeDeserializer.buildValueReader
+        listReader<string> stringReader xml |> List.toArray |> box
+
+    /// Specialized reader function for byte arrays
+    let byteArrayReader xml =
+        let byteReader = Byte.Parse >> box |> ValueTypeDeserializer.buildValueReader
+        listReader<byte> byteReader xml |> List.toArray |> box
+
+    /// Specialized reader function for integer arrays
+    let intArrayReader xml =
+        let intReader = Int32.Parse >> box |> ValueTypeDeserializer.buildValueReader
+        listReader<int> intReader xml |> List.toArray |> box
+
+
 /// Deserialization logic
 module Deserializer =
 
@@ -141,12 +198,6 @@ module Deserializer =
             |> Some
         | _ -> None
 
-    /// Parse one element for a deserialised list structure
-    let parseListElement<'a> (reader : ReaderFunc) element =
-        match reader(element) with
-        | null -> None
-        | x -> Some(x :?> 'a)
-
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
     let rec buildReaderInfo (p : PropertyInfo) =
         { Info = p; Reader = getReaderFunc p.PropertyType; Setter = Reflection.getObjSetter p }
@@ -169,68 +220,26 @@ module Deserializer =
             let builder = buildTypeBuilderInfo t
             Atom.updateAtomDict propertyCache t builder
 
-    /// Reader function for immutable F# lists
-    and listReader<'a> (reader : ReaderFunc) xml =
-        match xml with
-        | GroupElem(_, elems) ->
-            elems |> List.choose (parseListElement<'a> reader)
-        | _ -> []
-
-    /// Reader function for CLR list (System.Collections.Generic.List<T>)
-    and clrListReader<'a> (reader : ReaderFunc) xml =
-        let list = List<'a>()
-        match xml with
-        | GroupElem(_, elems) ->
-            elems
-            |> List.choose (parseListElement<'a> reader)
-            |> list.AddRange
-        | _ -> ()
-        list
-
     and getTypedListReader (t : Type) =
         // TODO: this does not look sane at all
-        let reader = Type.GetType("SharpXml.Deserializer").GetMethod("clrListReader")
+        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("clrListReader")
         let mtd = reader.MakeGenericMethod([| t |])
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
-
-    /// Reader function for arrays
-    and arrayReader<'a> (reader : ReaderFunc) xml =
-        match xml with
-        | GroupElem(_, elems) ->
-            elems
-            |> List.choose (parseListElement<'a> reader)
-            |> Array.ofList
-        | _ -> [| |]
 
     and getTypedArrayReader (t : Type) =
         // TODO: this does not look sane at all
-        let reader = Type.GetType("SharpXml.Deserializer").GetMethod("arrayReader")
+        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("arrayReader")
         let mtd = reader.MakeGenericMethod([| t |])
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
-
-    /// Specialized reader function for string arrays
-    and stringArrayReader xml =
-        let stringReader = box |> ValueTypeDeserializer.buildValueReader
-        listReader<string> stringReader xml |> List.toArray |> box
-
-    /// Specialized reader function for byte arrays
-    and byteArrayReader xml =
-        let byteReader = Byte.Parse >> box |> ValueTypeDeserializer.buildValueReader
-        listReader<byte> byteReader xml |> List.toArray |> box
-
-    /// Specialized reader function for integer arrays
-    and intArrayReader xml =
-        let intReader = Int32.Parse >> box |> ValueTypeDeserializer.buildValueReader
-        listReader<int> intReader xml |> List.toArray |> box
 
     /// Try to determine a reader function for array types
     and getArrayReader (t : Type) = fun () ->
         if not t.IsArray then None else
-            if t = typeof<string[]> then Some stringArrayReader
-            elif t = typeof<int[]> then Some intArrayReader
-            elif t = typeof<byte[]> then Some byteArrayReader
+            if t = typeof<string[]> then Some ListDeserializer.stringArrayReader
+            elif t = typeof<int[]> then Some ListDeserializer.intArrayReader
+            elif t = typeof<byte[]> then Some ListDeserializer.byteArrayReader
             else
                 let elem = t.GetElementType()
                 Some <| getTypedArrayReader elem
