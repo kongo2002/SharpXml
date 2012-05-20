@@ -114,6 +114,11 @@ module Deserializer =
             |> Some
         | _ -> None
 
+    let parseListElement<'a> (reader : ReaderFunc) element =
+        match reader(element) with
+        | null -> None
+        | x -> Some(x :?> 'a)
+
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
     let rec buildReaderInfo (p : PropertyInfo) =
         { Info = p; Reader = getReaderFunc p.PropertyType; Setter = Reflection.getObjSetter p }
@@ -137,13 +142,9 @@ module Deserializer =
             Atom.updateAtomDict propertyCache t builder
 
     and listReader<'a> (reader : ReaderFunc) xml =
-        let parse element =
-            match reader(element) with
-            | null -> None
-            | x -> Some(x :?> 'a)
         match xml with
         | GroupElem(_, elems) ->
-            elems |> List.choose parse
+            elems |> List.choose (parseListElement<'a> reader)
         | _ -> []
 
     and getTypedListReader (t : Type) =
@@ -154,14 +155,10 @@ module Deserializer =
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
 
     and arrayReader<'a> (reader : ReaderFunc) xml =
-        let parse element =
-            match reader(element) with
-            | null -> None
-            | x -> Some(x :?> 'a)
         match xml with
         | GroupElem(_, elems) ->
             elems
-            |> List.choose parse
+            |> List.choose (parseListElement<'a> reader)
             |> Array.ofList
         | _ -> [| |]
 
