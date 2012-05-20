@@ -139,17 +139,32 @@ module Deserializer =
     and listReader<'a> (reader : ReaderFunc) xml =
         match xml with
         | GroupElem(_, elems) ->
-            elems
-            |> List.choose (function | ContentElem _ as c -> Some(reader(c) :?> 'a) | _ -> None)
+            elems |> List.choose (function ContentElem _ as c -> Some(reader(c) :?> 'a) | _ -> None)
         | _ -> []
 
     and getTypedListReader (t : Type) =
         // TODO: this does not look good sane at all
         let reader = Type.GetType("SharpXml.Deserializer").GetMethod("listReader")
-        reader.MakeGenericMethod([| t |])
+        let mtd = reader.MakeGenericMethod([| t |])
+        fun (xml : XmlElem) -> mtd.Invoke(null, [| xml |])
+
+    and arrayReader<'a> (reader : ReaderFunc) xml =
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (function ContentElem _ as c -> Some(reader(c) :?> 'a) | _ -> None)
+            |> Array.ofList
+        | _ -> [| |]
+
+    and getTypedArrayReader (t : Type) =
+        // TODO: this does not look good sane at all
+        let reader = Type.GetType("SharpXml.Deserializer").GetMethod("arrayReader")
+        let mtd = reader.MakeGenericMethod([| t |])
+        fun (xml : XmlElem) -> mtd.Invoke(null, [| xml |])
 
     and stringArrayReader xml =
-        listReader<string> box xml |> List.toArray |> box
+        let stringReader = box |> ValueTypeDeserializer.buildValueReader
+        listReader<string> stringReader xml |> List.toArray |> box
 
     and byteArrayReader xml =
         let byteReader = Byte.Parse >> box |> ValueTypeDeserializer.buildValueReader
@@ -159,17 +174,20 @@ module Deserializer =
         if not t.IsArray then None else
             if t = typeof<string[]> then Some stringArrayReader
             elif t = typeof<byte[]> then Some byteArrayReader
-            else None
+            else
+                let elem = t.GetElementType()
+                Some <| getTypedListReader elem
 
     /// Class reader function
     and readClass (builder : TypeBuilderInfo) xml =
         let instance = builder.Ctor.Invoke()
         let rec inner inst elems =
             match elems with
-            | GroupElem(name, subElements) :: t ->
+            | GroupElem(name, _)  as h :: t ->
                 match builder.Props.TryGetValue name with
                 | true, prop ->
-                    // TODO
+                    let reader = prop.Reader
+                    prop.Setter.Invoke(inst, reader(h))
                     inner inst t
                 | _ -> inner inst t
             | ContentElem(name, _) as h :: t ->
