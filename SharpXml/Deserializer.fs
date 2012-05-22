@@ -281,14 +281,8 @@ module Deserializer =
         let instance = builder.Ctor.Invoke()
         let rec inner inst elems =
             match elems with
-            | GroupElem(name, _)  as h :: t ->
-                match builder.Props.TryGetValue name with
-                | true, prop ->
-                    let reader = prop.Reader
-                    prop.Setter.Invoke(inst, reader(h))
-                    inner inst t
-                | _ -> inner inst t
-            | ContentElem(name, _) as h :: t ->
+            | (GroupElem(name, _)  as h :: t)
+            | (ContentElem(name, _) as h :: t) ->
                 match builder.Props.TryGetValue name with
                 | true, prop ->
                     let reader = prop.Reader
