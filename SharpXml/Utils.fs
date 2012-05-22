@@ -163,3 +163,9 @@ module TypeHelper =
 
     let isTypeWithGenericType (t : Type) (genericType : Type) =
         (getTypeWithGenericType t genericType).IsSome
+
+    let hasGenericTypeDefinitions (t : Type) (genericTypes : Type seq) =
+        if not t.IsGenericType then false
+        else
+            let genTypeDef = t.GetGenericTypeDefinition()
+            Seq.exists ((=) genTypeDef) genericTypes

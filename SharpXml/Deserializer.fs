@@ -117,6 +117,16 @@ module ListDeserializer =
         | _ -> ()
         list
 
+    let collectionReader<'a> (reader : ReaderFunc) (ctor : Reflection.EmptyConstructor) xml =
+        let collection = ctor.Invoke() :?> ICollection<'a>
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (parseListElement<'a> reader)
+            |> List.iter (collection.Add)
+        | _ -> ()
+        collection
+
     /// Reader function for arrays
     let arrayReader<'a> (reader : ReaderFunc) xml =
         match xml with
@@ -226,6 +236,14 @@ module Deserializer =
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
 
+    and getCollectionReader (listType : Type) (t : Type) =
+        // TODO: this does not look sane at all
+        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("collectionReader")
+        let mtd = reader.MakeGenericMethod([| t |])
+        let elemReader = getReaderFunc t
+        let ctor = Reflection.getEmptyConstructor listType
+        fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
+
     and getTypedArrayReader (t : Type) =
         // TODO: this does not look sane at all
         let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("arrayReader")
@@ -250,7 +268,9 @@ module Deserializer =
             match listInterface with
             | Some listType ->
                 let elem = listType.GetGenericArguments().[0]
-                Some <| getTypedListReader elem
+                if TypeHelper.hasGenericTypeDefinitions t [| typedefof<List<_>> |]
+                then Some <| getTypedListReader elem
+                else Some <| getCollectionReader t elem
             | _ -> None
         else None
 
