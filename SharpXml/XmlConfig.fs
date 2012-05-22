@@ -75,12 +75,10 @@ type XmlConfig private() =
 
     /// Try to get a serializer delegate for the specified type
     member internal x.TryGetSerializer (t : Type) =
-        match (!serializerCache).TryGetValue t with
-        | true, serializer -> Some serializer
-        | _ -> None
+        (!serializerCache).TryGetValue t
+        |> Utils.tryToOption
 
     /// Try to get a deserializer delegate for the specified type
     member internal x.TryGetDeserializer (t : Type) =
-        match (!deserializerCache).TryGetValue t with
-        | true, deserializer -> Some deserializer
-        | _ -> None
+        (!deserializerCache).TryGetValue t
+        |> Utils.tryToOption

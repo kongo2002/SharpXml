@@ -16,6 +16,12 @@ module Utils =
     /// Wrap a reference (nullable) type into an Option
     let toOption item = if item = null then None else Some item
 
+    /// Turn a tuple typically returned by 'TryGetValue'
+    /// functions into an Option type
+    let tryToOption = function
+        | true, value -> Some value
+        | _ -> None
+
     /// Remove the name suffix of a generic type name
     let removeGenericSuffix input =
         genericRegex.Replace(input, String.Empty)
