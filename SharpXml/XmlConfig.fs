@@ -26,7 +26,7 @@ type XmlConfig private() =
 
     static let mutable instance = lazy(XmlConfig())
 
-    /// Singleton instance
+    /// XmlConfig singleton instance
     static member Instance with get() = instance.Value
 
     /// Whether to include null values in the serialized output
