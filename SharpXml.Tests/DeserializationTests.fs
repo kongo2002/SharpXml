@@ -74,6 +74,15 @@ module DeserializationTests =
         out.V2.[1] |> should equal "foo"
 
     [<Test>]
+    let ``Can deserialize generic classes with generic lists``() =
+        let out = deserialize<GenericListClass<string>> "<genericListClass><v1>100</v1><v2><item>foo</item><item>bar</item></v2></genericListClass>"
+        out.V1 |> should equal 100
+        out.V2 |> shouldBe notNull
+        out.V2.Count |> should equal 2
+        out.V2.[0] |> should equal "bar"
+        out.V2.[1] |> should equal "foo"
+
+    [<Test>]
     let ``Profile simple deserialization``() =
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000
