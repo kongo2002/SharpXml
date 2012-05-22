@@ -41,42 +41,54 @@ module XmlParser =
     /// type being one of Open, Close or Single
     let eatTag (input : string) index =
         let len = input.Length
-        let rec inner i state =
-            let next = i + 1
-            if next > len then 0, null, Open else
-                match state with
-                | Start ->
-                    if input.[i] = '<' then inner next TagStart else inner next state
-                | TagStart ->
-                    if isWhitespace input.[i] then
-                        inner next state
-                    elif input.[i] = '/' then
-                        inner (next+1) (TagName(i+1, true))
+        let nothing = 0, null, Open
+
+        let rec endTag i name tagType =
+            if i >= len then nothing
+            else
+                let chr = input.[i]
+                if chr = '>' then
+                    i, name, tagType
+                elif chr = '/' then
+                    endTag (i+1) name Single
+                else endTag (i+1) name tagType
+
+        let rec getName i start close =
+            if i >= len then nothing
+            else
+                let chr = input.[i]
+                if isWhitespace chr then
+                    if not close then
+                        let tag = input.Substring(start, (i-start))
+                        endTag (i+1) tag Open
                     else
-                        inner next (TagName(i, false))
-                | TagName(s, close) ->
-                    if isWhitespace input.[i] then
-                        if not close then
-                            let tag = input.Substring(s, (i-s))
-                            inner next (InTag (tag, Open))
-                        else
-                            inner next state
-                    elif input.[i] = '/' then
-                        let tag = input.Substring(s, (i-s))
-                        inner next (InTag (tag, Single))
-                    elif input.[i] = '>' then
-                        let tag = input.Substring(s, (i-s))
-                        let tagType = if close then Close else Open
-                        i, tag, tagType
-                    else
-                        inner next state
-                | InTag (tag, tagType) ->
-                    if input.[i] = '>' then
-                        i, tag, tagType
-                    elif input.[i] = '/' then
-                        inner next (InTag(tag, Single))
-                    else inner next state
-        inner index Start
+                        getName (i+1) start close
+                elif chr = '/' then
+                    let tag = input.Substring(start, (i-start))
+                    endTag (i+1) tag Single
+                elif chr = '>' then
+                    let tag = input.Substring(start, (i-start))
+                    let tagType = if close then Close else Open
+                    i, tag, tagType
+                else
+                    getName (i+1) start close
+
+        let rec findName i =
+            if i >= len then nothing
+            else
+                let chr = input.[i]
+                if isWhitespace chr then
+                    findName (i+1)
+                elif chr = '/' then
+                    getName (i+1) (i+1) true
+                else getName (i+1) i false
+
+        let rec findStart i =
+            if i >= len then nothing
+            elif input.[i] = '<' then findName (i+1)
+            else findStart (i+1)
+
+        findStart index
 
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index
