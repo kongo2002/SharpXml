@@ -16,7 +16,7 @@ module XmlParserTests =
         let index, value, t = eatTag input 0
         value |> should equal "testTag"
         index |> should equal 19
-        t |> should equal Single
+        t |> should equal TagType.Single
 
     [<Test>]
     let eatTag02() =
@@ -24,7 +24,7 @@ module XmlParserTests =
         let index, value, t = eatTag input 0
         value |> should equal "testTag"
         index |> should equal 10
-        t |> should equal Single
+        t |> should equal TagType.Single
 
 
     [<Test>]
@@ -33,7 +33,7 @@ module XmlParserTests =
         let index, value, t = eatTag input 10
         value |> should equal "testTag"
         index |> should equal 23
-        t |> should equal Single
+        t |> should equal TagType.Single
 
     [<Test>]
     let eatTag04() =
@@ -41,7 +41,7 @@ module XmlParserTests =
         let index, value, t = eatTag input 0
         value |> should equal "fooBar"
         index |> should equal 11
-        t |> should equal Open
+        t |> should equal TagType.Open
 
     [<Test>]
     let eatTag05() =
@@ -49,7 +49,7 @@ module XmlParserTests =
         let index, value, t = eatTag input 0
         value |> should equal "fooBar"
         index |> should equal 11
-        t |> should equal Single
+        t |> should equal TagType.Single
 
     [<Test>]
     let eatTag06() =
@@ -57,7 +57,7 @@ module XmlParserTests =
         let index, value, t = eatTag input 0
         value |> should equal "fooBar"
         index |> should equal 8
-        t |> should equal Close
+        t |> should equal TagType.Close
 
     [<Test>]
     let eatTag07() =
@@ -65,7 +65,7 @@ module XmlParserTests =
         let index, value, t = eatTag input 12
         value |> should equal "three"
         index |> should equal 19
-        t |> should equal Single
+        t |> should equal TagType.Single
 
     [<Test>]
     let eatContent01() =

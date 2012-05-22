@@ -11,15 +11,9 @@ module XmlParser =
         | GroupElem of string * XmlElem list
 
     type TagType =
-        | Open
-        | Single
-        | Close
-
-    type ParseState =
-        | Start
-        | TagStart
-        | TagName of int * bool
-        | InTag of string * TagType
+        | Open = 0
+        | Single = 1
+        | Close = 2
 
     let whitespaceChars =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
@@ -41,7 +35,7 @@ module XmlParser =
     /// type being one of Open, Close or Single
     let eatTag (input : string) index =
         let len = input.Length
-        let nothing = 0, null, Open
+        let nothing = 0, null, TagType.Open
 
         let rec endTag i name tagType =
             if i >= len then nothing
@@ -50,7 +44,7 @@ module XmlParser =
                 if chr = '>' then
                     i, name, tagType
                 elif chr = '/' then
-                    endTag (i+1) name Single
+                    endTag (i+1) name TagType.Single
                 else endTag (i+1) name tagType
 
         let rec getName i start close =
@@ -60,15 +54,15 @@ module XmlParser =
                 if isWhitespace chr then
                     if not close then
                         let tag = input.Substring(start, (i-start))
-                        endTag (i+1) tag Open
+                        endTag (i+1) tag TagType.Open
                     else
                         getName (i+1) start close
                 elif chr = '/' then
                     let tag = input.Substring(start, (i-start))
-                    endTag (i+1) tag Single
+                    endTag (i+1) tag TagType.Single
                 elif chr = '>' then
                     let tag = input.Substring(start, (i-start))
-                    let tagType = if close then Close else Open
+                    let tagType = if close then TagType.Close else TagType.Open
                     i, tag, tagType
                 else
                     getName (i+1) start close
@@ -124,7 +118,7 @@ module XmlParser =
             else
                 match eatTag input i with
                 // open tag
-                | x, name, Open when len > x + 1 ->
+                | x, name, TagType.Open when len > x + 1 ->
                     if input.[x+1] = '<' then
                         // nested group element
                         let elems, endIndex = inner (x+1) 1 []
@@ -135,10 +129,10 @@ module XmlParser =
                         let contentEnd, _, _ = eatTag input ind
                         inner (contentEnd+1) level (ContentElem(name, content) :: elements)
                 // single tag
-                | x, name, Single ->
+                | x, name, TagType.Single ->
                     inner (x+1) level (SingleElem name :: elements)
                 // closing tag
-                | x, name, Close ->
+                | x, name, TagType.Close ->
                     inner x (level-1) elements
                 | _, null, _ -> failwith "Unable to read XML tag"
                 | _ -> failwith "number of opening and closing XML tags does not match"
