@@ -52,6 +52,12 @@ module Atom =
         swapRef dict newDict
         value
 
+    /// Atomically remove an element from the specified dictionary
+    let removeAtomDictElement<'TKey, 'TValue when 'TKey : equality> (dict : Dictionary<'TKey, 'TValue> ref) key =
+        let newDict = Dictionary<'TKey, 'TValue>(!dict)
+        newDict.Remove(key) |> ignore
+        swapRef dict newDict
+
 /// Module containing Assembly related helper functions
 module Assembly =
 

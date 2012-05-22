@@ -1,5 +1,16 @@
 ﻿namespace SharpXml
 
+open System
+open System.Collections.Generic
+
+/// Delegate type that contains type
+/// specific serialization logic
+type SerializerFunc = delegate of obj -> string
+
+/// Delegate type that contains type
+/// specific deserialization logic
+type DeserializerFunc = delegate of string -> obj
+
 /// Singleton configuration class containing all
 /// preferences of the XmlSerializer
 type XmlConfig private() =
@@ -9,6 +20,9 @@ type XmlConfig private() =
     let mutable emitCamelCaseNames = false
     let mutable writeXmlHeader = false
     let mutable throwOnError = false
+
+    let serializerCache = ref (Dictionary<Type, SerializerFunc>())
+    let deserializerCache = ref (Dictionary<Type, DeserializerFunc>())
 
     static let mutable instance = lazy(XmlConfig())
 
@@ -42,3 +56,19 @@ type XmlConfig private() =
     member x.ThrowOnError
         with get() = throwOnError
         and set(v) = throwOnError <- v
+
+    /// Register a serializer delegate for the specified type
+    member x.RegisterSerializer<'T> (func : SerializerFunc) =
+        Atom.updateAtomDict serializerCache typeof<'T> func |> ignore
+
+    /// Register a deserializer delegate for the specified type
+    member x.RegisterDeserializer<'T> (func : DeserializerFunc) =
+        Atom.updateAtomDict deserializerCache typeof<'T> func |> ignore
+
+    /// Unregister the serializer delegate for the specified type
+    member x.UnregisterSerializer<'T>() =
+        Atom.removeAtomDictElement serializerCache typeof<'T>
+
+    /// Unregister the deserializer delegate for the specified type
+    member x.UnregisterDeserializer<'T>() =
+        Atom.removeAtomDictElement deserializerCache typeof<'T>
