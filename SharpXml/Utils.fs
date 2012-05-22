@@ -150,6 +150,13 @@ module TypeHelper =
             else inner typeToTest.BaseType
         inner t
 
+    let isGenericType (t : Type) =
+        let rec inner (typeToTest : Type) =
+            if typeToTest = null then false
+            elif typeToTest.IsGenericType then true
+            else inner typeToTest.BaseType
+        inner t
+
     let getTypeWithGenericType (t : Type) (genericType : Type) =
         let genInterface =
             t.GetInterfaces()

@@ -89,6 +89,7 @@ module DictionaryDeserializer =
 module ListDeserializer =
 
     open System
+    open System.Collections
     open System.Collections.Generic
 
     open SharpXml.XmlParser
@@ -117,7 +118,7 @@ module ListDeserializer =
         | _ -> ()
         list
 
-    let collectionReader<'a> (reader : ReaderFunc) (ctor : Reflection.EmptyConstructor) xml =
+    let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : Reflection.EmptyConstructor) xml =
         let collection = ctor.Invoke() :?> ICollection<'a>
         match xml with
         | GroupElem(_, elems) ->
@@ -126,6 +127,16 @@ module ListDeserializer =
             |> List.iter (collection.Add)
         | _ -> ()
         collection
+
+    let collectionReader (ctor : Reflection.EmptyConstructor) xml =
+        let list = ctor.Invoke() :?> IList
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (parseListElement (box |> ValueTypeDeserializer.buildValueReader))
+            |> List.iter (list.Add >> ignore)
+        | _ -> ()
+        list
 
     /// Reader function for arrays
     let arrayReader<'a> (reader : ReaderFunc) xml =
@@ -236,9 +247,9 @@ module Deserializer =
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
 
-    and getCollectionReader (listType : Type) (t : Type) =
+    and getGenericCollectionReader (listType : Type) (t : Type) =
         // TODO: this does not look sane at all
-        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("collectionReader")
+        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("genericCollectionReader")
         let mtd = reader.MakeGenericMethod([| t |])
         let elemReader = getReaderFunc t
         let ctor = Reflection.getEmptyConstructor listType
@@ -263,15 +274,19 @@ module Deserializer =
 
     /// Try to determine a reader function for list types
     and getListReader (t : Type) = fun () ->
-        if t.IsGenericType then
+        if TypeHelper.isGenericType t then
             let listInterface = TypeHelper.getTypeWithGenericType t typedefof<IList<_>>
             match listInterface with
             | Some listType ->
                 let elem = listType.GetGenericArguments().[0]
                 if TypeHelper.hasGenericTypeDefinitions t [| typedefof<List<_>> |]
                 then Some <| getTypedListReader elem
-                else Some <| getCollectionReader t elem
+                else Some <| getGenericCollectionReader t elem
             | _ -> None
+        elif t.IsAssignableFrom(typeof<IList>) || t.HasInterface(typeof<IList>) then
+            let ctor = Reflection.getEmptyConstructor t
+            let reader = ListDeserializer.collectionReader ctor >> box
+            Some reader
         else None
 
     and getDictTypeArguments (t : Type) =

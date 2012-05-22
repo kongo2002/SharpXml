@@ -57,10 +57,19 @@ module DeserializationTests =
         out.V2 |> should equal 99
 
     [<Test>]
+    let ``Can deserialize untyped ArrayLists``() =
+        let out = deserialize<ArrayListClass> "<arrayListClass><v1>937</v1><v2><item>ham</item><item>eggs</item></v2></arrayListClass>"
+        out.V1 |> should equal 937
+        out.V2.Count |> should equal 2
+        out.V2.[0] |> should equal "eggs"
+        out.V2.[1] |> should equal "ham"
+
+    [<Test>]
     let ``Can deserialize generic custom list types``() =
         let out = deserialize<CustomListClass> "<customListClass><v1>100</v1><v2><item>foo</item><item>bar</item></v2></customListClass>"
         out.V1 |> should equal 100
         out.V2 |> shouldBe notNull
+        out.V2.Count |> should equal 2
         out.V2.[0] |> should equal "bar"
         out.V2.[1] |> should equal "foo"
 

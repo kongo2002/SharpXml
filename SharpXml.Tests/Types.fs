@@ -3,6 +3,7 @@
 module Types =
 
     open System
+    open System.Collections
     open System.Collections.Generic
     open System.Runtime.Serialization
 
@@ -133,6 +134,18 @@ module Types =
 
         let mutable v1 = Unchecked.defaultof<int>
         let mutable v2 = Unchecked.defaultof<CustomList<string>>
+
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
+    type ArrayListClass() =
+
+        let mutable v1 = Unchecked.defaultof<int>
+        let mutable v2 = Unchecked.defaultof<ArrayList>
 
         member x.V1
             with get() = v1
