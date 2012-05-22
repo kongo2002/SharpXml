@@ -1,4 +1,6 @@
+*.DotSettings.user
 *.crunchsolution.cache
 *.ncrunchsolution
 *.ncrunchsolution.user
 *.suo
+_ReSharper*
