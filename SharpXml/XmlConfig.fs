@@ -72,3 +72,15 @@ type XmlConfig private() =
     /// Unregister the deserializer delegate for the specified type
     member x.UnregisterDeserializer<'T>() =
         Atom.removeAtomDictElement deserializerCache typeof<'T>
+
+    /// Try to get a serializer delegate for the specified type
+    member internal x.TryGetSerializer (t : Type) =
+        match (!serializerCache).TryGetValue t with
+        | true, serializer -> Some serializer
+        | _ -> None
+
+    /// Try to get a deserializer delegate for the specified type
+    member internal x.TryGetDeserializer (t : Type) =
+        match (!deserializerCache).TryGetValue t with
+        | true, deserializer -> Some deserializer
+        | _ -> None
