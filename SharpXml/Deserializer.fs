@@ -95,7 +95,7 @@ module ListDeserializer =
     open SharpXml.XmlParser
 
     /// Parse one element for a deserialised list structure
-    let parseListElement<'a> (reader : ReaderFunc) element =
+    let inline parseListElement<'a> (reader : ReaderFunc) element =
         match reader(element) with
         | null -> None
         | x -> Some(x :?> 'a)
