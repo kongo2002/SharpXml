@@ -40,14 +40,14 @@ module SerializationTests =
         let dict = Dictionary<string, int>()
         dict.Add("foo", 42)
         dict.Add("bar", 200)
-        serialize dict |> should equal "<dictionary><key>foo</key><value>42</value><key>bar</key><value>200</value></dictionary>"
+        serialize dict |> should equal "<dictionary><item><key>foo</key><value>42</value></item><item><key>bar</key><value>200</value></item></dictionary>"
 
     [<Test>]
     let ``Can serialize dictionaries with integer keys``() =
         let dict = Dictionary<int, string>()
         dict.Add(42, "foo")
         dict.Add(200, "bar")
-        serialize dict |> should equal "<dictionary><key>42</key><value>foo</value><key>200</key><value>bar</value></dictionary>"
+        serialize dict |> should equal "<dictionary><item><key>42</key><value>foo</value></item><item><key>200</key><value>bar</value></item></dictionary>"
 
     [<Test>]
     let ``Can serialize arrays``() =
@@ -101,3 +101,11 @@ module SerializationTests =
         let chars = string [ for i in 10 .. 30 -> char i ]
         let cls = TestClass(999, chars)
         serialize cls |> should equal (sprintf "<testClass><v1>999</v1><v2>%s</v2></testClass>" chars)
+
+    [<Test>]
+    let ``Can serialize dictionaries``() =
+        let dict = Dictionary<string, int>()
+        dict.Add("foo", 1)
+        dict.Add("bar", 2)
+        let cls = DictClass(V1 = dict, V2 = 200)
+        serialize cls |> should equal "<dictClass><v1><item><key>foo</key><value>1</value></item><item><key>bar</key><value>2</value></item></v1><v2>200</v2></dictClass>"

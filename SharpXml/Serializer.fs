@@ -367,8 +367,10 @@ module Serializer =
             let dictVal = map.[key]
             if (!keyWriter).IsNone then keyWriter := determineWriter (key.GetType()) 
             if (!valueWriter).IsNone then valueWriter := determineWriter (dictVal.GetType())
+            writer.Write("<item>")
             writeTag writer "key" key (!keyWriter).Value
-            writeTag writer "value" dictVal (!valueWriter).Value)
+            writeTag writer "value" dictVal (!valueWriter).Value
+            writer.Write("</item>"))
 
     and getGenericWriter (t : Type) = fun () ->
         // TODO: generic writer
