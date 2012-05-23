@@ -221,7 +221,7 @@ module Serializer =
     let typeInfoCache = ref (Dictionary<Type, TypeInfo>())
 
     /// General purpose XML tags writer function
-    let writeTag (w : TextWriter) (name : string) (value : obj) writeFunc =
+    let writeTag (w : TextWriter) (name : string) writeFunc (value : obj) =
         w.Write("<{0}>", name)
         writeFunc w value
         w.Write("</{0}>", name)
@@ -278,8 +278,13 @@ module Serializer =
     and writeEnumerable (writer : TextWriter) (value : obj) =
         let collection : IEnumerable = unbox value
         let write func elem =
-            let f = match func with | None -> determineWriter (elem.GetType()) | _ -> func
-            f.Value writer elem
+            let f =
+                match func with
+                | None ->
+                    let writeFunc = determineWriter (elem.GetType())
+                    Some <| writeTag writer "item" writeFunc.Value
+                | _ -> func
+            f.Value elem
             f
         collection
         |> Seq.cast
@@ -290,17 +295,17 @@ module Serializer =
     and writeIntArray (writer : TextWriter) (value : obj) =
         let array : int [] = unbox value
         array
-        |> Array.iter (fun elem -> writeTag writer "item" elem ValueTypeSerializer.writeInt32)
+        |> Array.iter (fun elem -> writeTag writer "item" ValueTypeSerializer.writeInt32 elem)
 
     /// Writer function for string arrays
     and writeStrArray (writer : TextWriter) (value : obj) =
         let array : string [] = unbox value
         array
-        |> Array.iter (fun elem -> writeTag writer "item" elem ValueTypeSerializer.writeStringObject)
+        |> Array.iter (fun elem -> writeTag writer "item" ValueTypeSerializer.writeStringObject elem)
 
     /// Try to determine a enumerable serialization function
     and getEnumerableWriter (t : Type) = fun () ->
-        if t.HasInterface typeof<IEnumerable> &&
+        if t.HasInterface typeof<IEnumerable> ||
             t.IsAssignableFrom typeof<IEnumerable> then
             Some writeEnumerable
         else None
@@ -326,7 +331,7 @@ module Serializer =
             | Some write ->
                 let v = p.GetFunc.Invoke(value)
                 if v <> null then
-                    writeTag writer p.ClsName v write
+                    writeTag writer p.ClsName write v
             | _ -> ())
 
     /// Try to determine a class or interface serialization function
@@ -368,8 +373,8 @@ module Serializer =
             if (!keyWriter).IsNone then keyWriter := determineWriter (key.GetType()) 
             if (!valueWriter).IsNone then valueWriter := determineWriter (dictVal.GetType())
             writer.Write("<item>")
-            writeTag writer "key" key (!keyWriter).Value
-            writeTag writer "value" dictVal (!valueWriter).Value
+            writeTag writer "key" (!keyWriter).Value key
+            writeTag writer "value" (!valueWriter).Value dictVal
             writer.Write("</item>"))
 
     and getGenericWriter (t : Type) = fun () ->
@@ -406,4 +411,4 @@ module Serializer =
     /// Write the given type using the appropriate serialization logic
     let writeType<'a> (writer : TextWriter) (element : 'a) =
         let tInfo = getTypeInfo typeof<'a>
-        writeTag writer tInfo.ClsName element (getWriterFunc typeof<'a>)
+        writeTag writer tInfo.ClsName (getWriterFunc typeof<'a>) element

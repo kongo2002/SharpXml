@@ -109,3 +109,8 @@ module SerializationTests =
         dict.Add("bar", 2)
         let cls = DictClass(V1 = dict, V2 = 200)
         serialize cls |> should equal "<dictClass><v1><item><key>foo</key><value>1</value></item><item><key>bar</key><value>2</value></item></v1><v2>200</v2></dictClass>"
+
+    [<Test>]
+    let ``Can serialize IEnumerables``() =
+        let cls = IEnumerableClass(V1 = "foo bar", V2 = List<int>(seq { 1 .. 2 }))
+        serialize cls |> should equal "<iEnumerableClass><v1>foo bar</v1><v2><item>1</item><item>2</item></v2></iEnumerableClass>"
