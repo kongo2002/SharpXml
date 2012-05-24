@@ -281,6 +281,7 @@ module Serializer =
             let f =
                 match func with
                 | None ->
+                    // TODO: this is quite unsafe
                     let writeFunc = determineWriter (elem.GetType())
                     Some <| writeTag writer "item" writeFunc.Value
                 | _ -> func

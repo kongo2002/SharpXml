@@ -154,6 +154,26 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
+    type CustomParserClass() =
+
+        let mutable _x = Unchecked.defaultof<int>
+        let mutable _y = Unchecked.defaultof<int>
+
+        member x.X
+            with get() = _x
+            and set v = _x <- v
+        member x.Y
+            with get() = _y
+            and set v = _y <- v
+
+        override x.ToString() =
+            sprintf "%dx%d" x.X x.Y
+
+        static member ParseXml(input : string) =
+            match input.Split('x') with
+            | [| x; y |] -> CustomParserClass(X = Int32.Parse(x), Y = Int32.Parse(y))
+            | _ -> failwith "invalid input for CustomParserClass"
+
     type ArrayListClass() =
 
         let mutable v1 = Unchecked.defaultof<int>

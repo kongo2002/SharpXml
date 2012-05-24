@@ -352,6 +352,7 @@ module Deserializer =
             let! listReader = getListReader t
             let! staticReader = getStaticParseMethod t
             let! stringCtor = getStringTypeConstructor t
+            let! parseXmlReader = getStaticParseMethod t
             let! classReader = getClassReader t
             classReader }
         reader

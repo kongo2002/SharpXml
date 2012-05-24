@@ -83,6 +83,20 @@ module DeserializationTests =
         out.V2.[1] |> should equal "foo"
 
     [<Test>]
+    let ``Can deserialize classes with a static ParseXml function``() =
+        let out = deserialize<CustomParserClass> "<customParserClass>200x400</CustomParserClass>"
+        out.X |> should equal 200
+        out.Y |> should equal 400
+
+    [<Test>]
+    let ``Can deserialize classes with a list of ParseXml-like classes``() =
+        let out = deserialize<GenericListClass<CustomParserClass>> "<genericListClass><v1>99</v1><v2><item>100x200</item><item>200x400</item></v2></genericListClass>"
+        out.V1 |> should equal 99
+        out.V2.Count |> should equal 2
+        out.V2.[0].Y |> should equal 400
+        out.V2.[1].X |> should equal 100
+
+    [<Test>]
     let ``Profile simple deserialization``() =
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000
