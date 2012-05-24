@@ -214,6 +214,7 @@ module ValueTypeSerializer =
             | TypeCode.UInt64 -> Some writeUInt64
             | _ -> None
 
+/// Serialization logic for list and collection types
 module ListSerializer =
 
     open System
@@ -235,6 +236,35 @@ module ListSerializer =
         array
         |> Array.iter (fun elem -> writeTag writer "item" ValueTypeSerializer.writeStringObject elem)
 
+    /// Writer function for untyped IEnumerables
+    let writeEnumerable determineFunc (writer : TextWriter) (value : obj) =
+        let collection : IEnumerable = unbox value
+        let write func elem =
+            let f =
+                match func with
+                | None ->
+                    let writeFunc = determineFunc (elem.GetType())
+                    Some <| writeTag writer "item" writeFunc
+                | _ -> func
+            f.Value elem
+            f
+        collection
+        |> Seq.cast
+        |> Seq.fold write None
+        |> ignore
+
+    /// Writer function for generic IEnumerables
+    let writeGenericEnumerable<'a> (writeFunc : WriterFunc) (writer : TextWriter) (value : obj) =
+        let collection : IEnumerable<'a> = unbox value
+        collection
+        |> Seq.iter (writeTag writer "item" writeFunc)
+
+    /// Wrapper function to get the generic IEnumerable writer
+    let getGenericEnumerableWriter elemWriter t =
+        // TODO: this does not look sane at all
+        let writer = Type.GetType("SharpXml.ListSerializer").GetMethod("writeGenericEnumerable")
+        let mtd = writer.MakeGenericMethod([| t |])
+        fun (w : TextWriter) x -> mtd.Invoke(null, [| elemWriter; w; x |]) |> ignore
 
 /// Serialization logic
 module Serializer =
@@ -310,7 +340,6 @@ module Serializer =
             (fun (w : TextWriter) x -> w.Write(func.Invoke(null, [| x |]))) |> Some
         | _ -> None
 
-
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
     let rec buildPropertyWriterInfo (propInfo : PropertyInfo) =
@@ -321,29 +350,18 @@ module Serializer =
           WriteFunc = getWriterFunc propInfo.PropertyType
           Default = Reflection.getDefaultValue propInfo.PropertyType }
 
-    /// Writer function for IEnumerable
-    and writeEnumerable (writer : TextWriter) (value : obj) =
-        let collection : IEnumerable = unbox value
-        let write func elem =
-            let f =
-                match func with
-                | None ->
-                    let writeFunc = getWriterFunc (elem.GetType())
-                    Some <| writeTag writer "item" writeFunc
-                | _ -> func
-            f.Value elem
-            f
-        collection
-        |> Seq.cast
-        |> Seq.fold write None
-        |> ignore
-
     /// Try to determine a enumerable serialization function
     and getEnumerableWriter (t : Type) = fun () ->
-        if t.HasInterface typeof<IEnumerable> ||
-            t.IsAssignableFrom typeof<IEnumerable> then
-            Some writeEnumerable
-        else None
+        match TypeHelper.getTypeWithGenericType t typedefof<IEnumerable<_>> with
+        | Some enumerableType ->
+            let elemType = enumerableType.GetGenericArguments().[0]
+            let elemWriter = getWriterFunc elemType
+            Some <| ListSerializer.getGenericEnumerableWriter elemWriter elemType
+        | _ ->
+            if t.HasInterface typeof<IEnumerable> ||
+                t.IsAssignableFrom typeof<IEnumerable> then
+                Some <| ListSerializer.writeEnumerable getWriterFunc
+            else None
 
     /// Get the PropertyWriterInfo array for the given type
     and getProperties (t : Type) =
