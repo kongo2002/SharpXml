@@ -134,7 +134,7 @@ module ListDeserializer =
         | GroupElem(_, elems) ->
             elems
             |> List.choose (parseListElement<'a> reader)
-            |> List.iter (collection.Add)
+            |> List.iter collection.Add
         | _ -> ()
         collection
 
@@ -147,6 +147,26 @@ module ListDeserializer =
             |> List.iter (list.Add >> ignore)
         | _ -> ()
         list
+
+    let queueReader<'a> (reader : ReaderFunc) xml =
+        let queue = Queue<'a>()
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (parseListElement<'a> reader)
+            |> List.iter queue.Enqueue
+        | _ -> ()
+        queue
+
+    let stackReader<'a> (reader : ReaderFunc) xml =
+        let stack = Stack<'a>()
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (parseListElement<'a> reader)
+            |> List.iter stack.Push
+        | _ -> ()
+        stack
 
     /// Reader function for arrays
     let arrayReader<'a> (reader : ReaderFunc) xml =
@@ -278,9 +298,26 @@ module Deserializer =
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
 
+    /// Try to determine a reader function for hash sets
     and getHashSetReader (t : Type) =
         // TODO: this does not look sane at all
         let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("hashSetReader")
+        let mtd = reader.MakeGenericMethod([| t |])
+        let elemReader = getReaderFunc t
+        fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
+
+    /// Try to determine a reader function for queues
+    and getQueueReader (t : Type) =
+        // TODO: this does not look sane at all
+        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("queueReader")
+        let mtd = reader.MakeGenericMethod([| t |])
+        let elemReader = getReaderFunc t
+        fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
+
+    /// Try to determine a reader function for stacks
+    and getStackReader (t : Type) =
+        // TODO: this does not look sane at all
+        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("stackReader")
         let mtd = reader.MakeGenericMethod([| t |])
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
@@ -298,14 +335,18 @@ module Deserializer =
     /// Try to determine a reader function for list types
     and getListReader (t : Type) = fun () ->
         if TypeHelper.isGenericType t then
-            let list = typedefof<IList<_>>
+            let iList = typedefof<IList<_>>
             let hashSet = typedefof<HashSet<_>>
+            let queue = typedefof<Queue<_>>
+            let stack = typedefof<Stack<_>>
             match t with
-            | GenericTypeOf list gen ->
+            | GenericTypeOf iList gen ->
                 if TypeHelper.hasGenericTypeDefinitions t [| typedefof<List<_>> |]
                 then Some <| getTypedListReader gen
                 else Some <| getGenericCollectionReader t gen
             | GenericTypeOf hashSet gen -> Some <| getHashSetReader gen
+            | GenericTypeOf queue gen -> Some <| getQueueReader gen
+            | GenericTypeOf stack gen -> Some <| getStackReader gen
             | _ -> None
         elif t.IsAssignableFrom(typeof<IList>) || t.HasInterface(typeof<IList>) then
             let ctor = Reflection.getEmptyConstructor t
