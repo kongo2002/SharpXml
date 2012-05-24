@@ -273,12 +273,14 @@ module Deserializer =
             |> Some
         | _ -> None
 
+    /// Get a reader function for NameValueCollection types
     let getNameValueCollectionReader (t : Type) =
         let ctor =
             if t = typeof<NameValueCollection> then
                 fun() -> NameValueCollection()
             else
-                fun() -> (Reflection.getEmptyConstructor t).Invoke() :?> NameValueCollection
+                let func = Reflection.getEmptyConstructor t
+                fun() -> func.Invoke() :?> NameValueCollection
         Some <| DictionaryDeserializer.nameValueCollectionReader ctor
 
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
