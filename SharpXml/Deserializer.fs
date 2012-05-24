@@ -233,6 +233,11 @@ module Deserializer =
             |> Some
         | _ -> None
 
+    let getGenericListFunction name t =
+        // TODO: I don't like this string-based reflection at all
+        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod(name)
+        reader.MakeGenericMethod([| t |])
+
     /// Try to find the static 'ParseXml' method on the specified type
     let findStaticParseMethod (t : Type) =
         t.GetMethod(parseMethodName, parseMethodFlags, null, [| typeof<string> |], null)
@@ -270,37 +275,34 @@ module Deserializer =
             let builder = buildTypeBuilderInfo t
             Atom.updateAtomDict propertyCache t builder
 
-    and getGenericListFunction name t =
-        // TODO: I don't like this string-based reflection at all
-        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod(name)
-        let mtd = reader.MakeGenericMethod([| t |])
+    and buildGenericFunction name t =
+        let mtd = getGenericListFunction name t
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
 
-    /// Try to determine a reader function for generic lists
+    /// Get a reader function for generic lists
     and getTypedListReader =
-        getGenericListFunction "clrListReader"
+        buildGenericFunction "clrListReader"
 
-    /// Try to determine a reader function for arrays
+    /// Get a reader function for arrays
     and getTypedArrayReader =
-        getGenericListFunction "arrayReader"
+        buildGenericFunction "arrayReader"
 
-    /// Try to determine a reader function for hash sets
+    /// Get a reader function for hash sets
     and getHashSetReader =
-        getGenericListFunction "hashSetReader"
+        buildGenericFunction "hashSetReader"
 
-    /// Try to determine a reader function for queues
+    /// Get a reader function for queues
     and getQueueReader =
-        getGenericListFunction "queueReader"
+        buildGenericFunction "queueReader"
 
-    /// Try to determine a reader function for stacks
+    /// Get a reader function for stacks
     and getStackReader =
-        getGenericListFunction "stackReader"
+        buildGenericFunction "stackReader"
 
+    /// Get a reader function for generic collections
     and getGenericCollectionReader (listType : Type) (t : Type) =
-        // TODO: this does not look sane at all
-        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("genericCollectionReader")
-        let mtd = reader.MakeGenericMethod([| t |])
+        let mtd = getGenericListFunction "genericCollectionReader" t
         let elemReader = getReaderFunc t
         let ctor = Reflection.getEmptyConstructor listType
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
