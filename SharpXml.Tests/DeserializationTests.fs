@@ -3,6 +3,7 @@
 module DeserializationTests =
 
     open System
+    open System.Collections.Generic
     open System.Diagnostics
     open NUnit.Framework
 
@@ -101,6 +102,12 @@ module DeserializationTests =
         let out = deserialize<StringCtorClass> "<stringCtorClass>300x50</stringCtorClass>"
         out.X |> should equal 300
         out.Y |> should equal 50
+
+    [<Test>]
+    let ``Can deserialize HashSets``() =
+        let out = deserialize<GenericClass<HashSet<string>>> "<genericClass><v1>100</v1><v2><item>foo</item><item>bar</item></v2></genericClass>"
+        out.V1 |> should equal 100
+        out.V2.Count |> should equal 2
 
     [<Test>]
     let ``Profile simple deserialization``() =

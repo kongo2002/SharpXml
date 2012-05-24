@@ -118,6 +118,16 @@ module ListDeserializer =
         | _ -> ()
         list
 
+    let hashSetReader<'a> (reader : ReaderFunc) xml =
+        let set = HashSet<'a>()
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (parseListElement<'a> reader)
+            |> List.iter (set.Add >> ignore)
+        | _ -> ()
+        set
+
     let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : Reflection.EmptyConstructor) xml =
         let collection = ctor.Invoke() :?> ICollection<'a>
         match xml with
@@ -185,6 +195,12 @@ module Deserializer =
 
     /// Reader function cache
     let readerCache = ref (Dictionary<Type, ReaderFunc>())
+
+    /// Active pattern wrapper for generic type detection
+    let (|GenericTypeOf|_|) (genericType : Type) (t : Type) =
+        match TypeHelper.getTypeWithGenericType t genericType with
+        | Some genType -> Some <| genType.GetGenericArguments().[0]
+        | _ -> None
 
     /// Try to find a constructor of the specified type
     /// with a single string parameter
@@ -262,6 +278,13 @@ module Deserializer =
         let elemReader = getReaderFunc t
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
 
+    and getHashSetReader (t : Type) =
+        // TODO: this does not look sane at all
+        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod("hashSetReader")
+        let mtd = reader.MakeGenericMethod([| t |])
+        let elemReader = getReaderFunc t
+        fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
+
     /// Try to determine a reader function for array types
     and getArrayReader (t : Type) = fun () ->
         if not t.IsArray then None else
@@ -275,13 +298,14 @@ module Deserializer =
     /// Try to determine a reader function for list types
     and getListReader (t : Type) = fun () ->
         if TypeHelper.isGenericType t then
-            let listInterface = TypeHelper.getTypeWithGenericType t typedefof<IList<_>>
-            match listInterface with
-            | Some listType ->
-                let elem = listType.GetGenericArguments().[0]
+            let list = typedefof<IList<_>>
+            let hashSet = typedefof<HashSet<_>>
+            match t with
+            | GenericTypeOf list gen ->
                 if TypeHelper.hasGenericTypeDefinitions t [| typedefof<List<_>> |]
-                then Some <| getTypedListReader elem
-                else Some <| getGenericCollectionReader t elem
+                then Some <| getTypedListReader gen
+                else Some <| getGenericCollectionReader t gen
+            | GenericTypeOf hashSet gen -> Some <| getHashSetReader gen
             | _ -> None
         elif t.IsAssignableFrom(typeof<IList>) || t.HasInterface(typeof<IList>) then
             let ctor = Reflection.getEmptyConstructor t
