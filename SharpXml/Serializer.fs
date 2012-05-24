@@ -69,7 +69,7 @@ module ValueTypeSerializer =
             | _ -> writer.Write(c)
         Seq.iter sanitize content
 
-    let nullableWriter writer value func =
+    let inline nullableWriter writer value func =
         if value <> null then func writer value
 
     let writeStringObject writer (value : obj) =
