@@ -239,19 +239,11 @@ module ListSerializer =
     /// Writer function for untyped IEnumerables
     let writeEnumerable determineFunc (writer : TextWriter) (value : obj) =
         let collection : IEnumerable = unbox value
-        let write func elem =
-            let f =
-                match func with
-                | None ->
-                    let writeFunc = determineFunc (elem.GetType())
-                    Some <| writeTag writer "item" writeFunc
-                | _ -> func
-            f.Value elem
-            f
         collection
         |> Seq.cast
-        |> Seq.fold write None
-        |> ignore
+        |> Seq.iter (fun elem ->
+            let writeFunc = determineFunc (elem.GetType())
+            writeTag writer "item" writeFunc elem)
 
     /// Writer function for generic IEnumerables
     let writeGenericEnumerable<'a> (writeFunc : WriterFunc) (writer : TextWriter) (value : obj) =

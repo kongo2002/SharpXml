@@ -124,3 +124,19 @@ module SerializationTests =
     let ``Can serialize class with static method ToXml()``() =
         let cls = CustomParserClass2(X = 200, Y = 400)
         serialize cls |> should equal "<customParserClass2>200x400</customParserClass2>"
+
+    [<Test>]
+    let ``Can serialize untyped collections``() =
+        let list = System.Collections.ArrayList()
+        list.Add("foo") |> ignore
+        list.Add("bar") |> ignore
+        let cls = ArrayListClass(V1 = 200, V2 = list)
+        serialize cls |> should equal "<arrayListClass><v1>200</v1><v2><item>foo</item><item>bar</item></v2></arrayListClass>"
+
+    [<Test>]
+    let ``Can serialize untyped collections containing different types``() =
+        let list = System.Collections.ArrayList()
+        list.Add("foo") |> ignore
+        list.Add(42) |> ignore
+        let cls = ArrayListClass(V1 = 200, V2 = list)
+        serialize cls |> should equal "<arrayListClass><v1>200</v1><v2><item>foo</item><item>42</item></v2></arrayListClass>"
