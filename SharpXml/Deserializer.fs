@@ -100,6 +100,15 @@ module ListDeserializer =
         | null -> None
         | x -> Some(x :?> 'a)
 
+    /// Generic collection processing function
+    let collectionProcessor<'a> action (reader : ReaderFunc) xml =
+        match xml with
+        | GroupElem(_, elems) ->
+            elems
+            |> List.choose (parseListElement<'a> reader)
+            |> List.iter action
+        | _ -> ()
+
     /// Reader function for immutable F# lists
     let listReader<'a> (reader : ReaderFunc) xml =
         match xml with
@@ -118,26 +127,16 @@ module ListDeserializer =
         | _ -> ()
         list
 
-    let hashSetReader<'a> (reader : ReaderFunc) xml =
-        let set = HashSet<'a>()
+    /// Reader function for arrays
+    let arrayReader<'a> (reader : ReaderFunc) xml =
         match xml with
         | GroupElem(_, elems) ->
             elems
             |> List.choose (parseListElement<'a> reader)
-            |> List.iter (set.Add >> ignore)
-        | _ -> ()
-        set
+            |> Array.ofList
+        | _ -> [| |]
 
-    let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : Reflection.EmptyConstructor) xml =
-        let collection = ctor.Invoke() :?> ICollection<'a>
-        match xml with
-        | GroupElem(_, elems) ->
-            elems
-            |> List.choose (parseListElement<'a> reader)
-            |> List.iter collection.Add
-        | _ -> ()
-        collection
-
+    /// Reader function for untyped collections
     let collectionReader (ctor : Reflection.EmptyConstructor) xml =
         let list = ctor.Invoke() :?> IList
         match xml with
@@ -148,34 +147,29 @@ module ListDeserializer =
         | _ -> ()
         list
 
+    /// Reader function for hash sets
+    let hashSetReader<'a> (reader : ReaderFunc) xml =
+        let set = HashSet<'a>()
+        collectionProcessor (set.Add >> ignore) reader xml
+        set
+
+    /// Reader function for generic collections
+    let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : Reflection.EmptyConstructor) xml =
+        let collection = ctor.Invoke() :?> ICollection<'a>
+        collectionProcessor collection.Add reader xml
+        collection
+
+    /// Reader function for queues
     let queueReader<'a> (reader : ReaderFunc) xml =
         let queue = Queue<'a>()
-        match xml with
-        | GroupElem(_, elems) ->
-            elems
-            |> List.choose (parseListElement<'a> reader)
-            |> List.iter queue.Enqueue
-        | _ -> ()
+        collectionProcessor queue.Enqueue reader xml
         queue
 
+    /// Reader function for stacks
     let stackReader<'a> (reader : ReaderFunc) xml =
         let stack = Stack<'a>()
-        match xml with
-        | GroupElem(_, elems) ->
-            elems
-            |> List.choose (parseListElement<'a> reader)
-            |> List.iter stack.Push
-        | _ -> ()
+        collectionProcessor stack.Push reader xml
         stack
-
-    /// Reader function for arrays
-    let arrayReader<'a> (reader : ReaderFunc) xml =
-        match xml with
-        | GroupElem(_, elems) ->
-            elems
-            |> List.choose (parseListElement<'a> reader)
-            |> Array.ofList
-        | _ -> [| |]
 
     /// Specialized reader function for string arrays
     let stringArrayReader xml =
