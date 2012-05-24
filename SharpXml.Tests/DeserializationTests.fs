@@ -97,6 +97,12 @@ module DeserializationTests =
         out.V2.[1].X |> should equal 100
 
     [<Test>]
+    let ``Can deserialize classes with string constructors``() =
+        let out = deserialize<StringCtorClass> "<stringCtorClass>300x50</stringCtorClass>"
+        out.X |> should equal 300
+        out.Y |> should equal 50
+
+    [<Test>]
     let ``Profile simple deserialization``() =
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000

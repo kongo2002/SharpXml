@@ -154,17 +154,31 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
+    type StringCtorClass(xml : string) =
+
+        let parts = xml.Split([| 'x' |])
+
+        let mutable x = Int32.Parse(parts.[0])
+        let mutable y = Int32.Parse(parts.[1])
+
+        member this.X
+            with get() = x
+            and set v = x <- v
+        member this.Y
+            with get() = y
+            and set v = y <- v
+
     type CustomParserClass() =
 
-        let mutable _x = Unchecked.defaultof<int>
-        let mutable _y = Unchecked.defaultof<int>
+        let mutable x = Unchecked.defaultof<int>
+        let mutable y = Unchecked.defaultof<int>
 
-        member x.X
-            with get() = _x
-            and set v = _x <- v
-        member x.Y
-            with get() = _y
-            and set v = _y <- v
+        member this.X
+            with get() = x
+            and set v = x <- v
+        member this.Y
+            with get() = y
+            and set v = y <- v
 
         member x.ToXml() =
             sprintf "%dx%d" x.X x.Y
