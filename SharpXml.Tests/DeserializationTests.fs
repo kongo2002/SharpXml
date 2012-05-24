@@ -137,6 +137,14 @@ module DeserializationTests =
         out.V2.["two"] |> should equal "bar"
 
     [<Test>]
+    let ``Can deserialize custom NameValueCollections``() =
+        let out = deserialize<GenericClass<CustomNameValueCollection>> "<genericClass><v1>100</v1><v2><item><key>one</key><value>foo</value></item><item><key>two</key><value>bar</value></item></v2></genericClass>"
+        out.V1 |> should equal 100
+        out.V2.Count |> should equal 2
+        out.V2.["one"] |> should equal "foo"
+        out.V2.["two"] |> should equal "bar"
+
+    [<Test>]
     let ``Profile simple deserialization``() =
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000

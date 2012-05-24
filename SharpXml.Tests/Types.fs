@@ -5,6 +5,7 @@ module Types =
     open System
     open System.Collections
     open System.Collections.Generic
+    open System.Collections.Specialized
     open System.Runtime.Serialization
 
     type TestEnum =
@@ -21,6 +22,15 @@ module Types =
         member x.AddPair(first, second) =
             x.Add(first)
             x.Add(second)
+
+    type CustomNameValueCollection =
+        inherit NameValueCollection
+
+        new () = { inherit NameValueCollection() }
+
+        member x.AddRange (items : (string * string) seq) =
+            items
+            |> Seq.iter (fun (k, v) -> x.Add(k, v))
 
     type TestClass(val1 : int, val2 : string) =
 

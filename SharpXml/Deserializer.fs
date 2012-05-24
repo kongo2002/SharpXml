@@ -90,8 +90,8 @@ module DictionaryDeserializer =
         | _ -> ()
         dictionary
 
-    let nameValueCollectionReader xml =
-        let collection = NameValueCollection()
+    let nameValueCollectionReader (ctor : unit -> #NameValueCollection) xml =
+        let collection = ctor()
         let processElement = function
             | GroupElem(_, [ v; k ]) ->
                 let key = ValueTypeDeserializer.extractString k
@@ -273,6 +273,14 @@ module Deserializer =
             |> Some
         | _ -> None
 
+    let getNameValueCollectionReader (t : Type) =
+        let ctor =
+            if t = typeof<NameValueCollection> then
+                fun() -> NameValueCollection()
+            else
+                fun() -> (Reflection.getEmptyConstructor t).Invoke() :?> NameValueCollection
+        Some <| DictionaryDeserializer.nameValueCollectionReader ctor
+
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
     let rec buildReaderInfo (p : PropertyInfo) =
         { Info = p; Reader = getReaderFunc p.PropertyType; Setter = Reflection.getObjSetter p }
@@ -355,7 +363,7 @@ module Deserializer =
             | GenericTypeOf stack gen -> Some <| getStackReader gen
             | _ -> None
         elif TypeHelper.isOrDerived t typeof<NameValueCollection> then
-            Some DictionaryDeserializer.nameValueCollectionReader
+            getNameValueCollectionReader t
         elif matchInterface typeof<IList> then
             let ctor = Reflection.getEmptyConstructor t
             let reader = ListDeserializer.collectionReader ctor >> box
