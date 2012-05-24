@@ -166,8 +166,28 @@ module Types =
             with get() = _y
             and set v = _y <- v
 
-        override x.ToString() =
+        member x.ToXml() =
             sprintf "%dx%d" x.X x.Y
+
+        static member ParseXml(input : string) =
+            match input.Split('x') with
+            | [| x; y |] -> CustomParserClass(X = Int32.Parse(x), Y = Int32.Parse(y))
+            | _ -> failwith "invalid input for CustomParserClass"
+
+    type CustomParserClass2() =
+
+        let mutable _x = Unchecked.defaultof<int>
+        let mutable _y = Unchecked.defaultof<int>
+
+        member x.X
+            with get() = _x
+            and set v = _x <- v
+        member x.Y
+            with get() = _y
+            and set v = _y <- v
+
+        static member ToXml(element : CustomParserClass2) =
+            sprintf "%dx%d" element.X element.Y
 
         static member ParseXml(input : string) =
             match input.Split('x') with

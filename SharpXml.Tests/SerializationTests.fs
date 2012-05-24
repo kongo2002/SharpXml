@@ -116,6 +116,11 @@ module SerializationTests =
         serialize cls |> should equal "<iEnumerableClass><v1>foo bar</v1><v2><item>1</item><item>2</item></v2></iEnumerableClass>"
 
     [<Test>]
-    let ``Can serialize class with custom ToString()``() =
+    let ``Can serialize class with instance method ToXml()``() =
         let cls = CustomParserClass(X = 200, Y = 400)
         serialize cls |> should equal "<customParserClass>200x400</customParserClass>"
+
+    [<Test>]
+    let ``Can serialize class with static method ToXml()``() =
+        let cls = CustomParserClass2(X = 200, Y = 400)
+        serialize cls |> should equal "<customParserClass2>200x400</customParserClass2>"

@@ -234,6 +234,10 @@ module Serializer =
         elif t = typeof<Type> then Some ValueTypeSerializer.writeType
         else None
 
+    let writerFuncName = "ToXml"
+    let instanceFlags = BindingFlags.Public ||| BindingFlags.Instance
+    let staticFlags = BindingFlags.Public ||| BindingFlags.Static
+
     let writeEmpty _ _ = ()
 
     let writeAbstractProperties (writer : TextWriter) (value : obj) =
@@ -344,6 +348,20 @@ module Serializer =
                 Some writeClass
         else None
 
+    /// Try to determine a member function 'ToXml'
+    and getInstanceWriter (t : Type) = fun() ->
+        match t.GetMethod(writerFuncName, instanceFlags, null, Type.EmptyTypes, null) |> Utils.toOption with
+        | Some func ->
+            (fun (w : TextWriter) x -> w.Write(func.Invoke(x, null))) |> Some
+        | _ -> None
+
+    /// Try to determine a static function 'ToXml'
+    and getStaticWriter (t : Type) = fun () ->
+        match t.GetMethod(writerFuncName, staticFlags, null, [| t |], null) |> Utils.toOption with
+        | Some func ->
+            (fun (w : TextWriter) x -> w.Write(func.Invoke(null, [| x |]))) |> Some
+        | _ -> None
+
     /// Try to determine a writer function for a dictionary
     and getDictionaryWriter (t : Type) = fun () ->
         if t.HasInterface(typeof<IDictionary>) ||
@@ -393,6 +411,8 @@ module Serializer =
             let! dictWriter = getDictionaryWriter t
             let! genericWriter = getGenericWriter t
             let! enumerableWriter = getEnumerableWriter t
+            let! instanceWriter = getInstanceWriter t
+            let! staticWriter = getStaticWriter t
             let! classWriter = getClassWriter t
             classWriter }
         writer
