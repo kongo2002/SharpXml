@@ -143,18 +143,25 @@ module TypeHelper =
 
     open System
 
-    let getGenericType (t : Type) =
+    let getGenericType t =
         let rec inner (typeToTest : Type) =
             if typeToTest = null then None
             elif typeToTest.IsGenericType then Some typeToTest
             else inner typeToTest.BaseType
         inner t
 
-    let isGenericType (t : Type) =
+    let isGenericType t =
         let rec inner (typeToTest : Type) =
             if typeToTest = null then false
             elif typeToTest.IsGenericType then true
             else inner typeToTest.BaseType
+        inner t
+
+    let isOrDerived t baseType =
+        let rec inner (current : Type) =
+            if current = null then false
+            elif current = baseType then true
+            else inner current.BaseType
         inner t
 
     let getTypeWithGenericType (t : Type) (genericType : Type) =

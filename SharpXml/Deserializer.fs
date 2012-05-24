@@ -29,6 +29,11 @@ module ValueTypeDeserializer =
         | ContentElem(_, str) -> reader str
         | _ -> null
 
+    let inline extractString xml =
+        match xml with
+        | ContentElem(_, str) -> str
+        | _ -> null
+
     let getEnumReader (t : Type) = fun () ->
         if t.IsEnum then
             fun i -> Enum.Parse(t, i)
@@ -63,13 +68,13 @@ module ValueTypeDeserializer =
 module DictionaryDeserializer =
 
     open System.Collections.Generic
+    open System.Collections.Specialized
 
     open SharpXml.XmlParser
 
     /// Dictionary reader function
     let dictReader<'a, 'b when 'a : equality> (keyReader : ReaderFunc) (valueReader : ReaderFunc) xml =
-        let readDictElem element =
-            match element with
+        let readDictElem = function
             // TODO: key and value tags are reversed
             | GroupElem(_, [ v; k ]) ->
                 let key = keyReader(k) :?> 'a
@@ -85,12 +90,26 @@ module DictionaryDeserializer =
         | _ -> ()
         dictionary
 
+    let nameValueCollectionReader xml =
+        let collection = NameValueCollection()
+        let processElement = function
+            | GroupElem(_, [ v; k ]) ->
+                let key = ValueTypeDeserializer.extractString k
+                let value = ValueTypeDeserializer.extractString v
+                collection.[key] <- value
+            | _ -> ()
+        match xml with
+        | GroupElem(_, elements) -> List.iter processElement elements
+        | _ -> ()
+        box collection
+
 /// List related deserialization logic
 module ListDeserializer =
 
     open System
     open System.Collections
     open System.Collections.Generic
+    open System.Collections.Specialized
 
     open SharpXml.XmlParser
 
@@ -192,6 +211,7 @@ module Deserializer =
     open System
     open System.Collections
     open System.Collections.Generic
+    open System.Collections.Specialized
     open System.Reflection
 
     open SharpXml.Attempt
@@ -319,6 +339,7 @@ module Deserializer =
 
     /// Try to determine a reader function for list types
     and getListReader (t : Type) = fun () ->
+        let matchInterface iface = t.IsAssignableFrom(iface) || t.HasInterface(iface)
         if TypeHelper.isGenericType t then
             let iList = typedefof<IList<_>>
             let hashSet = typedefof<HashSet<_>>
@@ -333,7 +354,9 @@ module Deserializer =
             | GenericTypeOf queue gen -> Some <| getQueueReader gen
             | GenericTypeOf stack gen -> Some <| getStackReader gen
             | _ -> None
-        elif t.IsAssignableFrom(typeof<IList>) || t.HasInterface(typeof<IList>) then
+        elif TypeHelper.isOrDerived t typeof<NameValueCollection> then
+            Some DictionaryDeserializer.nameValueCollectionReader
+        elif matchInterface typeof<IList> then
             let ctor = Reflection.getEmptyConstructor t
             let reader = ListDeserializer.collectionReader ctor >> box
             Some reader

@@ -4,6 +4,7 @@ module DeserializationTests =
 
     open System
     open System.Collections.Generic
+    open System.Collections.Specialized
     open System.Diagnostics
     open NUnit.Framework
 
@@ -126,6 +127,14 @@ module DeserializationTests =
         out.V2.Count |> should equal 2
         out.V2 |> Seq.head |> should equal "foo"
         out.V2 |> Seq.nth 1 |> should equal "bar"
+
+    [<Test>]
+    let ``Can deserialize NameValueCollections``() =
+        let out = deserialize<GenericClass<NameValueCollection>> "<genericClass><v1>100</v1><v2><item><key>one</key><value>foo</value></item><item><key>two</key><value>bar</value></item></v2></genericClass>"
+        out.V1 |> should equal 100
+        out.V2.Count |> should equal 2
+        out.V2.["one"] |> should equal "foo"
+        out.V2.["two"] |> should equal "bar"
 
     [<Test>]
     let ``Profile simple deserialization``() =
