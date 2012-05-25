@@ -18,6 +18,19 @@ type TypeBuilderInfo = {
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
     Ctor : Reflection.EmptyConstructor }
 
+module GenericTypes =
+
+    open System.Collections.Generic
+    open System.Collections.ObjectModel
+
+    let iList = typedefof<IList<_>>
+    let iColl = typedefof<ICollection<_>>
+    let hashSet = typedefof<HashSet<_>>
+    let queue = typedefof<Queue<_>>
+    let stack = typedefof<Stack<_>>
+    let linkedList = typedefof<LinkedList<_>>
+    let roColl = typedefof<ReadOnlyCollection<_>>
+
 module ValueTypeDeserializer =
 
     open System
@@ -381,26 +394,19 @@ module Deserializer =
     and getListReader (t : Type) = fun () ->
         let matchInterface iface = t.IsAssignableFrom(iface) || t.HasInterface(iface)
         if TypeHelper.isGenericType t then
-            let iList = typedefof<IList<_>>
-            let iColl = typedefof<ICollection<_>>
-            let hashSet = typedefof<HashSet<_>>
-            let queue = typedefof<Queue<_>>
-            let stack = typedefof<Stack<_>>
-            let linkedList = typedefof<LinkedList<_>>
-            let roColl = typedefof<ReadOnlyCollection<_>>
             match t with
-            | GenericTypeOf roColl gen ->
-                let param = iList.MakeGenericType([| gen |])
+            | GenericTypeOf GenericTypes.roColl gen ->
+                let param = GenericTypes.iList.MakeGenericType([| gen |])
                 let ctor = t.GetConstructor([| param |])
                 if ctor <> null then Some <| getGenericROReader ctor t gen else None
-            | GenericTypeOf iColl gen ->
+            | GenericTypeOf GenericTypes.iColl gen ->
                 if TypeHelper.hasGenericTypeDefinitions t [| typedefof<List<_>> |]
                 then Some <| getTypedListReader gen
                 else Some <| getGenericCollectionReader t gen
-            | GenericTypeOf hashSet gen -> Some <| getHashSetReader gen
-            | GenericTypeOf queue gen -> Some <| getQueueReader gen
-            | GenericTypeOf stack gen -> Some <| getStackReader gen
-            | GenericTypeOf linkedList gen -> Some <| getLinkedListReader gen
+            | GenericTypeOf GenericTypes.hashSet gen -> Some <| getHashSetReader gen
+            | GenericTypeOf GenericTypes.queue gen -> Some <| getQueueReader gen
+            | GenericTypeOf GenericTypes.stack gen -> Some <| getStackReader gen
+            | GenericTypeOf GenericTypes.linkedList gen -> Some <| getLinkedListReader gen
             | _ -> None
         elif TypeHelper.isOrDerived t typeof<NameValueCollection> then
             getNameValueCollectionReader t
