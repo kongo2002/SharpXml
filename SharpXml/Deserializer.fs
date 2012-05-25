@@ -389,7 +389,7 @@ module Deserializer =
             let roColl = typedefof<ReadOnlyCollection<_>>
             match t with
             | GenericTypeOf roColl gen ->
-                let param = roColl.MakeGenericType([| gen |])
+                let param = iList.MakeGenericType([| gen |])
                 let ctor = t.GetConstructor([| param |])
                 if ctor <> null then Some <| getGenericROReader ctor t gen else None
             | GenericTypeOf iList gen ->
