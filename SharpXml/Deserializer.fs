@@ -382,6 +382,7 @@ module Deserializer =
         let matchInterface iface = t.IsAssignableFrom(iface) || t.HasInterface(iface)
         if TypeHelper.isGenericType t then
             let iList = typedefof<IList<_>>
+            let iColl = typedefof<ICollection<_>>
             let hashSet = typedefof<HashSet<_>>
             let queue = typedefof<Queue<_>>
             let stack = typedefof<Stack<_>>
@@ -392,7 +393,7 @@ module Deserializer =
                 let param = iList.MakeGenericType([| gen |])
                 let ctor = t.GetConstructor([| param |])
                 if ctor <> null then Some <| getGenericROReader ctor t gen else None
-            | GenericTypeOf iList gen ->
+            | GenericTypeOf iColl gen ->
                 if TypeHelper.hasGenericTypeDefinitions t [| typedefof<List<_>> |]
                 then Some <| getTypedListReader gen
                 else Some <| getGenericCollectionReader t gen

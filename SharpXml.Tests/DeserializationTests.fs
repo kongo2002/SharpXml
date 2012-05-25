@@ -162,6 +162,14 @@ module DeserializationTests =
         Seq.nth 1 out.V2 |> should equal "one"
 
     [<Test>]
+    let ``Can deserialize sorted sets``() =
+        let out = deserialize<GenericClass<SortedSet<string>>> "<genericClass><v1>100</v1><v2><item>one</item><item>two</item></v2></genericClass>"
+        out.V1 |> should equal 100
+        out.V2.Count |> should equal 2
+        Seq.head out.V2 |> should equal "one"
+        Seq.nth 1 out.V2 |> should equal "two"
+
+    [<Test>]
     let ``Profile simple deserialization``() =
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000
