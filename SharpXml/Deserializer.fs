@@ -190,6 +190,13 @@ module ListDeserializer =
         collectionProcessor stack.Push reader xml
         stack
 
+    /// Reader function for generic linked lists
+    let linkedListReader<'a> (reader : ReaderFunc) xml =
+        let list = LinkedList<'a>()
+        let addTo (item : 'a) = list.AddLast(item) |> ignore
+        collectionProcessor addTo reader xml
+        list
+
     /// Specialized reader function for string arrays
     let stringArrayReader xml =
         let stringReader = box |> ValueTypeDeserializer.buildValueReader
@@ -284,8 +291,10 @@ module Deserializer =
         Some <| DictionaryDeserializer.nameValueCollectionReader ctor
 
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
-    let rec buildReaderInfo (p : PropertyInfo) =
-        { Info = p; Reader = getReaderFunc p.PropertyType; Setter = Reflection.getObjSetter p }
+    let rec buildReaderInfo (p : PropertyInfo) = {
+        Info = p;
+        Reader = getReaderFunc p.PropertyType;
+        Setter = Reflection.getObjSetter p }
 
     /// Build the TypeBuilderInfo record for the given Type
     and buildTypeBuilderInfo (t : Type) =
@@ -330,6 +339,10 @@ module Deserializer =
     and getStackReader =
         buildGenericFunction "stackReader"
 
+    /// Get a reader function for generic linked lists
+    and getLinkedListReader =
+        buildGenericFunction "linkedListReader"
+
     /// Get a reader function for generic collections
     and getGenericCollectionReader (listType : Type) (t : Type) =
         let mtd = getGenericListFunction "genericCollectionReader" t
@@ -355,6 +368,7 @@ module Deserializer =
             let hashSet = typedefof<HashSet<_>>
             let queue = typedefof<Queue<_>>
             let stack = typedefof<Stack<_>>
+            let linkedList = typedefof<LinkedList<_>>
             match t with
             | GenericTypeOf iList gen ->
                 if TypeHelper.hasGenericTypeDefinitions t [| typedefof<List<_>> |]
@@ -363,6 +377,7 @@ module Deserializer =
             | GenericTypeOf hashSet gen -> Some <| getHashSetReader gen
             | GenericTypeOf queue gen -> Some <| getQueueReader gen
             | GenericTypeOf stack gen -> Some <| getStackReader gen
+            | GenericTypeOf linkedList gen -> Some <| getLinkedListReader gen
             | _ -> None
         elif TypeHelper.isOrDerived t typeof<NameValueCollection> then
             getNameValueCollectionReader t

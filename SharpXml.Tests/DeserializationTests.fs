@@ -145,6 +145,14 @@ module DeserializationTests =
         out.V2.["two"] |> should equal "bar"
 
     [<Test>]
+    let ``Can deserialize linked lists``() =
+        let out = deserialize<GenericClass<LinkedList<string>>> "<genericClass><v1>100</v1><v2><item>one</item><item>two</item></v2></genericClass>"
+        out.V1 |> should equal 100
+        out.V2.Count |> should equal 2
+        Seq.head out.V2 |> should equal "two"
+        Seq.nth 1 out.V2 |> should equal "one"
+
+    [<Test>]
     let ``Profile simple deserialization``() =
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000
