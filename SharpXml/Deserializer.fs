@@ -362,11 +362,9 @@ module Deserializer =
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
 
     /// Get a reader function for generic readonly collections
-    and getGenericROReader (listType : Type) (t : Type) =
+    and getGenericROReader ctor (listType : Type) (t : Type) =
         let mtd = getGenericListFunction "genericROReader" t
         let elemReader = getReaderFunc t
-        let genListType = typedefof<IList<_>>.MakeGenericType(t)
-        let ctor = listType.GetConstructor([| genListType |])
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
 
     /// Try to determine a reader function for array types
@@ -390,8 +388,10 @@ module Deserializer =
             let linkedList = typedefof<LinkedList<_>>
             let roColl = typedefof<ReadOnlyCollection<_>>
             match t with
-            | GenericTypeIn [| roColl |] gen ->
-                Some <| getGenericROReader t gen
+            | GenericTypeOf roColl gen ->
+                let param = roColl.MakeGenericType([| gen |])
+                let ctor = t.GetConstructor([| param |])
+                if ctor <> null then Some <| getGenericROReader ctor t gen else None
             | GenericTypeOf iList gen ->
                 if TypeHelper.hasGenericTypeDefinitions t [| typedefof<List<_>> |]
                 then Some <| getTypedListReader gen
