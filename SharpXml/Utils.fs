@@ -164,6 +164,9 @@ module TypeHelper =
             else inner current.BaseType
         inner t
 
+    let isOrDerivedIn t baseTypes =
+        Seq.exists (isOrDerived t) baseTypes
+
     let getTypeWithGenericType (t : Type) (genericType : Type) =
         let genInterface =
             t.GetInterfaces()

@@ -178,6 +178,10 @@ module ListDeserializer =
         collectionProcessor collection.Add reader xml
         collection
 
+    let genericROReader<'a> (reader : ReaderFunc) (ctor : System.Reflection.ConstructorInfo) xml =
+        let list = clrListReader<'a> reader xml
+        ctor.Invoke([| list |])
+
     /// Reader function for queues
     let queueReader<'a> (reader : ReaderFunc) xml =
         let queue = Queue<'a>()
@@ -218,6 +222,7 @@ module Deserializer =
     open System
     open System.Collections
     open System.Collections.Generic
+    open System.Collections.ObjectModel
     open System.Collections.Specialized
     open System.Reflection
 
@@ -242,6 +247,12 @@ module Deserializer =
         match TypeHelper.getTypeWithGenericType t genericType with
         | Some genType -> Some <| genType.GetGenericArguments().[0]
         | _ -> None
+
+    let (|GenericTypeIn|_|) (genericTypes : Type seq) (t : Type) =
+        if TypeHelper.hasGenericTypeDefinitions t genericTypes then
+            Some <| t.GetGenericArguments().[0]
+        else
+            None
 
     /// Try to find a constructor of the specified type
     /// with a single string parameter
@@ -286,7 +297,7 @@ module Deserializer =
             if t = typeof<NameValueCollection> then
                 fun() -> NameValueCollection()
             else
-                let func = Reflection.getEmptyConstructor t
+                let func = Reflection.getConstructorMethod t
                 fun() -> func.Invoke() :?> NameValueCollection
         Some <| DictionaryDeserializer.nameValueCollectionReader ctor
 
@@ -304,7 +315,7 @@ module Deserializer =
             |> dict
         { Type = t
           Props = Dictionary(map, StringComparer.OrdinalIgnoreCase)
-          Ctor = Reflection.getEmptyConstructor t }
+          Ctor = Reflection.getConstructorMethod t }
 
     /// Determine the TypeBuilderInfo for the given Type
     and getTypeBuilderInfo (t : Type) =
@@ -347,7 +358,15 @@ module Deserializer =
     and getGenericCollectionReader (listType : Type) (t : Type) =
         let mtd = getGenericListFunction "genericCollectionReader" t
         let elemReader = getReaderFunc t
-        let ctor = Reflection.getEmptyConstructor listType
+        let ctor = Reflection.getConstructorMethod listType
+        fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
+
+    /// Get a reader function for generic readonly collections
+    and getGenericROReader (listType : Type) (t : Type) =
+        let mtd = getGenericListFunction "genericROReader" t
+        let elemReader = getReaderFunc t
+        let genListType = typedefof<IList<_>>.MakeGenericType(t)
+        let ctor = listType.GetConstructor([| genListType |])
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
 
     /// Try to determine a reader function for array types
@@ -369,7 +388,10 @@ module Deserializer =
             let queue = typedefof<Queue<_>>
             let stack = typedefof<Stack<_>>
             let linkedList = typedefof<LinkedList<_>>
+            let roColl = typedefof<ReadOnlyCollection<_>>
             match t with
+            | GenericTypeIn [| roColl |] gen ->
+                Some <| getGenericROReader t gen
             | GenericTypeOf iList gen ->
                 if TypeHelper.hasGenericTypeDefinitions t [| typedefof<List<_>> |]
                 then Some <| getTypedListReader gen
@@ -382,7 +404,7 @@ module Deserializer =
         elif TypeHelper.isOrDerived t typeof<NameValueCollection> then
             getNameValueCollectionReader t
         elif matchInterface typeof<IList> then
-            let ctor = Reflection.getEmptyConstructor t
+            let ctor = Reflection.getConstructorMethod t
             let reader = ListDeserializer.collectionReader ctor >> box
             Some reader
         else None
