@@ -5,6 +5,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SharpXml", "SharpXml\SharpX
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SharpXml.Tests", "SharpXml.Tests\SharpXml.Tests.fsproj", "{85E1E3EE-3118-4079-B930-82533B8450C4}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SharpXml.Common", "SharpXml.Common\SharpXml.Common.fsproj", "{05656716-338F-42E7-B62D-0CB05DB5E582}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +21,10 @@ Global
 		{85E1E3EE-3118-4079-B930-82533B8450C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{85E1E3EE-3118-4079-B930-82533B8450C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{85E1E3EE-3118-4079-B930-82533B8450C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05656716-338F-42E7-B62D-0CB05DB5E582}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05656716-338F-42E7-B62D-0CB05DB5E582}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05656716-338F-42E7-B62D-0CB05DB5E582}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05656716-338F-42E7-B62D-0CB05DB5E582}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

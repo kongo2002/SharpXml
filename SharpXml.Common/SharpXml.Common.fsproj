@@ -5,12 +5,12 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{9626d3cf-07a4-4616-9bcd-d9b1b919e24d}</ProjectGuid>
+    <ProjectGuid>{05656716-338f-42e7-b62d-0cb05db5e582}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>SharpXml</RootNamespace>
-    <AssemblyName>SharpXml</AssemblyName>
+    <RootNamespace>SharpXml.Common</RootNamespace>
+    <AssemblyName>SharpXml.Common</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <Name>SharpXml</Name>
+    <Name>SharpXml.Common</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -20,7 +20,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\SharpXml.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\SharpXml.Common.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -29,7 +29,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\SharpXml.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\SharpXml.Common.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
@@ -37,24 +37,9 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Utils.fs" />
-    <Compile Include="Extensions.fs" />
-    <Compile Include="Reflection.fs" />
-    <Compile Include="XmlParser.fs" />
-    <Compile Include="Serializer.fs" />
-    <Compile Include="Deserializer.fs" />
-    <Compile Include="XmlConfig.fs" />
-    <Compile Include="XmlSerializer.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\SharpXml.Common\SharpXml.Common.fsproj">
-      <Name>SharpXml.Common</Name>
-      <Project>{05656716-338f-42e7-b62d-0cb05db5e582}</Project>
-      <Private>True</Private>
-    </ProjectReference>
+    <Compile Include="XmlElementAttribute.fs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />

@@ -55,6 +55,11 @@
     <Compile Include="DeserializationTests.fs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\SharpXml.Common\SharpXml.Common.fsproj">
+      <Name>SharpXml.Common</Name>
+      <Project>{05656716-338f-42e7-b62d-0cb05db5e582}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\SharpXml\SharpXml.fsproj">
       <Name>SharpXml</Name>
       <Project>{9626d3cf-07a4-4616-9bcd-d9b1b919e24d}</Project>
