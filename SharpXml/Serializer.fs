@@ -17,7 +17,7 @@ type PropertyWriterInfo = {
     OriginalName : string
     ClsName : string
     GetFunc : Reflection.GetterFunc
-    WriteFunc : WriterFunc
+    WriteFunc : Lazy<WriterFunc>
     Default : obj }
 
 module SerializerBase =
@@ -339,7 +339,7 @@ module Serializer =
           OriginalName = propInfo.Name
           ClsName = propInfo.Name.ToCamelCase()
           GetFunc = Reflection.getObjGetter propInfo
-          WriteFunc = getWriterFunc propInfo.PropertyType
+          WriteFunc = lazy getWriterFunc propInfo.PropertyType
           Default = Reflection.getDefaultValue propInfo.PropertyType }
 
     /// Try to determine a enumerable serialization function
@@ -368,13 +368,13 @@ module Serializer =
             Atom.updateAtomDict propertyCache t props
 
     /// Writer for classes and other reference types
-    and writeClass (writer : TextWriter) (value : obj) =
-        let t = value.GetType()
-        getProperties t
-        |> Seq.iter (fun p ->
+    and writeClass props (writer : TextWriter) (value : obj) =
+        props
+        |> Array.iter (fun p ->
             let v = p.GetFunc.Invoke(value)
             if v <> null then
-                writeTag writer p.ClsName p.WriteFunc v)
+                let writeFunc = p.WriteFunc.Value
+                writeTag writer p.ClsName writeFunc v)
 
     /// Try to determine a class or interface serialization function
     and getClassWriter (t : Type) = fun () ->
@@ -382,7 +382,8 @@ module Serializer =
             if t.IsAbstract && not t.IsInterface then
                 Some writeAbstractProperties
             else
-                Some writeClass
+                let properties = getProperties t
+                Some (writeClass properties)
         else None
 
     /// Try to determine a writer function for a dictionary
