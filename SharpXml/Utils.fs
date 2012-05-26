@@ -22,6 +22,8 @@ module Utils =
         | true, value -> Some value
         | _ -> None
 
+    let inline empty str = String.IsNullOrWhiteSpace(str)
+
     /// Remove the name suffix of a generic type name
     let removeGenericSuffix input =
         genericRegex.Replace(input, String.Empty)

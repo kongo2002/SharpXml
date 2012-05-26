@@ -270,6 +270,7 @@ module Serializer =
 
     open SharpXml.Attempt
     open SharpXml.Extensions
+    open SharpXml.Utils
     open SerializerBase
 
     let propertyCache = ref (Dictionary<Type, PropertyWriterInfo[]>())
@@ -295,14 +296,20 @@ module Serializer =
 
     /// Determine the name of the TypeInfo based on the given type
     let getTypeName (t : Type) =
-        if t.IsArray then "array"
-        else t.Name.ToCamelCase() |> Utils.removeGenericSuffix
+        let baseName = if t.IsArray then "Array" else removeGenericSuffix t.Name
+        if XmlConfig.Instance.EmitCamelCaseNames then
+            baseName.ToCamelCase()
+        else
+            baseName
 
     /// Build a TypeInfo object based on the given Type
-    let buildTypeInfo t =
-        { Type = t
-          OriginalName = t.Name
-          ClsName = getTypeName t }
+    let buildTypeInfo t = {
+        Type = t
+        OriginalName = t.Name
+        ClsName =
+            match getAttribute<SharpXml.Common.XmlElementAttribute> t with
+            | Some attr when not (empty attr.Name) -> attr.Name
+            | _ -> getTypeName t }
 
     /// Get the TypeInfo object associated with the given Type
     let getTypeInfo (t : Type) =
@@ -335,9 +342,13 @@ module Serializer =
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
     let rec buildPropertyWriterInfo (propInfo : PropertyInfo) =
+        let cls =
+            match getAttribute<SharpXml.Common.XmlElementAttribute> propInfo with
+            | Some attr when not (empty attr.Name) -> attr.Name
+            | _ -> propInfo.Name.ToCamelCase()
         { Info = propInfo
           OriginalName = propInfo.Name
-          ClsName = propInfo.Name.ToCamelCase()
+          ClsName = cls
           GetFunc = Reflection.getObjGetter propInfo
           WriteFunc = lazy getWriterFunc propInfo.PropertyType
           Default = Reflection.getDefaultValue propInfo.PropertyType }

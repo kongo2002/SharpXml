@@ -5,10 +5,10 @@ open System.Globalization
 open System.IO
 open System.Text
 
+open SharpXml.Utils
+
 /// XML serializer
 type XmlSerializer() =
-
-    static let empty = String.IsNullOrWhiteSpace
 
     static member DeserializeFromString<'T> input : 'T =
         if empty input then Unchecked.defaultof<'T> else
