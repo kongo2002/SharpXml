@@ -145,6 +145,20 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
+    type AttributedDictClass() =
+
+        let mutable v1 = Unchecked.defaultof<int>
+        let mutable v2 = Unchecked.defaultof<Dictionary<string, int>>
+
+        [<XmlElement(Name = "A")>]
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        [<XmlElement(Name = "B", ItemName = "x", KeyName = "k", ValueName = "v")>]
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
     type NestedClass2() =
 
         let mutable v1 = Unchecked.defaultof<string>

@@ -146,3 +146,11 @@ module SerializationTests =
     let ``Can serialize classes attributed with XmlElementAttribute``() =
         let cls = AttributedClass(V1 = "foo", V2 = SimpleClass(V1 = "bar", V2 = 70))
         serialize cls |> should equal "<myClass><A>foo</A><B><v1>bar</v1><v2>70</v2></B></myClass>"
+
+    [<Test>]
+    let ``Can serialize dictionaries attributed with XmlElementAttribute``() =
+        let dict = Dictionary<string, int>()
+        dict.Add("foo", 1)
+        dict.Add("bar", 2)
+        let cls = AttributedDictClass(V1 = 211, V2 = dict)
+        serialize cls |> should equal "<attributedDictClass><A>211</A><B><x><k>foo</k><v>1</v></x><x><k>bar</k><v>2</v></x></B></attributedDictClass>"
