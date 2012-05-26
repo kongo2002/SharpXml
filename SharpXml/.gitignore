@@ -1,7 +1,0 @@
-*.crunchsolution.cache
-*.ncrunchproject
-*.ncrunchsolution
-*.ncrunchsolution.user
-*.suo
-/bin
-/obj
