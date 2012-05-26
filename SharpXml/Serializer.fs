@@ -230,16 +230,16 @@ module internal ListSerializer =
     open SerializerBase
 
     /// Writer function for integer arrays
-    let writeIntArray (writer : TextWriter) (value : obj) =
+    let writeIntArray itemName (writer : TextWriter) (value : obj) =
         let array : int [] = unbox value
         array
-        |> Array.iter (fun elem -> writeTag writer "item" ValueTypeSerializer.writeInt32 elem)
+        |> Array.iter (fun elem -> writeTag writer itemName ValueTypeSerializer.writeInt32 elem)
 
     /// Writer function for string arrays
-    let writeStrArray (writer : TextWriter) (value : obj) =
+    let writeStrArray itemName (writer : TextWriter) (value : obj) =
         let array : string [] = unbox value
         array
-        |> Array.iter (fun elem -> writeTag writer "item" ValueTypeSerializer.writeStringObject elem)
+        |> Array.iter (fun elem -> writeTag writer itemName ValueTypeSerializer.writeStringObject elem)
 
     /// Writer function for untyped IEnumerables
     let writeEnumerable itemName determineFunc (writer : TextWriter) (value : obj) =
@@ -435,8 +435,8 @@ module internal Serializer =
         if t.IsArray then
             if t = typeof<byte[]> then Some ValueTypeSerializer.writeBytes
             elif t = typeof<char[]> then Some ValueTypeSerializer.writeChars
-            elif t = typeof<int[]> then Some ListSerializer.writeIntArray
-            elif t = typeof<string[]> then Some ListSerializer.writeStrArray
+            elif t = typeof<int[]> then Some (ListSerializer.writeIntArray itemName)
+            elif t = typeof<string[]> then Some (ListSerializer.writeStrArray itemName)
             // other array types will be handled by the IEnumerable writer
             else None
         else None
