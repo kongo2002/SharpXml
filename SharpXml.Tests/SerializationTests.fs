@@ -10,7 +10,9 @@ module SerializationTests =
     open SharpXml.Tests.TestHelpers
     open SharpXml.Tests.Types
 
+
     let serialize<'a> (element : 'a) =
+        XmlConfig.Instance.EmitCamelCaseNames <- true
         XmlSerializer.SerializeToString<'a>(element)
 
     [<Test>]
@@ -139,3 +141,8 @@ module SerializationTests =
         list.Add(42) |> ignore
         let cls = ArrayListClass(V1 = 200, V2 = list)
         serialize cls |> should equal "<arrayListClass><v1>200</v1><v2><item>foo</item><item>42</item></v2></arrayListClass>"
+
+    [<Test>]
+    let ``Can serialize classes attributed with XmlElementAttribute``() =
+        let cls = AttributedClass(V1 = "foo", V2 = SimpleClass(V1 = "bar", V2 = 70))
+        serialize cls |> should equal "<myClass><A>foo</A><B><v1>bar</v1><v2>70</v2></B></myClass>"

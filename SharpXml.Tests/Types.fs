@@ -8,6 +8,8 @@ module Types =
     open System.Collections.Specialized
     open System.Runtime.Serialization
 
+    open SharpXml.Common
+
     type TestEnum =
         | Undefined = 0
         | Foo = 1
@@ -124,6 +126,21 @@ module Types =
         member x.V1
             with get() = v1
             and set v = v1 <- v
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
+    [<XmlElement(Name = "myClass")>]
+    type AttributedClass() =
+
+        let mutable v1 = Unchecked.defaultof<string>
+        let mutable v2 = Unchecked.defaultof<SimpleClass>
+
+        [<XmlElement(Name = "A")>]
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        [<XmlElement(Name = "B")>]
         member x.V2
             with get() = v2
             and set v = v2 <- v
