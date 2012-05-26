@@ -226,6 +226,7 @@ module internal ListSerializer =
     open System.Collections
     open System.Collections.Generic
     open System.IO
+    open System.Reflection
 
     open SerializerBase
 
@@ -259,7 +260,8 @@ module internal ListSerializer =
     /// Wrapper function to get the generic IEnumerable writer
     let getGenericEnumerableWriter itemName elemWriter t =
         // TODO: this does not look sane at all
-        let writer = Type.GetType("SharpXml.ListSerializer").GetMethod("writeGenericEnumerable")
+        let flags = BindingFlags.NonPublic ||| BindingFlags.Static
+        let writer = Type.GetType("SharpXml.ListSerializer").GetMethod("writeGenericEnumerable", flags)
         let mtd = writer.MakeGenericMethod([| t |])
         fun (w : TextWriter) x -> mtd.Invoke(null, [| itemName; elemWriter; w; x |]) |> ignore
 
