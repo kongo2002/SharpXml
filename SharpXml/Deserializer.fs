@@ -1,24 +1,24 @@
 ﻿namespace SharpXml
 
 /// Reader function delegate
-type ReaderFunc = XmlParser.XmlElem -> obj
+type internal ReaderFunc = XmlParser.XmlElem -> obj
 
 /// Record type containing the deserialization information
 /// for a specific property member
-type PropertyReaderInfo = {
+type internal PropertyReaderInfo = {
     Info : System.Reflection.PropertyInfo
     Reader : ReaderFunc
     Setter : Reflection.SetterFunc }
 
 /// Record type containing the deserialization information
 /// of a specific type and all its members that have to deserialized
-type TypeBuilderInfo = {
+type internal TypeBuilderInfo = {
     Type : System.Type
     // TODO: I would love to use a case-insensitive FSharpMap instead
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
     Ctor : Reflection.EmptyConstructor }
 
-module GenericTypes =
+module internal GenericTypes =
 
     open System.Collections.Generic
     open System.Collections.ObjectModel
@@ -31,7 +31,7 @@ module GenericTypes =
     let linkedList = typedefof<LinkedList<_>>
     let roColl = typedefof<ReadOnlyCollection<_>>
 
-module ValueTypeDeserializer =
+module internal ValueTypeDeserializer =
 
     open System
 
@@ -78,7 +78,7 @@ module ValueTypeDeserializer =
         | _ -> None
 
 /// Dictionary related deserialization logic
-module DictionaryDeserializer =
+module internal DictionaryDeserializer =
 
     open System.Collections
     open System.Collections.Generic
@@ -131,7 +131,7 @@ module DictionaryDeserializer =
         box table
 
 /// List related deserialization logic
-module ListDeserializer =
+module internal ListDeserializer =
 
     open System
     open System.Collections
@@ -244,7 +244,7 @@ module ListDeserializer =
         listReader<int> intReader xml |> List.toArray |> box
 
 /// Deserialization logic
-module Deserializer =
+module internal Deserializer =
 
     open System
     open System.Collections
@@ -255,6 +255,7 @@ module Deserializer =
 
     open SharpXml.Attempt
     open SharpXml.Extensions
+    open SharpXml.Utils
     open SharpXml.XmlParser
 
     /// Name of the static parsing method
@@ -275,6 +276,7 @@ module Deserializer =
         | Some genType -> Some <| genType.GetGenericArguments().[0]
         | _ -> None
 
+    /// Active pattern wrapper for multiple generic type detection
     let (|GenericTypeIn|_|) (genericTypes : Type seq) (t : Type) =
         if TypeHelper.hasGenericTypeDefinitions t genericTypes then
             Some <| t.GetGenericArguments().[0]
@@ -300,13 +302,14 @@ module Deserializer =
 
     let getGenericListFunction name t =
         // TODO: I don't like this string-based reflection at all
-        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod(name)
+        let flags = BindingFlags.NonPublic ||| BindingFlags.Static
+        let reader = Type.GetType("SharpXml.ListDeserializer").GetMethod(name, flags)
         reader.MakeGenericMethod([| t |])
 
     /// Try to find the static 'ParseXml' method on the specified type
     let findStaticParseMethod (t : Type) =
         t.GetMethod(parseMethodName, parseMethodFlags, null, [| typeof<string> |], null)
-        |> Utils.toOption
+        |> toOption
 
     /// Try to get a reader based on the type's static 'ParseXml' method
     let getStaticParseMethod (t : Type) = fun () ->
@@ -338,7 +341,12 @@ module Deserializer =
     and buildTypeBuilderInfo (t : Type) =
         let map =
             Reflection.getSerializableProperties t
-            |> Seq.map (fun p -> p.Name, buildReaderInfo p)
+            |> Seq.map (fun p ->
+                let name =
+                    match getAttribute<SharpXml.Common.XmlElementAttribute> p with
+                    | Some attr when not (empty attr.Name) -> attr.Name
+                    | _ -> p.Name
+                name, buildReaderInfo p)
             |> dict
         { Type = t
           Props = Dictionary(map, StringComparer.OrdinalIgnoreCase)
@@ -436,7 +444,8 @@ module Deserializer =
 
     and getTypedDictionaryReader (t : Type) =
         // TODO: this does not look sane at all
-        let reader = Type.GetType("SharpXml.DictionaryDeserializer").GetMethod("dictReader")
+        let flags = BindingFlags.NonPublic ||| BindingFlags.Static
+        let reader = Type.GetType("SharpXml.DictionaryDeserializer").GetMethod("dictReader", flags)
         let key, value = getDictTypeArguments t
         let mtd = reader.MakeGenericMethod([| key; value |])
         let keyReader = getReaderFunc key
