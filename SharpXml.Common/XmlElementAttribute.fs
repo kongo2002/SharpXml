@@ -9,6 +9,7 @@ type XmlElementAttribute() =
     let mutable name = Unchecked.defaultof<string>
     let mutable itemName = Unchecked.defaultof<string>
     let mutable keyName = Unchecked.defaultof<string>
+    let mutable valueName = Unchecked.defaultof<string>
 
     member x.Name
         with get() = name
@@ -21,4 +22,8 @@ type XmlElementAttribute() =
     member x.KeyName
         with get() = keyName
         and set(v) = keyName <- v
+
+    member x.ValueName
+        with get() = valueName
+        and set(v) = valueName <- v
 

@@ -7,7 +7,6 @@ module SerializationTests =
     open NUnit.Framework
 
     open SharpXml
-    open SharpXml.ValueTypeSerializer
     open SharpXml.Tests.TestHelpers
     open SharpXml.Tests.Types
 

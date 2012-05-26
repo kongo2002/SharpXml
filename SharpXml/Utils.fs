@@ -1,7 +1,7 @@
 ﻿namespace SharpXml
 
 /// General purpose utility functions
-module Utils =
+module internal Utils =
 
     open System
     open System.Text.RegularExpressions
@@ -22,6 +22,7 @@ module Utils =
         | true, value -> Some value
         | _ -> None
 
+    /// Convenience function for IsNullOrWhiteSpace
     let inline empty str = String.IsNullOrWhiteSpace(str)
 
     /// Remove the name suffix of a generic type name
@@ -41,7 +42,7 @@ module Utils =
 
 /// Module containing atomic operations like
 /// thread-safe dictionary update
-module Atom =
+module internal Atom =
 
     open System.Collections.Generic
     open System.Threading
@@ -67,7 +68,7 @@ module Atom =
         swapRef dict newDict
 
 /// Module containing Assembly related helper functions
-module Assembly =
+module internal Assembly =
 
     open System
     open System.IO
@@ -141,7 +142,7 @@ module Attempt =
     let attempt = AttemptBuilder()
 
 /// Module containing various helper functions related to types
-module TypeHelper =
+module internal TypeHelper =
 
     open System
 

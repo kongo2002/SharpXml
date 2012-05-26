@@ -1,18 +1,23 @@
 ﻿namespace SharpXml
 
 /// Writer function delegate
-type WriterFunc = System.IO.TextWriter -> obj -> unit
+type internal WriterFunc = System.IO.TextWriter -> obj -> unit
 
 /// Record type containing the type specific information
 /// for the first element to serialize
-type TypeInfo = {
+type internal TypeInfo = {
     Type : System.Type
     OriginalName : string
     ClsName : string }
 
+type internal DictNames = {
+    Item : string
+    Key : string
+    Value : string }
+
 /// Record type containing the serialization information
 /// for a specific property member
-type PropertyWriterInfo = {
+type internal PropertyWriterInfo = {
     Info : System.Reflection.PropertyInfo
     OriginalName : string
     ClsName : string
@@ -20,7 +25,7 @@ type PropertyWriterInfo = {
     WriteFunc : Lazy<WriterFunc>
     Default : obj }
 
-module SerializerBase =
+module internal SerializerBase =
 
     open System
     open System.IO
@@ -33,7 +38,7 @@ module SerializerBase =
 
 /// Module containing the serialization logic
 /// for value types
-module ValueTypeSerializer =
+module internal ValueTypeSerializer =
 
     open System
     open System.Globalization
@@ -215,7 +220,7 @@ module ValueTypeSerializer =
             | _ -> None
 
 /// Serialization logic for list and collection types
-module ListSerializer =
+module internal ListSerializer =
 
     open System
     open System.Collections
@@ -237,29 +242,29 @@ module ListSerializer =
         |> Array.iter (fun elem -> writeTag writer "item" ValueTypeSerializer.writeStringObject elem)
 
     /// Writer function for untyped IEnumerables
-    let writeEnumerable determineFunc (writer : TextWriter) (value : obj) =
+    let writeEnumerable itemName determineFunc (writer : TextWriter) (value : obj) =
         let collection : IEnumerable = unbox value
         collection
         |> Seq.cast
         |> Seq.iter (fun elem ->
             let writeFunc = determineFunc (elem.GetType())
-            writeTag writer "item" writeFunc elem)
+            writeTag writer itemName writeFunc elem)
 
     /// Writer function for generic IEnumerables
-    let writeGenericEnumerable<'a> (writeFunc : WriterFunc) (writer : TextWriter) (value : obj) =
+    let writeGenericEnumerable<'a> itemName (writeFunc : WriterFunc) (writer : TextWriter) (value : obj) =
         let collection : IEnumerable<'a> = unbox value
         collection
-        |> Seq.iter (writeTag writer "item" writeFunc)
+        |> Seq.iter (writeTag writer itemName writeFunc)
 
     /// Wrapper function to get the generic IEnumerable writer
-    let getGenericEnumerableWriter elemWriter t =
+    let getGenericEnumerableWriter itemName elemWriter t =
         // TODO: this does not look sane at all
         let writer = Type.GetType("SharpXml.ListSerializer").GetMethod("writeGenericEnumerable")
         let mtd = writer.MakeGenericMethod([| t |])
-        fun (w : TextWriter) x -> mtd.Invoke(null, [| elemWriter; w; x |]) |> ignore
+        fun (w : TextWriter) x -> mtd.Invoke(null, [| itemName; elemWriter; w; x |]) |> ignore
 
 /// Serialization logic
-module Serializer =
+module internal Serializer =
 
     open System
     open System.Collections
@@ -269,6 +274,7 @@ module Serializer =
     open System.Text.RegularExpressions
 
     open SharpXml.Attempt
+    open SharpXml.Common
     open SharpXml.Extensions
     open SharpXml.Utils
     open SerializerBase
@@ -339,11 +345,28 @@ module Serializer =
             (fun (w : TextWriter) x -> w.Write(func.Invoke(null, [| x |]))) |> Some
         | _ -> None
 
+    let getItemName (attribute : XmlElementAttribute option) =
+        match attribute with
+        | Some attr when not (empty attr.ItemName) -> attr.ItemName
+        | _ -> "item"
+
+    let defaultDictNames = { Item = "item"; Key = "key"; Value = "value" }
+
+    let getDictNames (attribute : XmlElementAttribute option) =
+        let get str fb = if not (empty str) then str else fb
+        match attribute with
+        | Some attr ->
+            let item = get attr.ItemName "item"
+            let key = get attr.KeyName "key"
+            let value = get attr.ValueName "value"
+            { Item = item; Key = key; Value = value }
+        | _ -> defaultDictNames
+
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
     let rec buildPropertyWriterInfo (propInfo : PropertyInfo) =
         let cls =
-            match getAttribute<SharpXml.Common.XmlElementAttribute> propInfo with
+            match getAttribute<XmlElementAttribute> propInfo with
             | Some attr when not (empty attr.Name) -> attr.Name
             | _ -> propInfo.Name.ToCamelCase()
         { Info = propInfo
@@ -354,16 +377,17 @@ module Serializer =
           Default = Reflection.getDefaultValue propInfo.PropertyType }
 
     /// Try to determine a enumerable serialization function
-    and getEnumerableWriter (t : Type) = fun () ->
+    and getEnumerableWriter attr (t : Type) = fun () ->
+        let itemName = getItemName attr
         match TypeHelper.getTypeWithGenericType t typedefof<IEnumerable<_>> with
         | Some enumerableType ->
             let elemType = enumerableType.GetGenericArguments().[0]
             let elemWriter = getWriterFunc elemType
-            Some <| ListSerializer.getGenericEnumerableWriter elemWriter elemType
+            Some <| ListSerializer.getGenericEnumerableWriter itemName elemWriter elemType
         | _ ->
             if t.HasInterface typeof<IEnumerable> ||
                 t.IsAssignableFrom typeof<IEnumerable> then
-                Some <| ListSerializer.writeEnumerable getWriterFunc
+                Some <| ListSerializer.writeEnumerable itemName getWriterFunc
             else None
 
     /// Get the PropertyWriterInfo array for the given type
@@ -398,14 +422,16 @@ module Serializer =
         else None
 
     /// Try to determine a writer function for a dictionary
-    and getDictionaryWriter (t : Type) = fun () ->
+    and getDictionaryWriter attr (t : Type) = fun () ->
+        let names = getDictNames attr
         if t.HasInterface(typeof<IDictionary>) ||
             t.IsAssignableFrom(typeof<IDictionary>) then
-            Some writeDictionary
+            Some (writeDictionary names)
         else None
 
     /// Try to determine a writer function for array types
-    and getArrayWriter (t : Type) = fun () ->
+    and getArrayWriter attr (t : Type) = fun () ->
+        let itemName = getItemName attr
         if t.IsArray then
             if t = typeof<byte[]> then Some ValueTypeSerializer.writeBytes
             elif t = typeof<char[]> then Some ValueTypeSerializer.writeChars
@@ -416,7 +442,7 @@ module Serializer =
         else None
 
     /// Writer function for a dictionary
-    and writeDictionary (writer : TextWriter) (value : obj) =
+    and writeDictionary names (writer : TextWriter) (value : obj) =
         let map : IDictionary = unbox value
         let keyWriter : WriterFunc option ref = ref None
         let valueWriter : WriterFunc option ref = ref None
@@ -428,10 +454,10 @@ module Serializer =
             if (!valueWriter).IsNone then valueWriter := Some <| getWriterFunc (dictVal.GetType())
             match !keyWriter, !valueWriter with
             | Some kv, Some vw ->
-                writer.Write("<item>")
-                writeTag writer "key" kv key
-                writeTag writer "value" vw dictVal
-                writer.Write("</item>")
+                writer.Write(sprintf "<%s>" names.Item)
+                writeTag writer names.Key kv key
+                writeTag writer names.Value vw dictVal
+                writer.Write(sprintf "</%s>" names.Item)
             | _ -> ())
 
     and getGenericWriter (t : Type) = fun () ->
@@ -441,14 +467,15 @@ module Serializer =
     /// Determine the associated serialization writer
     /// function for the specified type
     and determineWriter (t : Type) =
+        let attr = getAttribute<XmlElementAttribute> t
         let writer = attempt {
             let! strWriter = getStringWriter t
             let! valueWriter = getValueTypeWriter t
             let! specialWriter = getSpecialWriters t
-            let! arrayWriter = getArrayWriter t
-            let! dictWriter = getDictionaryWriter t
+            let! arrayWriter = getArrayWriter attr t
+            let! dictWriter = getDictionaryWriter attr t
             let! genericWriter = getGenericWriter t
-            let! enumerableWriter = getEnumerableWriter t
+            let! enumerableWriter = getEnumerableWriter attr t
             let! instanceWriter = getInstanceWriter t
             let! staticWriter = getStaticWriter t
             let! classWriter = getClassWriter t
