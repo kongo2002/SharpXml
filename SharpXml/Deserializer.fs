@@ -463,8 +463,10 @@ module Deserializer =
             | (ContentElem(name, _) as h :: t) ->
                 match builder.Props.TryGetValue name with
                 | true, prop ->
-                    let reader = prop.Reader
-                    prop.Setter.Invoke(inst, reader(h))
+                    try
+                        let reader = prop.Reader
+                        prop.Setter.Invoke(inst, reader(h))
+                    with _ -> ()
                     inner inst t
                 | _ -> inner inst t
             | SingleElem _ :: t ->
