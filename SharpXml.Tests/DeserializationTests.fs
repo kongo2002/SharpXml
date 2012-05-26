@@ -3,6 +3,7 @@
 module DeserializationTests =
 
     open System
+    open System.Collections
     open System.Collections.Generic
     open System.Collections.ObjectModel
     open System.Collections.Specialized
@@ -140,6 +141,14 @@ module DeserializationTests =
     [<Test>]
     let ``Can deserialize custom NameValueCollections``() =
         let out = deserialize<GenericClass<CustomNameValueCollection>> "<genericClass><v1>100</v1><v2><item><key>one</key><value>foo</value></item><item><key>two</key><value>bar</value></item></v2></genericClass>"
+        out.V1 |> should equal 100
+        out.V2.Count |> should equal 2
+        out.V2.["one"] |> should equal "foo"
+        out.V2.["two"] |> should equal "bar"
+
+    [<Test>]
+    let ``Can deserialize untyped hash tables``() =
+        let out = deserialize<GenericClass<Hashtable>> "<genericClass><v1>100</v1><v2><item><key>one</key><value>foo</value></item><item><key>two</key><value>bar</value></item></v2></genericClass>"
         out.V1 |> should equal 100
         out.V2.Count |> should equal 2
         out.V2.["one"] |> should equal "foo"

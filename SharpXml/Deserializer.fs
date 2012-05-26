@@ -80,6 +80,7 @@ module ValueTypeDeserializer =
 /// Dictionary related deserialization logic
 module DictionaryDeserializer =
 
+    open System.Collections
     open System.Collections.Generic
     open System.Collections.Specialized
 
@@ -115,6 +116,19 @@ module DictionaryDeserializer =
         | GroupElem(_, elements) -> List.iter processElement elements
         | _ -> ()
         box collection
+
+    let hashTableReader xml =
+        let table = Hashtable()
+        let processElement = function
+            | GroupElem(_, [ v; k ]) ->
+                let key = ValueTypeDeserializer.extractString k
+                let value = ValueTypeDeserializer.extractString v
+                table.Add(key, value)
+            | _ -> ()
+        match xml with
+        | GroupElem(_, elements) -> List.iter processElement elements
+        | _ -> ()
+        box table
 
 /// List related deserialization logic
 module ListDeserializer =
@@ -435,6 +449,8 @@ module Deserializer =
             match TypeHelper.getTypeWithGenericType t typedefof<Dictionary<_,_>> with
             | Some d ->
                 Some <| getTypedDictionaryReader t
+            | _ when t = typeof<Hashtable> ->
+                Some <| DictionaryDeserializer.hashTableReader
             | _ -> None
         else None
 
