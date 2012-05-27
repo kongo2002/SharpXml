@@ -445,7 +445,9 @@ module internal Deserializer =
                     try
                         let reader = prop.Reader
                         prop.Setter.Invoke(inst, reader(h))
-                    with _ -> ()
+                    with _ ->
+                        // TODO: log, error, exception?
+                        ()
                     inner inst t
                 | _ -> inner inst t
             | SingleElem _ :: t ->
