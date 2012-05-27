@@ -364,6 +364,7 @@ module internal Serializer =
     let getNameInfo (property : PropertyInfo) =
         let attribute = getAttribute<XmlElementAttribute> property
         let get str fb = if not (empty str) then str else fb
+        let name = if XmlConfig.Instance.EmitCamelCaseNames then property.Name.ToCamelCase() else property.Name
         let itemName =
             match property.PropertyType with
             | GenericTypeOf GenericTypes.iEnum elem ->
@@ -379,9 +380,9 @@ module internal Serializer =
             let item = get attr.ItemName itemName
             let key = get attr.KeyName keyName
             let value = get attr.ValueName valueName
-            let name = get attr.Name (property.Name.ToCamelCase())
+            let name = get attr.Name name
             { Name = name; Item = item; Key = key; Value = value }
-        | _ -> { Name = property.Name.ToCamelCase(); Item = itemName; Key = keyName; Value = valueName }
+        | _ -> { Name = name; Item = itemName; Key = keyName; Value = valueName }
 
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
