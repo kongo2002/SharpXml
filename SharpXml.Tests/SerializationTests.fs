@@ -154,3 +154,9 @@ module SerializationTests =
         dict.Add("bar", 2)
         let cls = AttributedDictClass(V1 = 211, V2 = dict)
         serialize cls |> should equal "<attributedDictClass><A>211</A><B><x><k>foo</k><v>1</v></x><x><k>bar</k><v>2</v></x></B></attributedDictClass>"
+
+    [<Test>]
+    let ``Can serialize lists attributed with XmlElementAttribute``() =
+        let list = List<string>([ "one"; "two"; "three"])
+        let cls = AttributedListClass(V1 = 200, V2 = list)
+        serialize cls |> should equal "<attributedListClass><A>200</A><v2><x>one</x><x>two</x><x>three</x></v2></attributedListClass>"
