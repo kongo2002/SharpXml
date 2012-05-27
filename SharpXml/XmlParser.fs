@@ -114,16 +114,19 @@ module XmlParser =
 
     let eatContentAlt (input : char[]) start =
         let length = input.Length - start
-        let rec inner (buffer : nativeptr<char>) len =
+        let mutable len = length
+        let mutable buffer = &&input.[start]
+        let mutable notFound = true
+        while notFound do
             if len > 0 then
-                let current = NativePtr.read buffer
-                if current = '<' then
-                    String(input, start, (length - len)), (length - len + start)
+                if (NativePtr.read buffer) = '<' then
+                    notFound <- false
                 else
-                    inner (NativePtr.add buffer 1) (len-1)
+                    len <- len - 1
+                    buffer <- NativePtr.add buffer 1
             else
-                String(input, start, length - len), length
-        inner (&&input.[start]) length
+                notFound <- false
+        String(input, start, length - len), (length - len + start)
 
     /// Parse the given input string starting from the specified
     /// index into an XML AST
