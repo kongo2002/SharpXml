@@ -141,6 +141,23 @@ module Attempt =
 
     let attempt = AttemptBuilder()
 
+/// Module containing often used generic type definitions
+module internal GenericTypes =
+
+    open System.Collections.Generic
+    open System.Collections.ObjectModel
+
+    let iList = typedefof<IList<_>>
+    let iDict = typedefof<IDictionary<_, _>>
+    let iEnum = typedefof<IEnumerable<_>>
+    let iColl = typedefof<ICollection<_>>
+    let hashSet = typedefof<HashSet<_>>
+    let queue = typedefof<Queue<_>>
+    let stack = typedefof<Stack<_>>
+    let linkedList = typedefof<LinkedList<_>>
+    let roColl = typedefof<ReadOnlyCollection<_>>
+
+
 /// Module containing various helper functions related to types
 module internal TypeHelper =
 
@@ -189,3 +206,17 @@ module internal TypeHelper =
         else
             let genTypeDef = t.GetGenericTypeDefinition()
             Seq.exists ((=) genTypeDef) genericTypes
+
+    /// Active pattern wrapper for generic type detection with 1 type argument
+    let (|GenericTypeOf|_|) (genericType : Type) (t : Type) =
+        match getTypeWithGenericType t genericType with
+        | Some genType -> Some <| genType.GetGenericArguments().[0]
+        | _ -> None
+
+    /// Active pattern wrapper for generic type detection with 2 type arguments
+    let (|GenericTypesOf|_|) (genericType : Type) (t : Type) =
+        match getTypeWithGenericType t genericType with
+        | Some genType ->
+            let args = t.GetGenericArguments()
+            if args.Length > 1 then Some(args.[0], args.[1]) else None
+        | _ -> None

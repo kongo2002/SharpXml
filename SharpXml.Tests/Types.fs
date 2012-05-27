@@ -299,6 +299,32 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
+    type Guest(id : int) =
+
+        let mutable firstName = Unchecked.defaultof<string>
+        let mutable lastName = Unchecked.defaultof<string>
+
+        member x.FirstName
+            with get() = firstName
+            and set v = firstName <- v
+        member x.LastName
+            with get() = lastName
+            and set v = lastName <- v
+        member x.Id
+            with get() = id
+
+    type Booking() =
+
+        let mutable name = Unchecked.defaultof<string>
+        let mutable guests = Unchecked.defaultof<List<Guest>>
+
+        member x.Name
+            with get() = name
+            and set v = name <- v
+        member x.Guests
+            with get() = guests
+            and set v = guests <- v
+
     [<DataContract(Name = "ContractClass", Namespace = "")>]
     type ContractClass() =
 

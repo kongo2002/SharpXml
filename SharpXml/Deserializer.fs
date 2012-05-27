@@ -18,19 +18,6 @@ type internal TypeBuilderInfo = {
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
     Ctor : Reflection.EmptyConstructor }
 
-module internal GenericTypes =
-
-    open System.Collections.Generic
-    open System.Collections.ObjectModel
-
-    let iList = typedefof<IList<_>>
-    let iColl = typedefof<ICollection<_>>
-    let hashSet = typedefof<HashSet<_>>
-    let queue = typedefof<Queue<_>>
-    let stack = typedefof<Stack<_>>
-    let linkedList = typedefof<LinkedList<_>>
-    let roColl = typedefof<ReadOnlyCollection<_>>
-
 module internal ValueTypeDeserializer =
 
     open System
@@ -255,6 +242,7 @@ module internal Deserializer =
 
     open SharpXml.Attempt
     open SharpXml.Extensions
+    open SharpXml.TypeHelper
     open SharpXml.Utils
     open SharpXml.XmlParser
 
@@ -269,19 +257,6 @@ module internal Deserializer =
 
     /// Reader function cache
     let readerCache = ref (Dictionary<Type, ReaderFunc>())
-
-    /// Active pattern wrapper for generic type detection
-    let (|GenericTypeOf|_|) (genericType : Type) (t : Type) =
-        match TypeHelper.getTypeWithGenericType t genericType with
-        | Some genType -> Some <| genType.GetGenericArguments().[0]
-        | _ -> None
-
-    /// Active pattern wrapper for multiple generic type detection
-    let (|GenericTypeIn|_|) (genericTypes : Type seq) (t : Type) =
-        if TypeHelper.hasGenericTypeDefinitions t genericTypes then
-            Some <| t.GetGenericArguments().[0]
-        else
-            None
 
     /// Try to find a constructor of the specified type
     /// with a single string parameter
@@ -415,14 +390,14 @@ module internal Deserializer =
     /// Try to determine a reader function for list types
     and getListReader (t : Type) = fun () ->
         let matchInterface iface = t.IsAssignableFrom(iface) || t.HasInterface(iface)
-        if TypeHelper.isGenericType t then
+        if isGenericType t then
             match t with
             | GenericTypeOf GenericTypes.roColl gen ->
                 let param = GenericTypes.iList.MakeGenericType([| gen |])
                 let ctor = t.GetConstructor([| param |])
                 if ctor <> null then Some <| getGenericROReader ctor t gen else None
             | GenericTypeOf GenericTypes.iColl gen ->
-                if TypeHelper.hasGenericTypeDefinitions t [| typedefof<List<_>> |]
+                if hasGenericTypeDefinitions t [| typedefof<List<_>> |]
                 then Some <| getTypedListReader gen
                 else Some <| getGenericCollectionReader t gen
             | GenericTypeOf GenericTypes.hashSet gen -> Some <| getHashSetReader gen
@@ -430,7 +405,7 @@ module internal Deserializer =
             | GenericTypeOf GenericTypes.stack gen -> Some <| getStackReader gen
             | GenericTypeOf GenericTypes.linkedList gen -> Some <| getLinkedListReader gen
             | _ -> None
-        elif TypeHelper.isOrDerived t typeof<NameValueCollection> then
+        elif isOrDerived t typeof<NameValueCollection> then
             getNameValueCollectionReader t
         elif matchInterface typeof<IList> then
             let ctor = Reflection.getConstructorMethod t
@@ -455,7 +430,7 @@ module internal Deserializer =
     and getDictionaryReader (t : Type) = fun () ->
         let dictInterface = typeof<IDictionary>
         if t.IsAssignableFrom(dictInterface) || t.HasInterface(dictInterface) then
-            match TypeHelper.getTypeWithGenericType t typedefof<Dictionary<_,_>> with
+            match getTypeWithGenericType t typedefof<Dictionary<_,_>> with
             | Some d ->
                 Some <| getTypedDictionaryReader t
             | _ when t = typeof<Hashtable> ->

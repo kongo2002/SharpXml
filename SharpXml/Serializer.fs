@@ -279,7 +279,9 @@ module internal Serializer =
     open SharpXml.Attempt
     open SharpXml.Common
     open SharpXml.Extensions
+    open SharpXml.TypeHelper
     open SharpXml.Utils
+
     open SerializerBase
 
     let propertyCache = ref (Dictionary<Type, PropertyWriterInfo[]>())
@@ -362,14 +364,24 @@ module internal Serializer =
     let getNameInfo (property : PropertyInfo) =
         let attribute = getAttribute<XmlElementAttribute> property
         let get str fb = if not (empty str) then str else fb
+        let itemName =
+            match property.PropertyType with
+            | GenericTypeOf GenericTypes.iEnum elem ->
+                getTypeName elem
+            | _ -> "item"
+        let keyName, valueName =
+            match property.PropertyType with
+            | GenericTypesOf GenericTypes.iDict (k, v) ->
+                getTypeName k, getTypeName v
+            | _ -> "key", "value"
         match attribute with
         | Some attr ->
-            let item = get attr.ItemName "item"
-            let key = get attr.KeyName "key"
-            let value = get attr.ValueName "value"
+            let item = get attr.ItemName itemName
+            let key = get attr.KeyName keyName
+            let value = get attr.ValueName valueName
             let name = get attr.Name (property.Name.ToCamelCase())
             { Name = name; Item = item; Key = key; Value = value }
-        | _ -> getDefaultNameInfo (property.Name.ToCamelCase())
+        | _ -> { Name = property.Name.ToCamelCase(); Item = itemName; Key = keyName; Value = valueName }
 
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
@@ -383,7 +395,7 @@ module internal Serializer =
 
     /// Try to determine a enumerable serialization function
     and getEnumerableWriter attr (t : Type) = fun () ->
-        match TypeHelper.getTypeWithGenericType t typedefof<IEnumerable<_>> with
+        match getTypeWithGenericType t typedefof<IEnumerable<_>> with
         | Some enumerableType ->
             let elemType = enumerableType.GetGenericArguments().[0]
             let elemWriter = getWriterFunc elemType

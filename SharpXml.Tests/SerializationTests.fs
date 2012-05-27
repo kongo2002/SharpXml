@@ -109,12 +109,12 @@ module SerializationTests =
         dict.Add("foo", 1)
         dict.Add("bar", 2)
         let cls = DictClass(V1 = dict, V2 = 200)
-        serialize cls |> should equal "<dictClass><v1><item><key>foo</key><value>1</value></item><item><key>bar</key><value>2</value></item></v1><v2>200</v2></dictClass>"
+        serialize cls |> should equal "<dictClass><v1><keyValuePair><string>foo</string><int32>1</int32></keyValuePair><keyValuePair><string>bar</string><int32>2</int32></keyValuePair></v1><v2>200</v2></dictClass>"
 
     [<Test>]
     let ``Can serialize IEnumerables``() =
         let cls = IEnumerableClass(V1 = "foo bar", V2 = List<int>(seq { 1 .. 2 }))
-        serialize cls |> should equal "<iEnumerableClass><v1>foo bar</v1><v2><item>1</item><item>2</item></v2></iEnumerableClass>"
+        serialize cls |> should equal "<iEnumerableClass><v1>foo bar</v1><v2><int32>1</int32><int32>2</int32></v2></iEnumerableClass>"
 
     [<Test>]
     let ``Can serialize class with instance method ToXml()``() =
@@ -160,3 +160,9 @@ module SerializationTests =
         let list = List<string>([ "one"; "two"; "three"])
         let cls = AttributedListClass(V1 = 200, V2 = list)
         serialize cls |> should equal "<attributedListClass><A>200</A><v2><x>one</x><x>two</x><x>three</x></v2></attributedListClass>"
+
+    [<Test>]
+    let ``Can serialize class member names correctly``() =
+        let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
+        let cls = Booking(Name = "testBooking", Guests = list)
+        serialize cls |> should equal "<booking><name>testBooking</name><guests><guest><firstName>foo</firstName><lastName>bar</lastName><id>10</id></guest><guest><firstName>ham</firstName><lastName>eggs</lastName><id>20</id></guest></guests></booking>"
