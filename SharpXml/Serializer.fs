@@ -371,6 +371,7 @@ module internal Serializer =
                 getTypeName elem
             | _ -> "item"
         let keyName, valueName =
+            // TODO: add check for other key-value collections
             match property.PropertyType with
             | GenericTypesOf GenericTypes.iDict (k, v) ->
                 getTypeName k, getTypeName v

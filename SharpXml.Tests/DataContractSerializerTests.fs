@@ -87,3 +87,10 @@ module DataContractSerializerTests =
     let ``DCS: profile simple deserialization``() =
         time (fun () -> contractDeserialize<ContractClass> "<ContractClass><V1>foo</V1><V2>42</V2></ContractClass>" |> ignore) 1000
         time (fun () -> contractDeserialize<ContractClass> "<ContractClass><V1>foo</V1><V2>42</V2></ContractClass>" |> ignore) 10000
+
+    [<Test>]
+    let ``DCS: profile simple serialization``() =
+        let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
+        let cls = Booking(Name = "testBooking", Guests = list)
+        time (fun () -> contractSerialize cls |> ignore) 1000
+        time (fun () -> contractSerialize cls |> ignore) 10000

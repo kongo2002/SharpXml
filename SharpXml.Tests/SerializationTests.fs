@@ -166,3 +166,10 @@ module SerializationTests =
         let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
         let cls = Booking(Name = "testBooking", Guests = list)
         serialize cls |> should equal "<booking><name>testBooking</name><guests><guest><firstName>foo</firstName><lastName>bar</lastName><id>10</id></guest><guest><firstName>ham</firstName><lastName>eggs</lastName><id>20</id></guest></guests></booking>"
+
+    [<Test>]
+    let ``Profile simple serialization``() =
+        let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
+        let cls = Booking(Name = "testBooking", Guests = list)
+        time (fun () -> serialize cls |> ignore) 1000
+        time (fun () -> serialize cls |> ignore) 10000
