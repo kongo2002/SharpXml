@@ -1,8 +1,5 @@
 ﻿namespace SharpXml
 
-/// Writer function delegate
-type internal WriterFunc = System.IO.TextWriter -> obj -> unit
-
 /// Record type containing the type specific information
 /// for the first element to serialize
 type internal TypeInfo = {
@@ -10,17 +7,21 @@ type internal TypeInfo = {
     OriginalName : string
     ClsName : string }
 
-type internal DictNames = {
+type internal NameInfo = {
+    Name : string
     Item : string
     Key : string
     Value : string }
+
+/// Writer function delegate
+type internal WriterFunc = NameInfo -> System.IO.TextWriter -> obj -> unit
 
 /// Record type containing the serialization information
 /// for a specific property member
 type internal PropertyWriterInfo = {
     Info : System.Reflection.PropertyInfo
     OriginalName : string
-    ClsName : string
+    Name : NameInfo
     GetFunc : Reflection.GetterFunc
     WriteFunc : Lazy<WriterFunc>
     Default : obj }
@@ -31,9 +32,9 @@ module internal SerializerBase =
     open System.IO
 
     /// General purpose XML tags writer function
-    let writeTag (w : TextWriter) (name : string) writeFunc (value : obj) =
+    let writeTag (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
         w.Write("<{0}>", name)
-        writeFunc w value
+        writeFunc info w value
         w.Write("</{0}>", name)
 
 /// Module containing the serialization logic
@@ -74,115 +75,115 @@ module internal ValueTypeSerializer =
             | _ -> writer.Write(c)
         Seq.iter sanitize content
 
-    let inline nullableWriter writer value func =
-        if value <> null then func writer value
+    let inline nullableWriter n writer value func =
+        if value <> null then func n writer value
 
-    let writeStringObject writer (value : obj) =
+    let writeStringObject _ writer (value : obj) =
         let v : string = unbox value
         writeString writer v
 
-    let writeObject (writer : TextWriter) (value : obj) =
+    let writeObject _ (writer : TextWriter) (value : obj) =
         writer.Write(value)
 
-    let writeFloat2f (writer : TextWriter) (value : obj) =
+    let writeFloat2f _ (writer : TextWriter) (value : obj) =
         let v = sprintf "%.2f" (unbox value)
         writeString writer v
 
-    let writeDateTime writer (value : obj) =
+    let writeDateTime _ writer (value : obj) =
         let v = toShortestXsdFormat (unbox value)
         writeString writer v
 
-    let writeNullableDateTime writer (value : obj) =
-        nullableWriter writer value writeDateTime
+    let writeNullableDateTime n writer (value : obj) =
+        nullableWriter n writer value writeDateTime
 
-    let writeDateTimeOffset writer (value : obj) =
+    let writeDateTimeOffset _ writer (value : obj) =
         let v : DateTimeOffset = unbox value
         writeString writer (v.ToString("o"))
 
-    let writeNullableDateTimeOffset writer (value : obj) =
-        nullableWriter writer value writeDateTimeOffset
+    let writeNullableDateTimeOffset n writer (value : obj) =
+        nullableWriter n writer value writeDateTimeOffset
 
-    let writeGuid writer (value : obj) =
+    let writeGuid _ writer (value : obj) =
         let v : Guid = unbox value
         writeString writer (v.ToString("N"))
 
-    let writeNullableGuid writer (value : obj) =
-        nullableWriter writer value writeGuid
+    let writeNullableGuid n writer (value : obj) =
+        nullableWriter n writer value writeGuid
 
-    let writeChar (writer : TextWriter) (value : obj) =
+    let writeChar _ (writer : TextWriter) (value : obj) =
         let v : char = unbox value
         writer.Write(v)
 
-    let writeChars (writer : TextWriter) (value : obj) =
+    let writeChars _ (writer : TextWriter) (value : obj) =
         let v : char[] = unbox value
         writer.Write(v)
 
-    let writeByte (writer : TextWriter) (value : obj) =
+    let writeByte _ (writer : TextWriter) (value : obj) =
         let v : byte = unbox value
         writer.Write(v)
 
-    let writeSByte (writer : TextWriter) (value : obj) =
+    let writeSByte _ (writer : TextWriter) (value : obj) =
         let v : sbyte = unbox value
         writer.Write(v)
 
-    let writeBytes (writer : TextWriter) (value : obj) =
+    let writeBytes _ (writer : TextWriter) (value : obj) =
         let v = Convert.ToBase64String(unbox value)
         writer.Write(v)
 
-    let writeUInt16 (writer : TextWriter) (value : obj) =
+    let writeUInt16 _ (writer : TextWriter) (value : obj) =
         let v : uint16 = unbox value
         writer.Write(v)
 
-    let writeInt16 (writer : TextWriter) (value : obj) =
+    let writeInt16 _ (writer : TextWriter) (value : obj) =
         let v : int16 = unbox value
         writer.Write(v)
 
-    let writeInt32 (writer : TextWriter) (value : obj) =
+    let writeInt32 _ (writer : TextWriter) (value : obj) =
         let v : int = unbox value
         writer.Write(v)
 
-    let writeUInt32 (writer : TextWriter) (value : obj) =
+    let writeUInt32 _ (writer : TextWriter) (value : obj) =
         let v : uint32 = unbox value
         writer.Write(v)
 
-    let writeInt64 (writer : TextWriter) (value : obj) =
+    let writeInt64 _ (writer : TextWriter) (value : obj) =
         let v : int64 = unbox value
         writer.Write(v)
 
-    let writeUInt64 (writer : TextWriter) (value : obj) =
+    let writeUInt64 _ (writer : TextWriter) (value : obj) =
         let v : uint64 = unbox value
         writer.Write(v)
 
-    let writeFloat (writer : TextWriter) (value : obj) =
+    let writeFloat _ (writer : TextWriter) (value : obj) =
         let v : float = unbox value
         writer.Write(v.ToString(CultureInfo.InvariantCulture))
 
-    let writeFloat32 (writer : TextWriter) (value : obj) =
+    let writeFloat32 _ (writer : TextWriter) (value : obj) =
         let v : float32 = unbox value
         writer.Write(v.ToString(CultureInfo.InvariantCulture))
 
-    let writeBool (writer : TextWriter) (value : obj) =
+    let writeBool _ (writer : TextWriter) (value : obj) =
         let v : bool = unbox value
         match v with
         | true -> writer.Write("true")
         | false -> writer.Write("false")
 
-    let writeDecimal writer (value : obj) =
+    let writeDecimal _ writer (value : obj) =
         let v : decimal = unbox value
         writeString writer (v.ToString(CultureInfo.InvariantCulture))
 
-    let writeEnum writer (value : obj) =
-        writeObject writer value
+    let writeEnum n writer (value : obj) =
+        writeObject n writer value
 
-    let writeEnumNames (writer : TextWriter) (value : obj) =
+    let writeEnumNames _ (writer : TextWriter) (value : obj) =
         let v : int = unbox value
         writer.Write(v)
 
-    let writeType writer (value : obj) =
+    let writeType _ writer (value : obj) =
         let v : Type = unbox value
         writeString writer v.AssemblyQualifiedName
 
-    let writeException writer (value : obj) =
+    let writeException _ writer (value : obj) =
         let v : Exception = unbox value
         writeString writer v.Message
 
@@ -231,39 +232,39 @@ module internal ListSerializer =
     open SerializerBase
 
     /// Writer function for integer arrays
-    let writeIntArray itemName (writer : TextWriter) (value : obj) =
+    let writeIntArray name (writer : TextWriter) (value : obj) =
         let array : int [] = unbox value
         array
-        |> Array.iter (fun elem -> writeTag writer itemName ValueTypeSerializer.writeInt32 elem)
+        |> Array.iter (fun elem -> writeTag name.Item name writer ValueTypeSerializer.writeInt32 elem)
 
     /// Writer function for string arrays
-    let writeStrArray itemName (writer : TextWriter) (value : obj) =
+    let writeStrArray name (writer : TextWriter) (value : obj) =
         let array : string [] = unbox value
         array
-        |> Array.iter (fun elem -> writeTag writer itemName ValueTypeSerializer.writeStringObject elem)
+        |> Array.iter (fun elem -> writeTag name.Item name writer ValueTypeSerializer.writeStringObject elem)
 
     /// Writer function for untyped IEnumerables
-    let writeEnumerable itemName determineFunc (writer : TextWriter) (value : obj) =
+    let writeEnumerable determineFunc name (writer : TextWriter) (value : obj) =
         let collection : IEnumerable = unbox value
         collection
         |> Seq.cast
         |> Seq.iter (fun elem ->
             let writeFunc = determineFunc (elem.GetType())
-            writeTag writer itemName writeFunc elem)
+            writeTag name.Item name writer writeFunc elem)
 
     /// Writer function for generic IEnumerables
-    let writeGenericEnumerable<'a> itemName (writeFunc : WriterFunc) (writer : TextWriter) (value : obj) =
+    let writeGenericEnumerable<'a> (writeFunc : WriterFunc) name (writer : TextWriter) (value : obj) =
         let collection : IEnumerable<'a> = unbox value
         collection
-        |> Seq.iter (writeTag writer itemName writeFunc)
+        |> Seq.iter (writeTag name.Item name writer writeFunc)
 
     /// Wrapper function to get the generic IEnumerable writer
-    let getGenericEnumerableWriter itemName elemWriter t =
+    let getGenericEnumerableWriter elemWriter t =
         // TODO: this does not look sane at all
         let flags = BindingFlags.NonPublic ||| BindingFlags.Static
         let writer = Type.GetType("SharpXml.ListSerializer").GetMethod("writeGenericEnumerable", flags)
         let mtd = writer.MakeGenericMethod([| t |])
-        fun (w : TextWriter) x -> mtd.Invoke(null, [| itemName; elemWriter; w; x |]) |> ignore
+        fun n (w : TextWriter) x -> mtd.Invoke(null, [| elemWriter; n; w; x |]) |> ignore
 
 /// Serialization logic
 module internal Serializer =
@@ -297,9 +298,9 @@ module internal Serializer =
     let instanceFlags = BindingFlags.Public ||| BindingFlags.Instance
     let staticFlags = BindingFlags.Public ||| BindingFlags.Static
 
-    let writeEmpty _ _ = ()
+    let writeEmpty _ _ _ = ()
 
-    let writeAbstractProperties (writer : TextWriter) (value : obj) =
+    let writeAbstractProperties _ (writer : TextWriter) (value : obj) =
         ()
 
     /// Determine the name of the TypeInfo based on the given type
@@ -337,14 +338,14 @@ module internal Serializer =
     let getInstanceWriter (t : Type) = fun() ->
         match t.GetMethod(writerFuncName, instanceFlags, null, Type.EmptyTypes, null) |> Utils.toOption with
         | Some func ->
-            (fun (w : TextWriter) x -> w.Write(func.Invoke(x, null))) |> Some
+            (fun _ (w : TextWriter) x -> w.Write(func.Invoke(x, null))) |> Some
         | _ -> None
 
     /// Try to determine a static function 'ToXml'
     let getStaticWriter (t : Type) = fun () ->
         match t.GetMethod(writerFuncName, staticFlags, null, [| t |], null) |> Utils.toOption with
         | Some func ->
-            (fun (w : TextWriter) x -> w.Write(func.Invoke(null, [| x |]))) |> Some
+            (fun _ (w : TextWriter) x -> w.Write(func.Invoke(null, [| x |]))) |> Some
         | _ -> None
 
     let getItemName (attribute : XmlElementAttribute option) =
@@ -352,44 +353,45 @@ module internal Serializer =
         | Some attr when not (empty attr.ItemName) -> attr.ItemName
         | _ -> "item"
 
-    let defaultDictNames = { Item = "item"; Key = "key"; Value = "value" }
+    let getDefaultNameInfo name = {
+        Name = name
+        Item = "item"
+        Key = "key"
+        Value = "value" }
 
-    let getDictNames (attribute : XmlElementAttribute option) =
+    let getNameInfo (property : PropertyInfo) =
+        let attribute = getAttribute<XmlElementAttribute> property
         let get str fb = if not (empty str) then str else fb
         match attribute with
         | Some attr ->
             let item = get attr.ItemName "item"
             let key = get attr.KeyName "key"
             let value = get attr.ValueName "value"
-            { Item = item; Key = key; Value = value }
-        | _ -> defaultDictNames
+            let name = get attr.Name (property.Name.ToCamelCase())
+            { Name = name; Item = item; Key = key; Value = value }
+        | _ -> getDefaultNameInfo (property.Name.ToCamelCase())
 
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
     let rec buildPropertyWriterInfo (propInfo : PropertyInfo) =
-        let cls =
-            match getAttribute<XmlElementAttribute> propInfo with
-            | Some attr when not (empty attr.Name) -> attr.Name
-            | _ -> propInfo.Name.ToCamelCase()
         { Info = propInfo
           OriginalName = propInfo.Name
-          ClsName = cls
+          Name = getNameInfo propInfo
           GetFunc = Reflection.getObjGetter propInfo
           WriteFunc = lazy getWriterFunc propInfo.PropertyType
           Default = Reflection.getDefaultValue propInfo.PropertyType }
 
     /// Try to determine a enumerable serialization function
     and getEnumerableWriter attr (t : Type) = fun () ->
-        let itemName = getItemName attr
         match TypeHelper.getTypeWithGenericType t typedefof<IEnumerable<_>> with
         | Some enumerableType ->
             let elemType = enumerableType.GetGenericArguments().[0]
             let elemWriter = getWriterFunc elemType
-            Some <| ListSerializer.getGenericEnumerableWriter itemName elemWriter elemType
+            Some <| ListSerializer.getGenericEnumerableWriter elemWriter elemType
         | _ ->
             if t.HasInterface typeof<IEnumerable> ||
                 t.IsAssignableFrom typeof<IEnumerable> then
-                Some <| ListSerializer.writeEnumerable itemName getWriterFunc
+                Some <| ListSerializer.writeEnumerable getWriterFunc
             else None
 
     /// Get the PropertyWriterInfo array for the given type
@@ -405,13 +407,13 @@ module internal Serializer =
             Atom.updateAtomDict propertyCache t props
 
     /// Writer for classes and other reference types
-    and writeClass props (writer : TextWriter) (value : obj) =
+    and writeClass props _ (writer : TextWriter) (value : obj) =
         props
         |> Array.iter (fun p ->
             let v = p.GetFunc.Invoke(value)
             if v <> null then
                 let writeFunc = p.WriteFunc.Value
-                writeTag writer p.ClsName writeFunc v)
+                writeTag p.Name.Name p.Name writer writeFunc v)
 
     /// Try to determine a class or interface serialization function
     and getClassWriter (t : Type) = fun () ->
@@ -424,27 +426,25 @@ module internal Serializer =
         else None
 
     /// Try to determine a writer function for a dictionary
-    and getDictionaryWriter attr (t : Type) = fun () ->
-        let names = getDictNames attr
+    and getDictionaryWriter (t : Type) = fun () ->
         if t.HasInterface(typeof<IDictionary>) ||
             t.IsAssignableFrom(typeof<IDictionary>) then
-            Some (writeDictionary names)
+            Some writeDictionary
         else None
 
     /// Try to determine a writer function for array types
-    and getArrayWriter attr (t : Type) = fun () ->
-        let itemName = getItemName attr
+    and getArrayWriter (t : Type) = fun () ->
         if t.IsArray then
             if t = typeof<byte[]> then Some ValueTypeSerializer.writeBytes
             elif t = typeof<char[]> then Some ValueTypeSerializer.writeChars
-            elif t = typeof<int[]> then Some (ListSerializer.writeIntArray itemName)
-            elif t = typeof<string[]> then Some (ListSerializer.writeStrArray itemName)
+            elif t = typeof<int[]> then Some ListSerializer.writeIntArray
+            elif t = typeof<string[]> then Some ListSerializer.writeStrArray
             // other array types will be handled by the IEnumerable writer
             else None
         else None
 
     /// Writer function for a dictionary
-    and writeDictionary names (writer : TextWriter) (value : obj) =
+    and writeDictionary name (writer : TextWriter) (value : obj) =
         let map : IDictionary = unbox value
         let keyWriter : WriterFunc option ref = ref None
         let valueWriter : WriterFunc option ref = ref None
@@ -456,10 +456,10 @@ module internal Serializer =
             if (!valueWriter).IsNone then valueWriter := Some <| getWriterFunc (dictVal.GetType())
             match !keyWriter, !valueWriter with
             | Some kv, Some vw ->
-                writer.Write(sprintf "<%s>" names.Item)
-                writeTag writer names.Key kv key
-                writeTag writer names.Value vw dictVal
-                writer.Write(sprintf "</%s>" names.Item)
+                writer.Write(sprintf "<%s>" name.Item)
+                writeTag name.Key name writer kv key
+                writeTag name.Value name writer vw dictVal
+                writer.Write(sprintf "</%s>" name.Item)
             | _ -> ())
 
     and getGenericWriter (t : Type) = fun () ->
@@ -474,8 +474,8 @@ module internal Serializer =
             let! strWriter = getStringWriter t
             let! valueWriter = getValueTypeWriter t
             let! specialWriter = getSpecialWriters t
-            let! arrayWriter = getArrayWriter attr t
-            let! dictWriter = getDictionaryWriter attr t
+            let! arrayWriter = getArrayWriter t
+            let! dictWriter = getDictionaryWriter t
             let! genericWriter = getGenericWriter t
             let! enumerableWriter = getEnumerableWriter attr t
             let! instanceWriter = getInstanceWriter t
@@ -499,4 +499,5 @@ module internal Serializer =
     /// Write the given type using the appropriate serialization logic
     let writeType<'a> (writer : TextWriter) (element : 'a) =
         let tInfo = getTypeInfo typeof<'a>
-        writeTag writer tInfo.ClsName (getWriterFunc typeof<'a>) element
+        let name = getDefaultNameInfo tInfo.ClsName
+        writeTag name.Name name writer (getWriterFunc typeof<'a>) element
