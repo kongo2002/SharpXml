@@ -33,7 +33,7 @@ module XmlParser =
 
     /// Eat a XML tag and return its name, the end index and
     /// type being one of Open, Close or Single
-    let eatTag (input : string) index =
+    let eatTag (input : char[]) index =
         let len = input.Length
         let nothing = 0, null, TagType.Open
 
@@ -53,15 +53,15 @@ module XmlParser =
                 let chr = input.[i]
                 if isWhitespace chr then
                     if not close then
-                        let tag = input.Substring(start, (i-start))
+                        let tag = String(input, start, (i-start))
                         endTag (i+1) tag TagType.Open
                     else
                         getName (i+1) start close
                 elif chr = '/' then
-                    let tag = input.Substring(start, (i-start))
+                    let tag = String(input, start, (i-start))
                     endTag (i+1) tag TagType.Single
                 elif chr = '>' then
-                    let tag = input.Substring(start, (i-start))
+                    let tag = String(input, start, (i-start))
                     let tagType = if close then TagType.Close else TagType.Open
                     i, tag, tagType
                 else
@@ -86,17 +86,17 @@ module XmlParser =
 
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index
-    let eatContent (input : string) index =
+    let eatContent (input : char[]) index =
         let len = input.Length
         let replace (f : string) (t : string) (i : string) =
             i.Replace(f, t)
         let rec inner i esc =
             let next = i + 1
             // end of string, this is probably an error
-            if next > len then input.Substring(index), len, esc
+            if next > len then String(input, index, len), len, esc
             elif input.[i] = '<' then
                 let length = i - index
-                input.Substring(index, length), i, esc
+                String(input, index, length), i, esc
             elif input.[i] = '&' then
                 inner next true
             else inner next esc
@@ -111,22 +111,23 @@ module XmlParser =
     /// Parse the given input string starting from the specified
     /// index into an XML AST
     let parseAST (input : string) index =
-        let len = input.Length
+        let inp = input.ToCharArray()
+        let len = inp.Length
         let rec inner i level elements =
             let next = i + 1
             if level = 0 || next >= len then elements, next
             else
-                match eatTag input i with
+                match eatTag inp i with
                 // open tag
                 | x, name, TagType.Open when len > x + 1 ->
-                    if input.[x+1] = '<' then
+                    if inp.[x+1] = '<' then
                         // nested group element
                         let elems, endIndex = inner (x+1) 1 []
                         inner endIndex level (GroupElem(name, elems) :: elements)
                     else
                         // plain content tag
-                        let content, ind = eatContent input (x+1)
-                        let contentEnd, _, _ = eatTag input ind
+                        let content, ind = eatContent inp (x+1)
+                        let contentEnd, _, _ = eatTag inp ind
                         inner (contentEnd+1) level (ContentElem(name, content) :: elements)
                 // single tag
                 | x, name, TagType.Single ->
@@ -136,6 +137,6 @@ module XmlParser =
                     inner x (level-1) elements
                 | _, null, _ -> failwith "Unable to read XML tag"
                 | _ -> failwith "number of opening and closing XML tags does not match"
-        if input.[index] <> '<' then failwith "XML content does not start with '<'"
+        if inp.[index] <> '<' then failwith "XML content does not start with '<'"
         inner index 1 [] |> fst
 
