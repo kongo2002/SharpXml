@@ -395,7 +395,7 @@ module internal Serializer =
 
     /// Try to determine a enumerable serialization function
     and getEnumerableWriter attr (t : Type) = fun () ->
-        match getTypeWithGenericType t typedefof<IEnumerable<_>> with
+        match getTypeWithGenericType t GenericTypes.iEnum with
         | Some enumerableType ->
             let elemType = enumerableType.GetGenericArguments().[0]
             let elemWriter = getWriterFunc elemType

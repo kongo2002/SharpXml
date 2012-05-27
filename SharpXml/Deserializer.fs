@@ -397,7 +397,7 @@ module internal Deserializer =
                 let ctor = t.GetConstructor([| param |])
                 if ctor <> null then Some <| getGenericROReader ctor t gen else None
             | GenericTypeOf GenericTypes.iColl gen ->
-                if hasGenericTypeDefinitions t [| typedefof<List<_>> |]
+                if hasGenericTypeDefinitions t [| GenericTypes.list |]
                 then Some <| getTypedListReader gen
                 else Some <| getGenericCollectionReader t gen
             | GenericTypeOf GenericTypes.hashSet gen -> Some <| getHashSetReader gen
@@ -413,15 +413,10 @@ module internal Deserializer =
             Some reader
         else None
 
-    and getDictTypeArguments (t : Type) =
-        let arguments = t.GetGenericArguments()
-        arguments.[0], arguments.[1]
-
-    and getTypedDictionaryReader (t : Type) =
+    and getTypedDictionaryReader key value =
         // TODO: this does not look sane at all
         let flags = BindingFlags.NonPublic ||| BindingFlags.Static
         let reader = Type.GetType("SharpXml.DictionaryDeserializer").GetMethod("dictReader", flags)
-        let key, value = getDictTypeArguments t
         let mtd = reader.MakeGenericMethod([| key; value |])
         let keyReader = getReaderFunc key
         let valueReader = getReaderFunc value
@@ -430,9 +425,9 @@ module internal Deserializer =
     and getDictionaryReader (t : Type) = fun () ->
         let dictInterface = typeof<IDictionary>
         if t.IsAssignableFrom(dictInterface) || t.HasInterface(dictInterface) then
-            match getTypeWithGenericType t typedefof<Dictionary<_,_>> with
-            | Some d ->
-                Some <| getTypedDictionaryReader t
+            match t with
+            | GenericTypesOf GenericTypes.dict (k, v) ->
+                Some <| getTypedDictionaryReader k v
             | _ when t = typeof<Hashtable> ->
                 Some <| DictionaryDeserializer.hashTableReader
             | _ -> None
