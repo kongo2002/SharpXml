@@ -2,6 +2,7 @@
 
 module XmlParserTests =
 
+    open System
     open System.Diagnostics
 
     open NUnit.Framework
@@ -87,6 +88,12 @@ module XmlParserTests =
         let result, index = eatContent (input.ToCharArray()) 23
         result |> should equal "ham eggs"
         index |> should equal 31
+
+    [<Test>]
+    let eatContentAlt01() =
+        let res, ind = eatContentAlt (("this is a small test</foo>").ToCharArray()) 5
+        res |> should equal "is a small test"
+        ind |> should equal 20
 
     let writeAst ast =
         let rec inner ast level =

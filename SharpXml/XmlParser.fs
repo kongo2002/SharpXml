@@ -1,9 +1,13 @@
 ﻿namespace SharpXml
 
+#nowarn "9"
+#nowarn "51"
+
 module XmlParser =
 
     open System
     open System.Collections.Generic
+    open Microsoft.FSharp.NativeInterop
 
     type XmlElem =
         | SingleElem of string
@@ -108,6 +112,19 @@ module XmlParser =
         else
             result, endIndex
 
+    let eatContentAlt (input : char[]) start =
+        let length = input.Length - start
+        let rec inner (buffer : nativeptr<char>) len =
+            if len > 0 then
+                let current = NativePtr.read buffer
+                if current = '<' then
+                    String(input, start, (length - len)), (length - len + start)
+                else
+                    inner (NativePtr.add buffer 1) (len-1)
+            else
+                String(input, start, length - len), length
+        inner (&&input.[start]) length
+
     /// Parse the given input string starting from the specified
     /// index into an XML AST
     let parseAST (input : string) index =
@@ -126,7 +143,7 @@ module XmlParser =
                         inner endIndex level (GroupElem(name, elems) :: elements)
                     else
                         // plain content tag
-                        let content, ind = eatContent inp (x+1)
+                        let content, ind = eatContentAlt inp (x+1)
                         let contentEnd, _, _ = eatTag inp ind
                         inner (contentEnd+1) level (ContentElem(name, content) :: elements)
                 // single tag
