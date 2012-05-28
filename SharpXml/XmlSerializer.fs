@@ -10,7 +10,11 @@ open SharpXml.Utils
 /// XML serializer
 type XmlSerializer() =
 
-    static member DeserializeFromString<'T> input : 'T =
+    /// UTF-8 encoding without BOM
+    static let utf8encoding = UTF8Encoding(false)
+
+    /// Deserialize the input string into the specified type
+    static member DeserializeFromString<'T> input =
         if empty input then Unchecked.defaultof<'T> else
             try
                 let reader = Deserializer.getReaderFunc typeof<'T>
@@ -20,6 +24,16 @@ type XmlSerializer() =
             with
             | :? SharpXmlException -> Unchecked.defaultof<'T>
 
+    /// Deserialize the input reader into the specified type
+    static member DeserializeFromReader<'T> (reader : TextReader) =
+        XmlSerializer.DeserializeFromString<'T>(reader.ReadToEnd())
+
+    /// Deserialize the input stream into the specified type
+    static member DeserializeFromStream<'T> (stream : Stream) =
+        use reader = new StreamReader(stream, utf8encoding)
+        XmlSerializer.DeserializeFromString<'T>(reader.ReadToEnd())
+
+    /// Serialize the given object into a XML string
     static member SerializeToString<'T> (element : 'T) =
         let sb = StringBuilder()
         use writer = new StringWriter(sb, CultureInfo.InvariantCulture)
@@ -27,3 +41,7 @@ type XmlSerializer() =
         Serializer.writeType writer element
         sb.ToString()
 
+    /// Serialize the given object into XML output using the specified TextWriter
+    static member SerializeToWriter<'T> (writer : TextWriter, element : 'T) =
+        if XmlConfig.Instance.WriteXmlHeader then writer.Write("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+        Serializer.writeType writer element
