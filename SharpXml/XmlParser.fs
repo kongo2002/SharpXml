@@ -90,43 +90,28 @@ module XmlParser =
 
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index
-    let eatContent (input : char[]) index =
-        let len = input.Length
-        let replace (f : string) (t : string) (i : string) =
-            i.Replace(f, t)
-        let rec inner i esc =
-            let next = i + 1
-            // end of string, this is probably an error
-            if next > len then String(input, index, len), len, esc
-            elif input.[i] = '<' then
-                let length = i - index
-                String(input, index, length), i, esc
-            elif input.[i] = '&' then
-                inner next true
-            else inner next esc
-        // TODO: this replacements probably could be done more performant,
-        // like while doing the search for the end tag
-        let result, endIndex, escaped = inner index false
-        if escaped then
-            result |> replace "&gt;" ">" |> replace "&lt;" "<", endIndex
-        else
-            result, endIndex
-
-    let eatContentAlt (input : char[]) start =
+    let eatContent (input : char[]) start =
         let length = input.Length - start
         let mutable len = length
+        let mutable found = false
+        let mutable encoded = false
         let mutable buffer = &&input.[start]
-        let mutable notFound = true
-        while notFound do
+        while not found do
             if len > 0 then
-                if (NativePtr.read buffer) = '<' then
-                    notFound <- false
+                let chr = NativePtr.read buffer
+                if chr = '<' then
+                    found <- true
                 else
+                    if chr = '&' then encoded <- true
                     len <- len - 1
                     buffer <- NativePtr.add buffer 1
             else
-                notFound <- false
-        String(input, start, length - len), (length - len + start)
+                found <- true
+        let result, index = String(input, start, length - len), (length - len + start)
+        if encoded then
+            result.Replace("&gt;", ">").Replace("&lt;", "<"), index
+        else
+            result, index
 
     /// Parse the given input string starting from the specified
     /// index into an XML AST
@@ -146,7 +131,7 @@ module XmlParser =
                         inner endIndex level (GroupElem(name, elems) :: elements)
                     else
                         // plain content tag
-                        let content, ind = eatContentAlt inp (x+1)
+                        let content, ind = eatContent inp (x+1)
                         let contentEnd, _, _ = eatTag inp ind
                         inner (contentEnd+1) level (ContentElem(name, content) :: elements)
                 // single tag

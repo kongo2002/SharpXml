@@ -89,12 +89,6 @@ module XmlParserTests =
         result |> should equal "ham eggs"
         index |> should equal 31
 
-    [<Test>]
-    let eatContentAlt01() =
-        let res, ind = eatContentAlt (("this is a small test</foo>").ToCharArray()) 5
-        res |> should equal "is a small test"
-        ind |> should equal 20
-
     let writeAst ast =
         let rec inner ast level =
             let debug str = System.Diagnostics.Debug.WriteLine(System.String(' ', level*2) + str)
