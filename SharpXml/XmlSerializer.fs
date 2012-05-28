@@ -12,10 +12,13 @@ type XmlSerializer() =
 
     static member DeserializeFromString<'T> input : 'T =
         if empty input then Unchecked.defaultof<'T> else
-            let reader = Deserializer.getReaderFunc typeof<'T>
-            match XmlParser.parseAST input 0 with
-            | [ xml ] -> reader xml :?> 'T
-            | _ -> invalidArg "the input XML has no root element" "input"
+            try
+                let reader = Deserializer.getReaderFunc typeof<'T>
+                match XmlParser.parseAST input 0 with
+                | [ xml ] -> reader xml :?> 'T
+                | _ -> invalidArg "the input XML has no root element" "input"
+            with
+            | :? SharpXmlException -> Unchecked.defaultof<'T>
 
     static member SerializeToString<'T> (element : 'T) =
         let sb = StringBuilder()

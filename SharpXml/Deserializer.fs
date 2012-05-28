@@ -1,5 +1,9 @@
 ﻿namespace SharpXml
 
+/// Application exception thrown during SharpXml
+/// serialization and deserialization
+exception SharpXmlException of string
+
 /// Reader function delegate
 type internal ReaderFunc = XmlParser.XmlElem -> obj
 
@@ -493,4 +497,4 @@ module internal Deserializer =
             | Some reader -> Atom.updateAtomDict readerCache t reader
             | _ ->
                 let err = sprintf "could not determine deserialization logic for type '%s'" t.FullName
-                invalidOp err
+                raise (SharpXmlException err)
