@@ -19,6 +19,12 @@ module XmlParser =
         | Single = 1
         | Close = 2
 
+    type ParseState =
+        | Start = 0
+        | Tag = 1
+        | TagName = 2
+        | EndTag = 3
+
     let whitespaceChars =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
         let max =  Array.max whitespace |> int
@@ -39,54 +45,58 @@ module XmlParser =
     /// type being one of Open, Close or Single
     let eatTag (input : char[]) index =
         let len = input.Length
-        let nothing = 0, null, TagType.Open
+        let mutable i = index
+        let mutable name = Unchecked.defaultof<string>
+        let mutable nameStart = 0
+        let mutable tag = TagType.Single
+        let mutable buffer = &&input.[index]
+        let mutable close = false
+        let mutable state = ParseState.Start
+        let mutable found = false
 
-        let rec endTag i name tagType =
-            if i >= len then nothing
-            else
-                let chr = input.[i]
-                if chr = '>' then
-                    i, name, tagType
-                elif chr = '/' then
-                    endTag (i+1) name TagType.Single
-                else endTag (i+1) name tagType
-
-        let rec getName i start close =
-            if i >= len then nothing
-            else
-                let chr = input.[i]
+        while i < len && not found do
+            let chr = NativePtr.read buffer
+            match state with
+            | ParseState.Start ->
+                i <- i + 1
+                buffer <- NativePtr.add buffer 1
+                if chr = '<' then state <- ParseState.Tag
+            | ParseState.Tag ->
+                i <- i + 1
+                buffer <- NativePtr.add buffer 1
+                if not (isWhitespace chr) then
+                    if chr = '/' then
+                        close <- true
+                        nameStart <- i
+                    else
+                        nameStart <- i - 1
+                    state <- ParseState.TagName
+            | ParseState.TagName ->
                 if isWhitespace chr then
                     if not close then
-                        let tag = String(input, start, (i-start))
-                        endTag (i+1) tag TagType.Open
-                    else
-                        getName (i+1) start close
+                        name <- String(input, nameStart, (i-nameStart))
+                        tag <- TagType.Open
+                        state <- ParseState.EndTag
                 elif chr = '/' then
-                    let tag = String(input, start, (i-start))
-                    endTag (i+1) tag TagType.Single
+                    name <- String(input, nameStart, (i-nameStart))
+                    tag <- TagType.Single
+                    state <- ParseState.EndTag
                 elif chr = '>' then
-                    let tag = String(input, start, (i-start))
-                    let tagType = if close then TagType.Close else TagType.Open
-                    i, tag, tagType
+                    name <- String(input, nameStart, (i-nameStart))
+                    tag <- if close then TagType.Close else TagType.Open
+                    found <- true
                 else
-                    getName (i+1) start close
+                    i <- i + 1
+                    buffer <- NativePtr.add buffer 1
+            | _ ->
+                if chr = '>' then
+                    found <- true
+                else
+                    i <- i + 1
+                    buffer <- NativePtr.add buffer 1
+                    if chr = '/' then tag <- TagType.Single
 
-        let rec findName i =
-            if i >= len then nothing
-            else
-                let chr = input.[i]
-                if isWhitespace chr then
-                    findName (i+1)
-                elif chr = '/' then
-                    getName (i+1) (i+1) true
-                else getName (i+1) i false
-
-        let rec findStart i =
-            if i >= len then nothing
-            elif input.[i] = '<' then findName (i+1)
-            else findStart (i+1)
-
-        findStart index
+        i, name, tag
 
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index
