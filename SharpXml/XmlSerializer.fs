@@ -13,6 +13,9 @@ type XmlSerializer() =
     /// UTF-8 encoding without BOM
     static let utf8encoding = UTF8Encoding(false)
 
+    /// Header string for XML output
+    static let xmlHeader = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+
     /// Deserialize the input string into the specified type
     static member DeserializeFromString<'T> input =
         if empty input then Unchecked.defaultof<'T> else
@@ -37,11 +40,11 @@ type XmlSerializer() =
     static member SerializeToString<'T> (element : 'T) =
         let sb = StringBuilder()
         use writer = new StringWriter(sb, CultureInfo.InvariantCulture)
-        if XmlConfig.Instance.WriteXmlHeader then writer.Write("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+        if XmlConfig.Instance.WriteXmlHeader then writer.Write(xmlHeader)
         Serializer.writeType writer element
         sb.ToString()
 
     /// Serialize the given object into XML output using the specified TextWriter
     static member SerializeToWriter<'T> (writer : TextWriter, element : 'T) =
-        if XmlConfig.Instance.WriteXmlHeader then writer.Write("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+        if XmlConfig.Instance.WriteXmlHeader then writer.Write(xmlHeader)
         Serializer.writeType writer element
