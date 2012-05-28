@@ -56,14 +56,12 @@ module XmlParser =
 
         while i < len && not found do
             let chr = NativePtr.read buffer
+            i <- i + 1
+            buffer <- NativePtr.add buffer 1
             match state with
             | ParseState.Start ->
-                i <- i + 1
-                buffer <- NativePtr.add buffer 1
                 if chr = '<' then state <- ParseState.Tag
             | ParseState.Tag ->
-                i <- i + 1
-                buffer <- NativePtr.add buffer 1
                 if not (isWhitespace chr) then
                     if chr = '/' then
                         close <- true
@@ -74,27 +72,24 @@ module XmlParser =
             | ParseState.TagName ->
                 if isWhitespace chr then
                     if not close then
-                        name <- String(input, nameStart, (i-nameStart))
+                        name <- String(input, nameStart, (i-nameStart-1))
                         tag <- TagType.Open
                         state <- ParseState.EndTag
                 elif chr = '/' then
-                    name <- String(input, nameStart, (i-nameStart))
+                    name <- String(input, nameStart, (i-nameStart-1))
                     tag <- TagType.Single
                     state <- ParseState.EndTag
                 elif chr = '>' then
-                    name <- String(input, nameStart, (i-nameStart))
+                    name <- String(input, nameStart, (i-nameStart-1))
                     tag <- if close then TagType.Close else TagType.Open
+                    i <- i - 1
                     found <- true
-                else
-                    i <- i + 1
-                    buffer <- NativePtr.add buffer 1
             | _ ->
                 if chr = '>' then
+                    i <- i - 1
                     found <- true
-                else
-                    i <- i + 1
-                    buffer <- NativePtr.add buffer 1
-                    if chr = '/' then tag <- TagType.Single
+                elif chr = '/' then
+                    tag <- TagType.Single
 
         i, name, tag
 
