@@ -17,6 +17,7 @@ module SerializationTests =
 
     [<Test>]
     let ``Can serialize DateTime values``() =
+        XmlConfig.Instance.UnregisterSerializer<DateTime>()
         let curr = DateTime.Now
         let date = curr.Date
         serialize date |> should equal (sprintf "<dateTime>%s</dateTime>" (date.ToString("yyyy-MM-dd")))
@@ -166,6 +167,25 @@ module SerializationTests =
         let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
         let cls = Booking(Name = "testBooking", Guests = list)
         serialize cls |> should equal "<booking><name>testBooking</name><guests><guest><firstName>foo</firstName><lastName>bar</lastName><id>10</id></guest><guest><firstName>ham</firstName><lastName>eggs</lastName><id>20</id></guest></guests></booking>"
+
+    [<Test>]
+    let ``Can serialize decimals with custom serializer``() =
+        XmlConfig.Instance.RegisterSerializer<decimal>(fun d ->
+            let dec : decimal = unbox d
+            dec.ToString("0,0"))
+        let cls = GenericClass<decimal>(V1 = 100, V2 = 200.45m)
+        serialize cls |> should equal "<genericClass><v1>100</v1><v2>200</v2></genericClass>"
+        XmlConfig.Instance.UnregisterSerializer<decimal>()
+
+    [<Test>]
+    let ``Can serialize DateTime with custom serializer``() =
+        let now = DateTime.Now
+        XmlConfig.Instance.RegisterSerializer<DateTime>(fun d ->
+            let date : DateTime = unbox d
+            date.ToShortDateString())
+        let cls = GenericClass<DateTime>(V1 = 999, V2 = now)
+        serialize cls |> should equal (sprintf "<genericClass><v1>999</v1><v2>%s</v2></genericClass>" (now.ToShortDateString()))
+        XmlConfig.Instance.UnregisterSerializer<DateTime>()
 
     [<Test>]
     let ``Profile simple serialization``() =

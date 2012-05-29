@@ -350,6 +350,13 @@ module internal Serializer =
             (fun _ (w : TextWriter) x -> w.Write(func.Invoke(null, [| x |]))) |> Some
         | _ -> None
 
+    /// Try to get a custom serializer function
+    let getCustomWriter (t : Type) = fun () ->
+        match XmlConfig.Instance.TryGetSerializer t with
+        | Some func ->
+            Some (fun _ (w : TextWriter) x -> w.Write(func.Invoke(x)))
+        | _ -> None
+
     let getItemName (attribute : XmlElementAttribute option) =
         match attribute with
         | Some attr when not (empty attr.ItemName) -> attr.ItemName
@@ -486,6 +493,7 @@ module internal Serializer =
         let attr = getAttribute<XmlElementAttribute> t
         let writer = attempt {
             let! strWriter = getStringWriter t
+            let! customWriter = getCustomWriter t
             let! valueWriter = getValueTypeWriter t
             let! specialWriter = getSpecialWriters t
             let! arrayWriter = getArrayWriter t
