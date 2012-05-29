@@ -73,6 +73,14 @@ type XmlConfig private() =
     member x.UnregisterDeserializer<'T>() =
         Atom.removeAtomDictElement deserializerCache typeof<'T>
 
+    /// Clear all registered custom serializer delegates
+    member x.ClearSerializers() =
+        Atom.clearAtomDict serializerCache
+
+    /// Clear all registered custom deserializer delegates
+    member x.ClearDeserializers() =
+        Atom.clearAtomDict deserializerCache
+
     /// Try to get a serializer delegate for the specified type
     member internal x.TryGetSerializer (t : Type) =
         (!serializerCache).TryGetValue t
