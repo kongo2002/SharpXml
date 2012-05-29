@@ -128,7 +128,7 @@ module internal Assembly =
         | _ -> findTypeFromLoadedAssembly typeName
 
 /// Module containing the Attempt computation builder
-module Attempt =
+module internal Attempt =
 
     let bind proc f =
         let value = proc()

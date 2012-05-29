@@ -10,6 +10,28 @@ module XmlParserTests =
     open SharpXml.Tests.TestHelpers
     open SharpXml.XmlParser
 
+    let private writeAst ast =
+        let rec inner ast level =
+            let debug str = Debug.WriteLine(System.String(' ', level*2) + str)
+            match ast with
+            | ContentElem(name, content) :: t ->
+                sprintf "Content(%s): %s" name content |> debug
+                inner t level
+            | GroupElem(name, elems) :: t ->
+                sprintf "Group(%s):" name |> debug
+                inner elems (level+1)
+                inner t level
+            | SingleElem(name) :: t ->
+                sprintf "Single(%s)" name |> debug
+                inner t level
+            | [] -> ()
+        inner ast 0
+
+    let private parse input =
+        let result = parseAST input 0
+        writeAst result
+        result
+
     [<Test>]
     let eatTag01() =
         let input = " foo <testTag rest/> <hamEggs/>"
@@ -87,28 +109,6 @@ module XmlParserTests =
         let result, index = eatContent (input.ToCharArray()) 23
         result |> should equal "ham eggs"
         index |> should equal 31
-
-    let writeAst ast =
-        let rec inner ast level =
-            let debug str = System.Diagnostics.Debug.WriteLine(System.String(' ', level*2) + str)
-            match ast with
-            | ContentElem(name, content) :: t ->
-                sprintf "Content(%s): %s" name content |> debug
-                inner t level
-            | GroupElem(name, elems) :: t ->
-                sprintf "Group(%s):" name |> debug
-                inner elems (level+1)
-                inner t level
-            | SingleElem(name) :: t ->
-                sprintf "Single(%s)" name |> debug
-                inner t level
-            | [] -> ()
-        inner ast 0
-
-    let parse input =
-        let result = parseAST input 0
-        writeAst result
-        result
 
     [<Test>]
     let parseAST01() =

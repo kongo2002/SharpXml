@@ -1,6 +1,6 @@
 ﻿namespace SharpXml
 
-module Reflection =
+module ReflectionHelpers =
 
     open System
     open System.Collections.Generic

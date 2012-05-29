@@ -22,7 +22,7 @@ type internal PropertyWriterInfo = {
     Info : System.Reflection.PropertyInfo
     OriginalName : string
     Name : NameInfo
-    GetFunc : Reflection.GetterFunc
+    GetFunc : ReflectionHelpers.GetterFunc
     WriteFunc : Lazy<WriterFunc>
     Default : obj }
 
@@ -398,9 +398,9 @@ module internal Serializer =
         { Info = propInfo
           OriginalName = propInfo.Name
           Name = getNameInfo propInfo
-          GetFunc = Reflection.getObjGetter propInfo
+          GetFunc = ReflectionHelpers.getObjGetter propInfo
           WriteFunc = lazy getWriterFunc propInfo.PropertyType
-          Default = Reflection.getDefaultValue propInfo.PropertyType }
+          Default = ReflectionHelpers.getDefaultValue propInfo.PropertyType }
 
     /// Try to determine a enumerable serialization function
     and getEnumerableWriter attr (t : Type) = fun () ->
@@ -421,7 +421,7 @@ module internal Serializer =
         | true, props -> props
         | _ ->
             let props =
-                Reflection.getSerializableProperties t
+                ReflectionHelpers.getSerializableProperties t
                 |> Seq.filter (fun p -> p.GetIndexParameters().Length = 0)
                 |> Seq.map buildPropertyWriterInfo
                 |> Array.ofSeq

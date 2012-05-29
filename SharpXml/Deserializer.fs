@@ -12,7 +12,7 @@ type internal ReaderFunc = XmlParser.XmlElem -> obj
 type internal PropertyReaderInfo = {
     Info : System.Reflection.PropertyInfo
     Reader : ReaderFunc
-    Setter : Reflection.SetterFunc }
+    Setter : ReflectionHelpers.SetterFunc }
 
 /// Record type containing the deserialization information
 /// of a specific type and all its members that have to deserialized
@@ -20,7 +20,7 @@ type internal TypeBuilderInfo = {
     Type : System.Type
     // TODO: I would love to use a case-insensitive FSharpMap instead
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
-    Ctor : Reflection.EmptyConstructor }
+    Ctor : ReflectionHelpers.EmptyConstructor }
 
 module internal ValueTypeDeserializer =
 
@@ -174,7 +174,7 @@ module internal ListDeserializer =
         | _ -> [| |]
 
     /// Reader function for untyped collections
-    let collectionReader (ctor : Reflection.EmptyConstructor) xml =
+    let collectionReader (ctor : ReflectionHelpers.EmptyConstructor) xml =
         let list = ctor.Invoke() :?> IList
         match xml with
         | GroupElem(_, elems) ->
@@ -191,7 +191,7 @@ module internal ListDeserializer =
         set
 
     /// Reader function for generic collections
-    let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : Reflection.EmptyConstructor) xml =
+    let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : ReflectionHelpers.EmptyConstructor) xml =
         let collection = ctor.Invoke() :?> ICollection<'a>
         collectionProcessor collection.Add reader xml
         collection
@@ -306,7 +306,7 @@ module internal Deserializer =
             if t = typeof<NameValueCollection> then
                 fun() -> NameValueCollection()
             else
-                let func = Reflection.getConstructorMethod t
+                let func = ReflectionHelpers.getConstructorMethod t
                 fun() -> func.Invoke() :?> NameValueCollection
         Some <| DictionaryDeserializer.nameValueCollectionReader ctor
 
@@ -314,12 +314,12 @@ module internal Deserializer =
     let rec buildReaderInfo (p : PropertyInfo) = {
         Info = p;
         Reader = getReaderFunc p.PropertyType;
-        Setter = Reflection.getObjSetter p }
+        Setter = ReflectionHelpers.getObjSetter p }
 
     /// Build the TypeBuilderInfo record for the given Type
     and buildTypeBuilderInfo (t : Type) =
         let map =
-            Reflection.getSerializableProperties t
+            ReflectionHelpers.getSerializableProperties t
             |> Seq.map (fun p ->
                 let name =
                     match getAttribute<SharpXml.Common.XmlElementAttribute> p with
@@ -329,7 +329,7 @@ module internal Deserializer =
             |> dict
         { Type = t
           Props = Dictionary(map, StringComparer.OrdinalIgnoreCase)
-          Ctor = Reflection.getConstructorMethod t }
+          Ctor = ReflectionHelpers.getConstructorMethod t }
 
     /// Determine the TypeBuilderInfo for the given Type
     and getTypeBuilderInfo (t : Type) =
@@ -372,7 +372,7 @@ module internal Deserializer =
     and getGenericCollectionReader (listType : Type) (t : Type) =
         let mtd = getGenericListFunction "genericCollectionReader" t
         let elemReader = getReaderFunc t
-        let ctor = Reflection.getConstructorMethod listType
+        let ctor = ReflectionHelpers.getConstructorMethod listType
         fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
 
     /// Get a reader function for generic readonly collections
@@ -412,7 +412,7 @@ module internal Deserializer =
         elif isOrDerived t typeof<NameValueCollection> then
             getNameValueCollectionReader t
         elif matchInterface typeof<IList> then
-            let ctor = Reflection.getConstructorMethod t
+            let ctor = ReflectionHelpers.getConstructorMethod t
             let reader = ListDeserializer.collectionReader ctor >> box
             Some reader
         else None

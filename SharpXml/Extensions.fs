@@ -1,9 +1,9 @@
 ﻿namespace SharpXml
 
-open System
-open System.Reflection
+module internal Extensions =
 
-module Extensions =
+    open System
+    open System.Reflection
 
     let caseDiff = (int 'A') - (int 'a')
 

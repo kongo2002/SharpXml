@@ -1,6 +1,6 @@
 ﻿namespace SharpXml
 
-module XmlParser =
+module internal XmlParser =
 
     open System
     open System.Collections.Generic
