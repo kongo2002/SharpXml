@@ -22,7 +22,7 @@ type internal PropertyWriterInfo = {
     Info : System.Reflection.PropertyInfo
     OriginalName : string
     Name : NameInfo
-    GetFunc : ReflectionHelpers.GetterFunc
+    GetFunc : GetterFunc
     WriteFunc : Lazy<WriterFunc>
     Default : obj }
 

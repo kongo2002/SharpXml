@@ -1,6 +1,12 @@
 ﻿namespace SharpXml
 
-module ReflectionHelpers =
+type EmptyConstructor = delegate of unit -> obj
+type GetterFunc = delegate of obj -> obj
+type GetterFunc<'T> = delegate of 'T -> obj
+type SetterFunc = delegate of obj * obj -> unit
+type SetterFunc<'T> = delegate of 'T * obj -> unit
+
+module internal ReflectionHelpers =
 
     open System
     open System.Collections.Generic
@@ -10,12 +16,6 @@ module ReflectionHelpers =
     open System.Runtime.Serialization
 
     open SharpXml.Extensions
-
-    type EmptyConstructor = delegate of unit -> obj
-    type GetterFunc = delegate of obj -> obj
-    type GetterFunc<'T> = delegate of 'T -> obj
-    type SetterFunc = delegate of obj * obj -> unit
-    type SetterFunc<'T> = delegate of 'T * obj -> unit
 
     let publicFlags =
         BindingFlags.FlattenHierarchy |||

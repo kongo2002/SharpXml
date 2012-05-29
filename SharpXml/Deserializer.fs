@@ -12,7 +12,7 @@ type internal ReaderFunc = XmlParser.XmlElem -> obj
 type internal PropertyReaderInfo = {
     Info : System.Reflection.PropertyInfo
     Reader : ReaderFunc
-    Setter : ReflectionHelpers.SetterFunc }
+    Setter : SetterFunc }
 
 /// Record type containing the deserialization information
 /// of a specific type and all its members that have to deserialized
@@ -20,7 +20,7 @@ type internal TypeBuilderInfo = {
     Type : System.Type
     // TODO: I would love to use a case-insensitive FSharpMap instead
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
-    Ctor : ReflectionHelpers.EmptyConstructor }
+    Ctor : EmptyConstructor }
 
 module internal ValueTypeDeserializer =
 
@@ -174,7 +174,7 @@ module internal ListDeserializer =
         | _ -> [| |]
 
     /// Reader function for untyped collections
-    let collectionReader (ctor : ReflectionHelpers.EmptyConstructor) xml =
+    let collectionReader (ctor : EmptyConstructor) xml =
         let list = ctor.Invoke() :?> IList
         match xml with
         | GroupElem(_, elems) ->
@@ -191,7 +191,7 @@ module internal ListDeserializer =
         set
 
     /// Reader function for generic collections
-    let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : ReflectionHelpers.EmptyConstructor) xml =
+    let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : EmptyConstructor) xml =
         let collection = ctor.Invoke() :?> ICollection<'a>
         collectionProcessor collection.Add reader xml
         collection

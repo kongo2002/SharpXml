@@ -43,7 +43,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="Extensions.fs" />
-    <Compile Include="Reflection.fs" />
+    <Compile Include="ReflectionHelpers.fs" />
     <Compile Include="XmlParser.fs" />
     <Compile Include="XmlConfig.fs" />
     <Compile Include="Serializer.fs" />
