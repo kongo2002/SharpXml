@@ -307,7 +307,7 @@ module internal Serializer =
 
     /// Determine the name of the TypeInfo based on the given type
     let getTypeName (t : Type) =
-        let baseName = if t.IsArray then "Array" else removeGenericSuffix t.Name
+        let baseName = if t.IsArray then "Array" else removeGenericSuffix <| t.NullableUnderlying().Name
         if XmlConfig.Instance.EmitCamelCaseNames then
             baseName.ToCamelCase()
         else
@@ -483,9 +483,8 @@ module internal Serializer =
                 writer.Write(sprintf "</%s>" name.Item)
             | _ -> ())
 
-    and getGenericWriter (t : Type) = fun () ->
-        // TODO: generic writer
-        None
+    and getObjectWriter = fun() ->
+        Some ValueTypeSerializer.writeObject
 
     /// Determine the associated serialization writer
     /// function for the specified type
@@ -498,12 +497,12 @@ module internal Serializer =
             let! specialWriter = getSpecialWriters t
             let! arrayWriter = getArrayWriter t
             let! dictWriter = getDictionaryWriter t
-            let! genericWriter = getGenericWriter t
             let! enumerableWriter = getEnumerableWriter attr t
             let! instanceWriter = getInstanceWriter t
             let! staticWriter = getStaticWriter t
             let! classWriter = getClassWriter t
-            classWriter }
+            let! objectWriter = getObjectWriter
+            objectWriter }
         writer
 
     /// Get the writer function to serialize the
