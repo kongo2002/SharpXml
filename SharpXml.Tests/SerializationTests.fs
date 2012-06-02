@@ -17,7 +17,6 @@ module SerializationTests =
 
     [<Test>]
     let ``Can serialize DateTime values``() =
-        XmlConfig.Instance.UnregisterSerializer<DateTime>()
         let curr = DateTime.Now
         let date = curr.Date
         serialize date |> should equal (sprintf "<dateTime>%s</dateTime>" (date.ToString("yyyy-MM-dd")))
@@ -180,12 +179,11 @@ module SerializationTests =
     [<Test>]
     let ``Can serialize DateTime with custom serializer``() =
         let now = DateTime.Now
-        XmlConfig.Instance.RegisterSerializer<DateTime>(fun d ->
-            let date : DateTime = unbox d
-            date.ToShortDateString())
-        let cls = GenericClass<DateTime>(V1 = 999, V2 = now)
+        XmlConfig.Instance.RegisterSerializer<CustomDateTime>(fun d ->
+            let date : CustomDateTime = unbox d
+            date.Date.ToShortDateString())
+        let cls = GenericClass<CustomDateTime>(V1 = 999, V2 = CustomDateTime(now))
         serialize cls |> should equal (sprintf "<genericClass><v1>999</v1><v2>%s</v2></genericClass>" (now.ToShortDateString()))
-        XmlConfig.Instance.UnregisterSerializer<DateTime>()
 
     [<Test>]
     let ``Profile simple serialization``() =

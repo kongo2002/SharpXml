@@ -34,6 +34,14 @@ module Types =
             items
             |> Seq.iter (fun (k, v) -> x.Add(k, v))
 
+    type CustomDateTime(date : DateTime) =
+
+        let mutable _date = date
+
+        member x.Date
+            with get() = _date
+            and set(v) = _date <- v
+
     type TestClass(val1 : int, val2 : string) =
 
         let mutable v1 = val1
