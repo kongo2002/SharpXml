@@ -27,6 +27,58 @@ module SerializationTests =
         serialize value |> should equal (sprintf "<double>%.3f</double>" value)
 
     [<Test>]
+    let ``Can serialize integers``() =
+        let value = 301
+        serialize value |> should equal (sprintf "<int32>%d</int32>" value)
+
+    [<Test>]
+    let ``Can serialize unsigned integers``() =
+        let value = 301u
+        serialize value |> should equal (sprintf "<uInt32>%d</uInt32>" value)
+
+    [<Test>]
+    let ``Can serialize short integers``() =
+        let value = 301s
+        serialize value |> should equal (sprintf "<int16>%d</int16>" value)
+
+    [<Test>]
+    let ``Can serialize unsigned short integers``() =
+        let value = 301us
+        serialize value |> should equal (sprintf "<uInt16>%d</uInt16>" value)
+
+    [<Test>]
+    let ``Can serialize longs``() =
+        let value = 301L
+        serialize value |> should equal (sprintf "<int64>%d</int64>" value)
+
+    [<Test>]
+    let ``Can serialize unsigned longs``() =
+        let value = 301UL
+        serialize value |> should equal (sprintf "<uInt64>%d</uInt64>" value)
+
+    [<Test>]
+    let ``Can serialize strings``() =
+        let value = "foo bar"
+        serialize value |> should equal (sprintf "<string>%s</string>" value)
+
+    [<Test>]
+    let ``Can serialize TimeSpans``() =
+        let value = TimeSpan(2, 10, 5)
+        serialize value |> should equal "<timeSpan>02:10:05</timeSpan>"
+
+    [<Test>]
+    let ``Can serialize DateTimeOffsets``() =
+        let value = DateTimeOffset(DateTime(2000, 12, 1), TimeSpan.Zero)
+        serialize value |> should equal (sprintf "<dateTimeOffset>%s</dateTimeOffset>" <| value.ToString("o"))
+
+    [<Test>]
+    let ``Can serialize nullable DateTimeOffsets``() =
+        let value = Nullable(DateTimeOffset(DateTime(2000, 12, 1), TimeSpan.Zero))
+        let nullValue : Nullable<DateTimeOffset> = Nullable()
+        serialize value |> should equal (sprintf "<dateTimeOffset>%s</dateTimeOffset>" <| value.Value.ToString("o"))
+        serialize nullValue |> should equal "<dateTimeOffset></dateTimeOffset>"
+
+    [<Test>]
     let ``Can serialize simple classes without default constructors``() =
         let cls = TestClass(800, "foo bar")
         serialize cls |> should equal "<testClass><v1>800</v1><v2>foo bar</v2></testClass>"
