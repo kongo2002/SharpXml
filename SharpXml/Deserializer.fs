@@ -234,6 +234,14 @@ module internal ListDeserializer =
         let intReader = Int32.Parse >> box |> ValueTypeDeserializer.buildValueReader
         listReader<int> intReader xml |> List.toArray |> box
 
+    /// Specialized reader function for char arrays
+    let charArrayReader = function
+        | ContentElem(_, value) when not (Utils.empty value) ->
+            value.ToCharArray() |> box
+        | _ ->
+            let array : char[] = [| |]
+            array |> box
+
 /// Deserialization logic
 module internal Deserializer =
 
@@ -387,6 +395,7 @@ module internal Deserializer =
             if t = typeof<string[]> then Some ListDeserializer.stringArrayReader
             elif t = typeof<int[]> then Some ListDeserializer.intArrayReader
             elif t = typeof<byte[]> then Some ListDeserializer.byteArrayReader
+            elif t = typeof<char[]> then Some ListDeserializer.charArrayReader
             else
                 let elem = t.GetElementType()
                 Some <| getTypedArrayReader elem
