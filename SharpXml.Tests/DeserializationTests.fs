@@ -31,6 +31,11 @@ module DeserializationTests =
         out.V2 |> should equal 42
 
     [<Test>]
+    let ``Can deserialize char arrays``() =
+        let out = deserialize<char[]> "<array>char</array>"
+        out |> should equal [| 'c'; 'h'; 'a'; 'r' |]
+
+    [<Test>]
     let ``Can deserialize class arrays``() =
         let out = deserialize<TestClass4> "<testClass4><v1><item><v1>42</v1><v2>foo</v2></item><item><v1>200</v1><v2>bar</v2></item></v1><v2>99</v2></testClass4>"
         out.V1.Length |> should equal 2

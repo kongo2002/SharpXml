@@ -22,6 +22,35 @@ module SerializationTests =
         serialize date |> should equal (sprintf "<dateTime>%s</dateTime>" (date.ToString("yyyy-MM-dd")))
 
     [<Test>]
+    let ``Can serialize nullable DateTime values``() =
+        let date = Nullable(DateTime.Now.Date)
+        let nullValue : Nullable<DateTime> = Nullable()
+        serialize date |> should equal (sprintf "<dateTime>%s</dateTime>" (date.Value.ToString("yyyy-MM-dd")))
+        serialize nullValue |> should equal "<dateTime></dateTime>"
+
+    [<Test>]
+    let ``Can serialize guids``() =
+        let value = Guid()
+        serialize value |> should equal (sprintf "<guid>%s</guid>" <| value.ToString("N"))
+
+    [<Test>]
+    let ``Can serialize chars``() =
+        let value = 'c'
+        serialize value |> should equal "<char>c</char>"
+
+    [<Test>]
+    let ``Can serialize char arrays``() =
+        let value = [| 'c'; 'h'; 'a'; 'r' |]
+        serialize value |> should equal "<array>char</array>"
+
+    [<Test>]
+    let ``Can serialize nullable guids``() =
+        let value = Guid()
+        let nullValue : Nullable<Guid> = Nullable()
+        serialize value |> should equal (sprintf "<guid>%s</guid>" <| value.ToString("N"))
+        serialize nullValue |> should equal "<guid></guid>"
+
+    [<Test>]
     let ``Can serialize floats``() =
         let value = 2.528
         serialize value |> should equal (sprintf "<double>%.3f</double>" value)

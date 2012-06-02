@@ -85,10 +85,6 @@ module internal ValueTypeSerializer =
     let writeObject _ (writer : TextWriter) (value : obj) =
         writer.Write(value)
 
-    let writeFloat2f _ (writer : TextWriter) (value : obj) =
-        let v = sprintf "%.2f" (unbox value)
-        writeString writer v
-
     let writeDateTime _ writer (value : obj) =
         let v = toShortestXsdFormat (unbox value)
         writeString writer v
