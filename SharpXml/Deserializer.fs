@@ -236,8 +236,16 @@ module internal ListDeserializer =
 
     /// Specialized reader function for char arrays
     let charArrayReader = function
-        | ContentElem(_, value) when not (Utils.empty value) ->
+        | ContentElem(_, value) when Utils.notEmpty value ->
             value.ToCharArray() |> box
+        | GroupElem(_, elements) ->
+            elements
+            |> List.choose(function
+                | ContentElem(_, str) when Utils.notEmpty str -> Some str.[0]
+                | _ -> None)
+            |> List.rev
+            |> List.toArray
+            |> box
         | _ ->
             let array : char[] = [| |]
             array |> box
@@ -331,7 +339,7 @@ module internal Deserializer =
             |> Seq.map (fun p ->
                 let name =
                     match getAttribute<SharpXml.Common.XmlElementAttribute> p with
-                    | Some attr when not (empty attr.Name) -> attr.Name
+                    | Some attr when notWhite attr.Name -> attr.Name
                     | _ -> p.Name
                 name, buildReaderInfo p)
             |> dict

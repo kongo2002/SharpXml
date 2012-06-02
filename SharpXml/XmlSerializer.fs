@@ -18,7 +18,7 @@ type XmlSerializer() =
 
     /// Deserialize the input string into the specified type
     static member DeserializeFromString<'T> input =
-        if empty input then Unchecked.defaultof<'T> else
+        if notEmpty input then
             try
                 let reader = Deserializer.getReaderFunc typeof<'T>
                 match XmlParser.parseAST input 0 with
@@ -26,6 +26,8 @@ type XmlSerializer() =
                 | _ -> invalidArg "the input XML has no root element" "input"
             with
             | :? SharpXmlException -> Unchecked.defaultof<'T>
+        else
+            Unchecked.defaultof<'T>
 
     /// Deserialize the input reader into the specified type
     static member DeserializeFromReader<'T> (reader : TextReader) =

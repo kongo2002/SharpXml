@@ -315,7 +315,7 @@ module internal Serializer =
         OriginalName = t.Name
         ClsName =
             match getAttribute<SharpXml.Common.XmlElementAttribute> t with
-            | Some attr when not (empty attr.Name) -> attr.Name
+            | Some attr when notWhite attr.Name -> attr.Name
             | _ -> getTypeName t }
 
     /// Get the TypeInfo object associated with the given Type
@@ -355,7 +355,7 @@ module internal Serializer =
 
     let getItemName (attribute : XmlElementAttribute option) =
         match attribute with
-        | Some attr when not (empty attr.ItemName) -> attr.ItemName
+        | Some attr when notWhite attr.ItemName -> attr.ItemName
         | _ -> "item"
 
     let getDefaultNameInfo name = {
@@ -366,7 +366,7 @@ module internal Serializer =
 
     let getNameInfo (property : PropertyInfo) =
         let attribute = getAttribute<XmlElementAttribute> property
-        let get str fb = if not (empty str) then str else fb
+        let get str fb = if notWhite str then str else fb
         let name = if XmlConfig.Instance.EmitCamelCaseNames then property.Name.ToCamelCase() else property.Name
         let itemName =
             match property.PropertyType with

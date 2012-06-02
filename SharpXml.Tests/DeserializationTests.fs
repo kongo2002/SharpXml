@@ -31,8 +31,13 @@ module DeserializationTests =
         out.V2 |> should equal 42
 
     [<Test>]
-    let ``Can deserialize char arrays``() =
+    let ``Can deserialize char arrays from strings``() =
         let out = deserialize<char[]> "<array>char</array>"
+        out |> should equal [| 'c'; 'h'; 'a'; 'r' |]
+
+    [<Test>]
+    let ``Can deserialize char arrays from elements``() =
+        let out = deserialize<char[]> "<array><x>c</x><x>h</x><x>a</x><x>r</x></array>"
         out |> should equal [| 'c'; 'h'; 'a'; 'r' |]
 
     [<Test>]

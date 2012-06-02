@@ -22,8 +22,11 @@ module internal Utils =
         | true, value -> Some value
         | _ -> None
 
+    /// Convenience function for IsNullOrEmpty
+    let inline notEmpty str = not <| String.IsNullOrEmpty(str)
+
     /// Convenience function for IsNullOrWhiteSpace
-    let inline empty str = String.IsNullOrWhiteSpace(str)
+    let inline notWhite str = not <| String.IsNullOrWhiteSpace(str)
 
     /// Remove the name suffix of a generic type name
     let removeGenericSuffix input =
