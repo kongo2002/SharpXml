@@ -484,8 +484,11 @@ module internal Deserializer =
                         let reader = prop.Reader
                         prop.Setter.Invoke(inst, reader(h))
                     with _ ->
-                        // TODO: log, error, exception?
-                        ()
+                        let error = sprintf "Unable to deserialize property '%s' of type '%s'" prop.Info.Name prop.Info.DeclaringType.FullName
+                        if XmlConfig.Instance.ThrowOnError then
+                            raise (SharpXmlException error)
+                        else
+                            Diagnostics.Trace.WriteLine(error)
                     inner inst t
                 | _ -> inner inst t
             | SingleElem _ :: t ->
