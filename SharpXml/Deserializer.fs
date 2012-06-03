@@ -528,7 +528,7 @@ module internal Deserializer =
         | true, reader -> reader
         | _ ->
             match determineReader t with
-            | Some reader -> Atom.updateAtomDict readerCache t reader
+            | Some func -> Atom.updateAtomDict readerCache t func
             | _ ->
                 let err = sprintf "could not determine deserialization logic for type '%s'" t.FullName
                 raise (SharpXmlException err)
