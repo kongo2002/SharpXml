@@ -137,20 +137,35 @@ module internal ListDeserializer =
         | null -> None
         | x -> Some(x :?> 'a)
 
+    /// Build a new list in reversed order
+    let revBuild processor elements =
+        let rec inner list acc =
+            match list with
+            | h :: t ->
+                match processor h with
+                | Some result -> inner t (result :: acc)
+                | _ -> inner t acc
+            | _ -> acc
+        inner elements []
+
     /// Generic collection processing function
     let collectionProcessor<'a> action (reader : ReaderFunc) xml =
         match xml with
         | GroupElem(_, elems) ->
             elems
-            |> List.choose (parseListElement<'a> reader)
-            |> List.iter action
+            |> List.iter(fun x ->
+                match parseListElement<'a> reader x with
+                | Some result ->
+                    action result
+                | _ -> ())
         | _ -> ()
 
     /// Reader function for immutable F# lists
     let listReader<'a> (reader : ReaderFunc) xml =
         match xml with
         | GroupElem(_, elems) ->
-            elems |> List.choose (parseListElement<'a> reader)
+            elems
+            |> revBuild (parseListElement<'a> reader)
         | _ -> []
 
     /// Reader function for CLR list (System.Collections.Generic.List<T>)
@@ -159,7 +174,7 @@ module internal ListDeserializer =
         match xml with
         | GroupElem(_, elems) ->
             elems
-            |> List.choose (parseListElement<'a> reader)
+            |> revBuild (parseListElement<'a> reader)
             |> list.AddRange
         | _ -> ()
         list
@@ -169,7 +184,7 @@ module internal ListDeserializer =
         match xml with
         | GroupElem(_, elems) ->
             elems
-            |> List.choose (parseListElement<'a> reader)
+            |> revBuild (parseListElement<'a> reader)
             |> Array.ofList
         | _ -> [| |]
 
@@ -179,7 +194,7 @@ module internal ListDeserializer =
         match xml with
         | GroupElem(_, elems) ->
             elems
-            |> List.choose (parseListElement (box |> ValueTypeDeserializer.buildValueReader))
+            |> revBuild (parseListElement (box |> ValueTypeDeserializer.buildValueReader))
             |> List.iter (list.Add >> ignore)
         | _ -> ()
         list
@@ -241,10 +256,7 @@ module internal ListDeserializer =
             value.ToCharArray() |> box
         | GroupElem(_, elements) ->
             elements
-            |> List.choose(function
-                | ContentElem(_, str) when Utils.notEmpty str -> Some str.[0]
-                | _ -> None)
-            |> List.rev
+            |> revBuild (function | ContentElem(_, str) when Utils.notEmpty str -> Some str.[0] | _ -> None)
             |> List.toArray
             |> box
         | _ -> Array.empty<char> |> box

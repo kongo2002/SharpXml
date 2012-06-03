@@ -27,7 +27,7 @@ module DeserializationTests =
     let ``Can deserialize string arrays``() =
         let out = deserialize<TestClass3> "<testClass><v1><item>foo</item><item>bar</item></v1><v2>42</v2></testClass>"
         out.V1.Length |> should equal 2
-        out.V1 |> should equal [| "bar"; "foo" |]
+        out.V1 |> should equal [| "foo"; "bar" |]
         out.V2 |> should equal 42
 
     [<Test>]
@@ -51,16 +51,16 @@ module DeserializationTests =
     let ``Can deserialize class arrays``() =
         let out = deserialize<TestClass4> "<testClass4><v1><item><v1>42</v1><v2>foo</v2></item><item><v1>200</v1><v2>bar</v2></item></v1><v2>99</v2></testClass4>"
         out.V1.Length |> should equal 2
-        out.V1.[0].V1 |> should equal 200
-        out.V1.[1].V2 |> should equal "foo"
+        out.V1.[0].V1 |> should equal 42
+        out.V1.[1].V2 |> should equal "bar"
         out.V2 |> should equal 99
 
     [<Test>]
     let ``Can deserialize class lists``() =
         let out = deserialize<ListClass> "<listClass><v1><item><v1>42</v1><v2>foo</v2></item><item><v1>200</v1><v2>bar</v2></item></v1><v2>99</v2></listClass>"
         out.V1.Count |> should equal 2
-        out.V1.[0].V1 |> should equal 200
-        out.V1.[1].V2 |> should equal "foo"
+        out.V1.[0].V1 |> should equal 42
+        out.V1.[1].V2 |> should equal "bar"
         out.V2 |> should equal 99
 
     [<Test>]
@@ -82,8 +82,8 @@ module DeserializationTests =
         let out = deserialize<ArrayListClass> "<arrayListClass><v1>937</v1><v2><item>ham</item><item>eggs</item></v2></arrayListClass>"
         out.V1 |> should equal 937
         out.V2.Count |> should equal 2
-        out.V2.[0] |> should equal "eggs"
-        out.V2.[1] |> should equal "ham"
+        out.V2.[0] |> should equal "ham"
+        out.V2.[1] |> should equal "eggs"
 
     [<Test>]
     let ``Can deserialize generic custom list types``() =
@@ -100,8 +100,8 @@ module DeserializationTests =
         out.V1 |> should equal 100
         out.V2 |> shouldBe notNull
         out.V2.Count |> should equal 2
-        out.V2.[0] |> should equal "bar"
-        out.V2.[1] |> should equal "foo"
+        out.V2.[0] |> should equal "foo"
+        out.V2.[1] |> should equal "bar"
 
     [<Test>]
     let ``Can deserialize classes with a static ParseXml function``() =
@@ -114,8 +114,8 @@ module DeserializationTests =
         let out = deserialize<GenericListClass<CustomParserClass>> "<genericListClass><v1>99</v1><v2><item>100x200</item><item>200x400</item></v2></genericListClass>"
         out.V1 |> should equal 99
         out.V2.Count |> should equal 2
-        out.V2.[0].Y |> should equal 400
-        out.V2.[1].X |> should equal 100
+        out.V2.[0].Y |> should equal 200
+        out.V2.[1].X |> should equal 200
 
     [<Test>]
     let ``Can deserialize classes with string constructors``() =
@@ -184,8 +184,8 @@ module DeserializationTests =
         let out = deserialize<GenericClass<ReadOnlyCollection<string>>> "<genericClass><v1>100</v1><v2><item>one</item><item>two</item></v2></genericClass>"
         out.V1 |> should equal 100
         out.V2.Count |> should equal 2
-        Seq.head out.V2 |> should equal "two"
-        Seq.nth 1 out.V2 |> should equal "one"
+        Seq.head out.V2 |> should equal "one"
+        Seq.nth 1 out.V2 |> should equal "two"
 
     [<Test>]
     let ``Can deserialize sorted sets``() =
