@@ -148,9 +148,16 @@ module internal ListDeserializer =
             | _ -> acc
         inner elements []
 
+    /// Generic collection processing function that
+    /// processes the items in reverse order
+    let revProcessor<'a> action (reader : ReaderFunc) = function
+        | GroupElem(_, elems) ->
+            revBuild (parseListElement<'a> reader) elems
+            |> List.iter action
+        | _ -> ()
+
     /// Generic collection processing function
-    let collectionProcessor<'a> action (reader : ReaderFunc) xml =
-        match xml with
+    let collectionProcessor<'a> action (reader : ReaderFunc) = function
         | GroupElem(_, elems) ->
             elems
             |> List.iter(fun x ->
@@ -186,7 +193,7 @@ module internal ListDeserializer =
             elems
             |> revBuild (parseListElement<'a> reader)
             |> Array.ofList
-        | _ -> [| |]
+        | _ -> Array.empty<'a>
 
     /// Reader function for untyped collections
     let collectionReader (ctor : EmptyConstructor) xml =
@@ -202,13 +209,13 @@ module internal ListDeserializer =
     /// Reader function for hash sets
     let hashSetReader<'a> (reader : ReaderFunc) xml =
         let set = HashSet<'a>()
-        collectionProcessor (set.Add >> ignore) reader xml
+        revProcessor (set.Add >> ignore) reader xml
         set
 
     /// Reader function for generic collections
     let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : EmptyConstructor) xml =
         let collection = ctor.Invoke() :?> ICollection<'a>
-        collectionProcessor collection.Add reader xml
+        revProcessor collection.Add reader xml
         collection
 
     let genericROReader<'a> (reader : ReaderFunc) (ctor : System.Reflection.ConstructorInfo) xml =
@@ -218,7 +225,7 @@ module internal ListDeserializer =
     /// Reader function for queues
     let queueReader<'a> (reader : ReaderFunc) xml =
         let queue = Queue<'a>()
-        collectionProcessor queue.Enqueue reader xml
+        revProcessor queue.Enqueue reader xml
         queue
 
     /// Reader function for stacks
@@ -230,7 +237,7 @@ module internal ListDeserializer =
     /// Reader function for generic linked lists
     let linkedListReader<'a> (reader : ReaderFunc) xml =
         let list = LinkedList<'a>()
-        let addTo (item : 'a) = list.AddLast(item) |> ignore
+        let addTo (item : 'a) = list.AddFirst(item) |> ignore
         collectionProcessor addTo reader xml
         list
 

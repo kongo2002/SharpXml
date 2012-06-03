@@ -91,8 +91,8 @@ module DeserializationTests =
         out.V1 |> should equal 100
         out.V2 |> shouldBe notNull
         out.V2.Count |> should equal 2
-        out.V2.[0] |> should equal "bar"
-        out.V2.[1] |> should equal "foo"
+        out.V2.[0] |> should equal "foo"
+        out.V2.[1] |> should equal "bar"
 
     [<Test>]
     let ``Can deserialize generic classes with generic lists``() =
@@ -128,16 +128,16 @@ module DeserializationTests =
         let out = deserialize<GenericClass<HashSet<string>>> "<genericClass><v1>100</v1><v2><item>foo</item><item>bar</item></v2></genericClass>"
         out.V1 |> should equal 100
         out.V2.Count |> should equal 2
-        out.V2 |> Seq.head  |> should equal "bar"
-        out.V2 |> Seq.nth 1  |> should equal "foo"
+        out.V2 |> Seq.head  |> should equal "foo"
+        out.V2 |> Seq.nth 1  |> should equal "bar"
 
     [<Test>]
     let ``Can deserialize Queues``() =
         let out = deserialize<GenericClass<Queue<string>>> "<genericClass><v1>100</v1><v2><item>foo</item><item>bar</item></v2></genericClass>"
         out.V1 |> should equal 100
         out.V2.Count |> should equal 2
-        out.V2 |> Seq.head |> should equal "bar"
-        out.V2 |> Seq.nth 1 |> should equal "foo"
+        out.V2 |> Seq.head |> should equal "foo"
+        out.V2 |> Seq.nth 1 |> should equal "bar"
 
     [<Test>]
     let ``Can deserialize Stacks``() =
@@ -176,8 +176,8 @@ module DeserializationTests =
         let out = deserialize<GenericClass<LinkedList<string>>> "<genericClass><v1>100</v1><v2><item>one</item><item>two</item></v2></genericClass>"
         out.V1 |> should equal 100
         out.V2.Count |> should equal 2
-        Seq.head out.V2 |> should equal "two"
-        Seq.nth 1 out.V2 |> should equal "one"
+        Seq.head out.V2 |> should equal "one"
+        Seq.nth 1 out.V2 |> should equal "two"
 
     [<Test>]
     let ``Can deserialize readonly collections``() =
