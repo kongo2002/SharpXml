@@ -224,15 +224,16 @@ module internal ListDeserializer =
         let stringReader = box |> ValueTypeDeserializer.buildValueReader
         listReader<string> stringReader xml |> List.toArray |> box
 
-    /// Specialized reader function for byte arrays
-    let byteArrayReader xml =
-        let byteReader = Byte.Parse >> box |> ValueTypeDeserializer.buildValueReader
-        listReader<byte> byteReader xml |> List.toArray |> box
-
     /// Specialized reader function for integer arrays
     let intArrayReader xml =
         let intReader = Int32.Parse >> box |> ValueTypeDeserializer.buildValueReader
         listReader<int> intReader xml |> List.toArray |> box
+
+    /// Specialized reader function for byte arrays
+    let byteArrayReader = function
+        | ContentElem(_, value) when Utils.notEmpty value ->
+            Convert.FromBase64String(value) |> box
+        | _ -> Array.empty<byte> |> box
 
     /// Specialized reader function for char arrays
     let charArrayReader = function
@@ -246,9 +247,7 @@ module internal ListDeserializer =
             |> List.rev
             |> List.toArray
             |> box
-        | _ ->
-            let array : char[] = [| |]
-            array |> box
+        | _ -> Array.empty<char> |> box
 
 /// Deserialization logic
 module internal Deserializer =
