@@ -30,7 +30,7 @@ module SerializationTests =
 
     [<Test>]
     let ``Can serialize guids``() =
-        let value = Guid()
+        let value = Guid.NewGuid()
         serialize value |> should equal (sprintf "<guid>%s</guid>" <| value.ToString("N"))
 
     [<Test>]
@@ -44,6 +44,53 @@ module SerializationTests =
         serialize value |> should equal "<array>char</array>"
 
     [<Test>]
+    let ``Can serialize booleans``() =
+        let falseValue = false
+        let trueValue = true
+        serialize falseValue |> should equal "<boolean>false</boolean>"
+        serialize trueValue |> should equal "<boolean>true</boolean>"
+
+    [<Test>]
+    let ``Can serialize floats (single)``() =
+        let value = 4.5f
+        serialize value |> should equal "<single>4.5</single>"
+
+    [<Test>]
+    let ``Can serialize bytes``() =
+        let value = 99uy
+        serialize value |> should equal "<byte>99</byte>"
+
+    [<Test>]
+    let ``Can serialize byte arrays``() =
+        let value = [| 99uy; 100uy; 101uy |]
+        serialize value |> should equal (sprintf "<array>%s</array>" (Convert.ToBase64String(value)))
+
+    [<Test>]
+    let ``Can serialize types``() =
+        let value = typeof<string>
+        serialize value |> should equal (sprintf "<type>%s</type>" value.AssemblyQualifiedName)
+
+    [<Test>]
+    let ``Can serialize exceptions``() =
+        let value = NotImplementedException("not implemented yet")
+        serialize value |> should equal "<notImplementedException>not implemented yet</notImplementedException>"
+
+    [<Test>]
+    let ``Can serialize flags enums``() =
+        let value = FlagsEnum.Ham ||| FlagsEnum.Eggs
+        serialize value |> should equal "<flagsEnum>3</flagsEnum>"
+
+    [<Test>]
+    let ``Can serialize enums with names``() =
+        let value = TestEnum.Bar
+        serialize value |> should equal "<testEnum>Bar</testEnum>"
+
+    [<Test>]
+    let ``Can serialize string arrays``() =
+        let value = [| "foo"; "bar" |]
+        serialize value |> should equal "<array><item>foo</item><item>bar</item></array>"
+
+    [<Test>]
     let ``Can serialize nullable guids``() =
         let value = Guid()
         let nullValue : Nullable<Guid> = Nullable()
@@ -51,7 +98,7 @@ module SerializationTests =
         serialize nullValue |> should equal "<guid></guid>"
 
     [<Test>]
-    let ``Can serialize floats``() =
+    let ``Can serialize doubles``() =
         let value = 2.528
         serialize value |> should equal (sprintf "<double>%.3f</double>" value)
 
@@ -247,6 +294,12 @@ module SerializationTests =
         let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
         let cls = Booking(Name = "testBooking", Guests = list)
         serialize cls |> should equal "<booking><name>testBooking</name><guests><guest><firstName>foo</firstName><lastName>bar</lastName><id>10</id></guest><guest><firstName>ham</firstName><lastName>eggs</lastName><id>20</id></guest></guests></booking>"
+
+    [<Test>]
+    let ``Can serialize array names correctly``() =
+        let array = [| Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") |]
+        let cls = GenericClass<Guest[]>(V1 = 200, V2 = array)
+        serialize cls |> should equal "<genericClass><v1>200</v1><v2><guest><firstName>foo</firstName><lastName>bar</lastName><id>10</id></guest><guest><firstName>ham</firstName><lastName>eggs</lastName><id>20</id></guest></v2></genericClass>"
 
     [<Test>]
     let ``Can serialize decimals with custom serializer``() =

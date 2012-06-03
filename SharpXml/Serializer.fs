@@ -288,8 +288,8 @@ module internal Serializer =
     /// function, i.e. Exception, Uri
     let getSpecialWriters (t : Type) = fun () ->
         if t = typeof<Uri> then Some ValueTypeSerializer.writeStringObject
-        elif t = typeof<Exception> then Some ValueTypeSerializer.writeException
-        elif t = typeof<Type> then Some ValueTypeSerializer.writeType
+        elif isOrDerived t typeof<Exception> then Some ValueTypeSerializer.writeException
+        elif t.IsInstanceOfType(typeof<Type>) then Some ValueTypeSerializer.writeType
         else None
 
     let writerFuncName = "ToXml"

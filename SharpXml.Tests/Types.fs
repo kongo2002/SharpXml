@@ -15,6 +15,12 @@ module Types =
         | Foo = 1
         | Bar = 2
 
+    [<Flags>]
+    type FlagsEnum =
+        | Undefined = 0
+        | Ham = 1
+        | Eggs = 2
+
     type CustomList<'T> =
         inherit List<'T>
 
