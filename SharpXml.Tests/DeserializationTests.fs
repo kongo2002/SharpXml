@@ -31,6 +31,13 @@ module DeserializationTests =
         out.V2 |> should equal 42
 
     [<Test>]
+    let ``Can deserialize integer arrays``() =
+        let out = deserialize<GenericClass<int[]>> "<testClass><v1>201</v1><v2><item>1</item><item>2</item></v2></testClass>"
+        out.V1 |> should equal 201
+        out.V2.Length |> should equal 2
+        out.V2 |> should equal [| 1; 2 |]
+
+    [<Test>]
     let ``Can deserialize char arrays from strings``() =
         let out = deserialize<char[]> "<array>char</array>"
         out |> should equal [| 'c'; 'h'; 'a'; 'r' |]

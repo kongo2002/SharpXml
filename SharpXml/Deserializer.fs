@@ -434,14 +434,14 @@ module internal Deserializer =
                 let param = GenericTypes.iList.MakeGenericType([| gen |])
                 let ctor = t.GetConstructor([| param |])
                 if ctor <> null then Some <| getGenericROReader ctor t gen else None
+            | GenericTypeOf GenericTypes.hashSet gen -> Some <| getHashSetReader gen
+            | GenericTypeOf GenericTypes.linkedList gen -> Some <| getLinkedListReader gen
             | GenericTypeOf GenericTypes.iColl gen ->
                 if hasGenericTypeDefinitions t [| GenericTypes.list |]
                 then Some <| getTypedListReader gen
                 else Some <| getGenericCollectionReader t gen
-            | GenericTypeOf GenericTypes.hashSet gen -> Some <| getHashSetReader gen
             | GenericTypeOf GenericTypes.queue gen -> Some <| getQueueReader gen
             | GenericTypeOf GenericTypes.stack gen -> Some <| getStackReader gen
-            | GenericTypeOf GenericTypes.linkedList gen -> Some <| getLinkedListReader gen
             | _ -> None
         elif isOrDerived t typeof<NameValueCollection> then
             getNameValueCollectionReader t
