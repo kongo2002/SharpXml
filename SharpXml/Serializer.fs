@@ -353,17 +353,14 @@ module internal Serializer =
             Some (fun _ (w : TextWriter) x -> w.Write(func.Invoke(x)))
         | _ -> None
 
-    let getItemName (attribute : XmlElementAttribute option) =
-        match attribute with
-        | Some attr when notWhite attr.ItemName -> attr.ItemName
-        | _ -> "item"
-
+    /// Return a default NameInfo instance for the specified name
     let getDefaultNameInfo name = {
         Name = name
         Item = "item"
         Key = "key"
         Value = "value" }
 
+    /// Build a NameInfo object for the given PropertyInfo
     let getNameInfo (property : PropertyInfo) =
         let attribute = getAttribute<XmlElementAttribute> property
         let get str fb = if notWhite str then str else fb
@@ -400,16 +397,13 @@ module internal Serializer =
 
     /// Try to determine a enumerable serialization function
     and getEnumerableWriter attr (t : Type) = fun () ->
-        match getTypeWithGenericType t GenericTypes.iEnum with
-        | Some enumerableType ->
-            let elemType = enumerableType.GetGenericArguments().[0]
+        match t with
+        | GenericTypeOf GenericTypes.iEnum elemType ->
             let elemWriter = getWriterFunc elemType
             Some <| ListSerializer.getGenericEnumerableWriter elemWriter elemType
-        | _ ->
-            if t.HasInterface typeof<IEnumerable> ||
-                t.IsAssignableFrom typeof<IEnumerable> then
-                Some <| ListSerializer.writeEnumerable getWriterFunc
-            else None
+        | _ when matchInterface typeof<IEnumerable> t ->
+            Some <| ListSerializer.writeEnumerable getWriterFunc
+        | _ -> None
 
     /// Get the PropertyWriterInfo array for the given type
     and getProperties (t : Type) =
@@ -444,8 +438,7 @@ module internal Serializer =
 
     /// Try to determine a writer function for a dictionary
     and getDictionaryWriter (t : Type) = fun () ->
-        if t.HasInterface(typeof<IDictionary>) ||
-            t.IsAssignableFrom(typeof<IDictionary>) then
+        if matchInterface typeof<IDictionary> t then
             Some writeDictionary
         else None
 
@@ -511,7 +504,7 @@ module internal Serializer =
             | Some s -> Atom.updateAtomDict serializerCache t s
             | _ ->
                 let err = sprintf "could not determine serialization logic for type '%s'" t.FullName
-                invalidOp err
+                raise (SharpXmlException err)
 
     /// Write the given type using the appropriate serialization logic
     let writeType<'a> (writer : TextWriter) (element : 'a) =

@@ -83,6 +83,9 @@ module internal Extensions =
             underlying = typeof<double> ||
             underlying = typeof<decimal>
 
+    let matchInterface (interfaceType : Type) (t : Type) =
+        t.IsAssignableFrom(interfaceType) || t.HasInterface(interfaceType)
+
     /// Extension methods for System.DateTime
     type System.DateTime with
 

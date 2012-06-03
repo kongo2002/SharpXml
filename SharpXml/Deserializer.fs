@@ -428,7 +428,6 @@ module internal Deserializer =
 
     /// Try to determine a reader function for list types
     and getListReader (t : Type) = fun () ->
-        let matchInterface iface = t.IsAssignableFrom(iface) || t.HasInterface(iface)
         if isGenericType t then
             match t with
             | GenericTypeOf GenericTypes.roColl gen ->
@@ -446,7 +445,7 @@ module internal Deserializer =
             | _ -> None
         elif isOrDerived t typeof<NameValueCollection> then
             getNameValueCollectionReader t
-        elif matchInterface typeof<IList> then
+        elif matchInterface typeof<IList> t then
             let ctor = ReflectionHelpers.getConstructorMethod t
             let reader = ListDeserializer.collectionReader ctor >> box
             Some reader
@@ -463,7 +462,7 @@ module internal Deserializer =
 
     and getDictionaryReader (t : Type) = fun () ->
         let dictInterface = typeof<IDictionary>
-        if t.IsAssignableFrom(dictInterface) || t.HasInterface(dictInterface) then
+        if matchInterface dictInterface t then
             match t with
             | GenericTypesOf GenericTypes.dict (k, v) ->
                 Some <| getTypedDictionaryReader k v

@@ -48,6 +48,14 @@ module Types =
             with get() = _date
             and set(v) = _date <- v
 
+    type CustomDecimal(value : decimal) =
+
+        let mutable _value = value
+
+        member x.Value
+            with get() = _value
+            and set(v) = _value <- v
+
     type TestClass(val1 : int, val2 : string) =
 
         let mutable v1 = val1

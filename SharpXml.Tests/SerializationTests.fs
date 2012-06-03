@@ -56,9 +56,19 @@ module SerializationTests =
         serialize value |> should equal "<single>4.5</single>"
 
     [<Test>]
-    let ``Can serialize bytes``() =
+    let ``Can serialize unsigned bytes``() =
         let value = 99uy
         serialize value |> should equal "<byte>99</byte>"
+
+    [<Test>]
+    let ``Can serialize bytes``() =
+        let value = 99y
+        serialize value |> should equal "<sByte>99</sByte>"
+
+    [<Test>]
+    let ``Can serialize decimals``() =
+        let value = 204.992m
+        serialize value |> should equal "<decimal>204.992</decimal>"
 
     [<Test>]
     let ``Can serialize byte arrays``() =
@@ -303,12 +313,11 @@ module SerializationTests =
 
     [<Test>]
     let ``Can serialize decimals with custom serializer``() =
-        XmlConfig.Instance.RegisterSerializer<decimal>(fun d ->
-            let dec : decimal = unbox d
-            dec.ToString("0,0"))
-        let cls = GenericClass<decimal>(V1 = 100, V2 = 200.45m)
+        XmlConfig.Instance.RegisterSerializer<CustomDecimal>(fun d ->
+            let dec : CustomDecimal = unbox d
+            dec.Value.ToString("0,0"))
+        let cls = GenericClass<CustomDecimal>(V1 = 100, V2 = CustomDecimal(200.45m))
         serialize cls |> should equal "<genericClass><v1>100</v1><v2>200</v2></genericClass>"
-        XmlConfig.Instance.UnregisterSerializer<decimal>()
 
     [<Test>]
     let ``Can serialize DateTime with custom serializer``() =
