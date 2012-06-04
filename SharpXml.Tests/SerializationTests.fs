@@ -24,7 +24,6 @@ module SerializationTests =
     open SharpXml.Tests.TestHelpers
     open SharpXml.Tests.Types
 
-
     let serialize<'a> (element : 'a) =
         XmlConfig.Instance.EmitCamelCaseNames <- true
         XmlSerializer.SerializeToString<'a>(element)
@@ -316,7 +315,7 @@ module SerializationTests =
     [<Test>]
     let ``Can serialize class member names correctly``() =
         let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
-        let cls = Booking(Name = "testBooking", Guests = list)
+        let cls = Booking("testBooking", list)
         serialize cls |> should equal "<booking><name>testBooking</name><guests><guest><firstName>foo</firstName><lastName>bar</lastName><id>10</id></guest><guest><firstName>ham</firstName><lastName>eggs</lastName><id>20</id></guest></guests></booking>"
 
     [<Test>]
@@ -343,8 +342,21 @@ module SerializationTests =
         serialize cls |> should equal (sprintf "<genericClass><v1>999</v1><v2>%s</v2></genericClass>" (now.ToShortDateString()))
 
     [<Test>]
+    let ``Can serialize empty values``() =
+        XmlConfig.Instance.IncludeNullValues <- false
+        let cls = ListClass(V1 = null, V2 = 992)
+        let guests = List<Guest>([ Guest(94) ])
+        let booking = Booking("booking", guests)
+        serialize cls |> should equal "<listClass><v2>992</v2></listClass>"
+        serialize booking |> should equal "<booking><name>booking</name><guests><guest><id>94</id></guest></guests></booking>"
+        XmlConfig.Instance.IncludeNullValues <- true
+        serialize cls |> should equal "<listClass><v1></v1><v2>992</v2></listClass>"
+        serialize booking |> should equal "<booking><name>booking</name><guests><guest><firstName></firstName><lastName></lastName><id>94</id></guest></guests></booking>"
+        XmlConfig.Instance.IncludeNullValues <- false
+
+    [<Test>]
     let ``Profile simple serialization``() =
         let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
-        let cls = Booking(Name = "testBooking", Guests = list)
+        let cls = Booking("testBooking", list)
         time (fun () -> serialize cls |> ignore) 1000
         time (fun () -> serialize cls |> ignore) 10000

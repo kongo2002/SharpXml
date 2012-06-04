@@ -51,6 +51,10 @@ module internal SerializerBase =
         writeFunc info w value
         w.Write("</{0}>", name)
 
+    /// Empty tag writer function
+    let writeEmptyTag (name : string) (w : TextWriter) =
+        w.Write("<{0}></{0}>", name)
+
 /// Module containing the serialization logic
 /// for value types
 module internal ValueTypeSerializer =
@@ -298,6 +302,10 @@ module internal Serializer =
     let serializerCache = ref (Dictionary<Type, WriterFunc>())
     let typeInfoCache = ref (Dictionary<Type, TypeInfo>())
 
+    let writerFuncName = "ToXml"
+    let instanceFlags = BindingFlags.Public ||| BindingFlags.Instance
+    let staticFlags = BindingFlags.Public ||| BindingFlags.Static
+
     /// Try to determine one of a special serialization
     /// function, i.e. Exception, Uri
     let getSpecialWriters (t : Type) = fun () ->
@@ -306,14 +314,7 @@ module internal Serializer =
         elif t.IsInstanceOfType(typeof<Type>) then Some ValueTypeSerializer.writeType
         else None
 
-    let writerFuncName = "ToXml"
-    let instanceFlags = BindingFlags.Public ||| BindingFlags.Instance
-    let staticFlags = BindingFlags.Public ||| BindingFlags.Static
-
-    let writeEmpty _ _ _ = ()
-
-    let writeAbstractProperties _ (writer : TextWriter) (value : obj) =
-        ()
+    let writeAbstractProperties _ _ _ = ()
 
     /// Determine the name of the TypeInfo based on the given type
     let getTypeName (t : Type) =
@@ -438,7 +439,9 @@ module internal Serializer =
             let v = p.GetFunc.Invoke(value)
             if v <> null then
                 let writeFunc = p.WriteFunc.Value
-                writeTag p.Name.Name p.Name writer writeFunc v)
+                writeTag p.Name.Name p.Name writer writeFunc v
+            elif XmlConfig.Instance.IncludeNullValues then
+                writeEmptyTag p.Name.Name writer)
 
     /// Try to determine a class or interface serialization function
     and getClassWriter (t : Type) = fun () ->

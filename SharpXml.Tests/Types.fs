@@ -349,17 +349,17 @@ module Types =
         member x.Id
             with get() = id
 
-    type Booking() =
+    type Booking(name : string, guests : List<Guest>) =
 
-        let mutable name = Unchecked.defaultof<string>
-        let mutable guests = Unchecked.defaultof<List<Guest>>
+        let mutable _name = name
+        let mutable _guests = guests
 
         member x.Name
-            with get() = name
-            and set v = name <- v
+            with get() = _name
+            and set v = _name <- v
         member x.Guests
-            with get() = guests
-            and set v = guests <- v
+            with get() = _guests
+            and set v = _guests <- v
 
     [<DataContract(Name = "ContractClass", Namespace = "")>]
     type ContractClass() =
