@@ -89,7 +89,7 @@ module internal ValueTypeSerializer =
         elif day.Milliseconds = 0 then date.ToUniversal().ToString(xsdFormatSeconds)
         else toXsdFormat date
 
-    let writeString (writer : TextWriter) (content : string) =
+    let inline writeString (writer : TextWriter) (content : string) =
         let inline sanitize c =
             match c with
             | '<' -> writer.Write("&lt;")
@@ -107,23 +107,23 @@ module internal ValueTypeSerializer =
     let writeObject _ (writer : TextWriter) (value : obj) =
         writer.Write(value)
 
-    let writeDateTime _ writer (value : obj) =
+    let writeDateTime _ (writer : TextWriter) (value : obj) =
         let v = toShortestXsdFormat (unbox value)
-        writeString writer v
+        writer.Write(v)
 
     let writeNullableDateTime n writer (value : obj) =
         nullableWriter n writer value writeDateTime
 
-    let writeDateTimeOffset _ writer (value : obj) =
+    let writeDateTimeOffset _ (writer : TextWriter) (value : obj) =
         let v : DateTimeOffset = unbox value
-        writeString writer (v.ToString("o"))
+        writer.Write(v.ToString("o"))
 
     let writeNullableDateTimeOffset n writer (value : obj) =
         nullableWriter n writer value writeDateTimeOffset
 
-    let writeGuid _ writer (value : obj) =
+    let writeGuid _ (writer : TextWriter) (value : obj) =
         let v : Guid = unbox value
-        writeString writer (v.ToString("N"))
+        writer.Write(v.ToString("N"))
 
     let writeNullableGuid n writer (value : obj) =
         nullableWriter n writer value writeGuid
@@ -186,9 +186,9 @@ module internal ValueTypeSerializer =
         | true -> writer.Write("true")
         | false -> writer.Write("false")
 
-    let writeDecimal _ writer (value : obj) =
+    let writeDecimal _ (writer : TextWriter) (value : obj) =
         let v : decimal = unbox value
-        writeString writer (v.ToString(CultureInfo.InvariantCulture))
+        writer.Write(v.ToString(CultureInfo.InvariantCulture))
 
     let writeEnum n writer (value : obj) =
         writeObject n writer value
