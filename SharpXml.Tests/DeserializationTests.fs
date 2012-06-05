@@ -226,8 +226,3 @@ module DeserializationTests =
         out.V2.Count |> should equal 2
         Seq.head out.V2 |> should equal "one"
         Seq.nth 1 out.V2 |> should equal "two"
-
-    [<Test>]
-    let ``Profile simple deserialization``() =
-        time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
-        time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000

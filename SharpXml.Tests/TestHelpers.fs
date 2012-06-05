@@ -16,7 +16,10 @@ namespace SharpXml.Tests
 
 module TestHelpers =
 
+    open System.Collections.Generic
     open System.Diagnostics
+    open System.Linq
+
     open NUnit.Framework
     open NUnit.Framework.Constraints
 
@@ -30,6 +33,23 @@ module TestHelpers =
         Debug.WriteLine <| sprintf "Iterations: %d; Elapsed: %A" iterations sw.Elapsed
 #else
         System.Console.WriteLine("Iterations: {0}; Elapsed: {1}", iterations, sw.Elapsed)
+#endif
+
+    let timeAvg func iterations =
+        let times = List<int64>()
+        let rec loop f i =
+            if i > 0 then
+                let sw = Stopwatch.StartNew()
+                f()
+                sw.Stop()
+                times.Add(sw.ElapsedMilliseconds)
+                loop f (i-1)
+        loop func iterations
+        let avg = times.Average()
+#if DEBUG
+        Debug.WriteLine <| sprintf "Iterations: %d; Average: %.0f" iterations avg
+#else
+        System.Console.WriteLine("Iterations: {0}; Average: {1}", iterations, avg)
 #endif
 
     let should (func : 'a -> #Constraint) x (actual : obj) =

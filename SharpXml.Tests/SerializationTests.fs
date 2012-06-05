@@ -24,8 +24,9 @@ module SerializationTests =
     open SharpXml.Tests.TestHelpers
     open SharpXml.Tests.Types
 
+    XmlConfig.Instance.EmitCamelCaseNames <- true
+
     let serialize<'a> (element : 'a) =
-        XmlConfig.Instance.EmitCamelCaseNames <- true
         XmlSerializer.SerializeToString<'a>(element)
 
     [<Test>]
@@ -359,9 +360,3 @@ module SerializationTests =
         serialize booking |> should equal "<booking><name>booking</name><guests><guest><firstName></firstName><lastName></lastName><id>94</id></guest></guests></booking>"
         XmlConfig.Instance.IncludeNullValues <- false
 
-    [<Test>]
-    let ``Profile simple serialization``() =
-        let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
-        let cls = Booking("testBooking", list)
-        time (fun () -> serialize cls |> ignore) 1000
-        time (fun () -> serialize cls |> ignore) 10000
