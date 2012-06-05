@@ -90,12 +90,7 @@ module internal ValueTypeSerializer =
         else toXsdFormat date
 
     let inline writeString (writer : TextWriter) (content : string) =
-        let inline sanitize c =
-            match c with
-            | '<' -> writer.Write("&lt;")
-            | '>' -> writer.Write("&gt;")
-            | _ -> writer.Write(c)
-        Seq.iter sanitize content
+        writer.Write(content.Replace("<", "&lt;").Replace(">", "&gt;"))
 
     let inline nullableWriter n writer value func =
         if value <> null then func n writer value
