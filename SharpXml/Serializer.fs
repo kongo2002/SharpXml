@@ -411,7 +411,7 @@ module internal Serializer =
           Default = ReflectionHelpers.getDefaultValue propInfo.PropertyType }
 
     /// Try to determine a enumerable serialization function
-    and getEnumerableWriter attr (t : Type) = fun () ->
+    and getEnumerableWriter (t : Type) = fun () ->
         match t with
         | GenericTypeOf GenericTypes.iEnum elemType ->
             let elemWriter = getWriterFunc elemType
@@ -495,7 +495,6 @@ module internal Serializer =
     /// Determine the associated serialization writer
     /// function for the specified type
     and determineWriter (t : Type) =
-        let attr = getAttribute<XmlElementAttribute> t
         let writer = attempt {
             let! strWriter = getStringWriter t
             let! customWriter = getCustomWriter t
@@ -503,7 +502,7 @@ module internal Serializer =
             let! specialWriter = getSpecialWriters t
             let! arrayWriter = getArrayWriter t
             let! dictWriter = getDictionaryWriter t
-            let! enumerableWriter = getEnumerableWriter attr t
+            let! enumerableWriter = getEnumerableWriter t
             let! instanceWriter = getInstanceWriter t
             let! staticWriter = getStaticWriter t
             let! classWriter = getClassWriter t
