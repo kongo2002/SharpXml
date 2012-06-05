@@ -47,13 +47,17 @@ module internal SerializerBase =
 
     /// General purpose XML tags writer function
     let writeTag (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
-        w.Write("<{0}>", name)
+        w.Write('<'); w.Write(name); w.Write('>')
         writeFunc info w value
-        w.Write("</{0}>", name)
+        w.Write("</"); w.Write(name); w.Write('>')
 
     /// Empty tag writer function
     let writeEmptyTag (name : string) (w : TextWriter) =
-        w.Write("<{0}></{0}>", name)
+        w.Write('<')
+        w.Write(name);
+        w.Write("></");
+        w.Write(name);
+        w.Write('>');
 
 /// Module containing the serialization logic
 /// for value types
