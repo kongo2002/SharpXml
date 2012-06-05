@@ -209,6 +209,17 @@ module DeserializationTests =
         Seq.nth 1 out.V2 |> should equal "two"
 
     [<Test>]
+    let ``Can deserialize arrays of classes``() =
+        let out = deserialize<GenericClass<Guest[]>> "<genericClass><v1>984</v1><v2><guest><firstName>ham</firstName></guest><guest><firstName>foo</firstName><lastName>bar</lastName><id>2</id></guest></v2></genericClass>"
+        out.V1 |> should equal 984
+        out.V2.Length |> should equal 2
+        out.V2.[0].Id |> should equal 0
+        out.V2.[0].FirstName |> should equal "ham"
+        out.V2.[1].Id |> should equal 0
+        out.V2.[1].FirstName |> should equal "foo"
+        out.V2.[1].LastName |> should equal "bar"
+
+    [<Test>]
     let ``Can deserialize sorted sets``() =
         let out = deserialize<GenericClass<SortedSet<string>>> "<genericClass><v1>100</v1><v2><item>one</item><item>two</item></v2></genericClass>"
         out.V1 |> should equal 100
