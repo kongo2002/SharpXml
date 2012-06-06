@@ -12,6 +12,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+#nowarn "9"
+#nowarn "51"
+
 namespace SharpXml
 
 /// Record type containing the type specific information
@@ -68,6 +71,8 @@ module internal ValueTypeSerializer =
     open System.IO
     open System.Xml
 
+    open Microsoft.FSharp.NativeInterop
+
     open SharpXml.Extensions
 
     let shortDateTimeFormat = "yyyy-MM-dd"
@@ -90,7 +95,17 @@ module internal ValueTypeSerializer =
         else toXsdFormat date
 
     let inline writeString (writer : TextWriter) (content : string) =
-        writer.Write(content.Replace("<", "&lt;").Replace(">", "&gt;"))
+        let chars = content.ToCharArray()
+        let len = chars.Length
+        let mutable curr = 0
+        let mutable char = NativePtr.read &&chars.[0]
+        while curr < len do
+            match char with
+            | '<' -> writer.Write("&lt;")
+            | '>' -> writer.Write("&gt;")
+            | _ -> writer.Write(char)
+            curr <- curr + 1
+            if curr < len then char <- NativePtr.read &&chars.[curr]
 
     let inline nullableWriter n writer value func =
         if value <> null then func n writer value
