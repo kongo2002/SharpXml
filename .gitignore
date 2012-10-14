@@ -4,6 +4,7 @@
 *.ncrunchsolution
 *.ncrunchsolution.user
 *.suo
+_NCrunch*
 _ReSharper*
 bin
 obj
