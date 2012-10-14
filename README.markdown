@@ -176,13 +176,14 @@ Some random things I am planning to work on in the future:
 
 - Mono support
 - Extend documentation/README
+- Make `SharpXml.Common` an optional dependency
 - Investigate into additional performance tweaks
 - Additional unit tests
 
 
 ## Maintainer
 
-*SharpXml* is written by Gregor Uhlenheuer. You can reach at [kongo2002@gmail.com][3]
+*SharpXml* is written by Gregor Uhlenheuer. You can reach me at [kongo2002@gmail.com][3]
 
 
 ## License
