@@ -196,6 +196,48 @@ The serialized output by *SharpXml* looks like the following:
 **Note**: In all XML examples above indentation is added for convenience only.
 
 
+### Using XmlElementAttribute
+
+As mentioned before you can use the `XmlElementAttribute` to customize the
+generated XML output which is especially useful for collection and dictionary
+types.
+
+	public class CustomDictClass
+	{
+		public int Id { get; set; }
+
+		[XmlElement(ItemName="Element", KeyName="String", ValueName="Int")]
+		public Dictionary<string, int> Values { get; set; }
+	}
+
+	var test = new CustomDictClass
+		{
+			Id = 753,
+			Values = new Dictionary<string, int>
+				{
+					{ "ten", 10 },
+					{ "eight", 8 }
+				}
+		};
+
+This example show the effect of all three available options given by the
+`XmlElementAttribute`: `ItemName`, `KeyName' and `ValueName`.
+
+	<CustomDictClass>
+		<Id>753</Id>
+		<Values>
+			<Element>
+				<String>ten</String>
+				<Int>10</Int>
+			</Element>
+			<Element>
+				<String>eight</String>
+				<Int>8</Int>
+			</Element>
+		</Values>
+	</CustomDictClass>
+
+
 ## Todo
 
 Some random things I am planning to work on in the future:
