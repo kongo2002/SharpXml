@@ -1,9 +1,11 @@
 
 # SharpXml
 
-*SharpXml* is an independent, dependency-free and fast .NET XML serialization library. It is written in F# and is built on .NET 4.0.
+*SharpXml* is an independent, dependency-free and fast .NET XML serialization
+library. It is written in F# and is built on .NET 4.0.
 
-The project is inspired by the great .NET JSON serializer [ServiceStack.Text][1].
+The project is inspired by the great .NET JSON serializer
+[ServiceStack.Text][1].
 
 
 ## Lean API
@@ -13,33 +15,47 @@ The API intends to appear small and descriptive at the same time:
 	// Serialization functions
 	string XmlSerializer.SerializeToString<T>(T element);
 	void XmlSerializer.SerializeToWriter<T>(TextWriter writer, T element);
-	
+
 	// Deserialization functions
 	T XmlSerializer.DeserializeFromString<T>(string value);
 	T XmlSerializer.DeserializeFromReader<T>(TextReader reader);
 	T XmlSerializer.DeserializeFromStream<T>(Stream stream);
 
-*T* can be any .NET POCO type. Apart from others *SharpXml* supports all basic collection types residing in `System.Collections`, `System.Collections.Generic` and `System.Collections.Specialized`.
+*T* can be any .NET POCO type. Apart from others *SharpXml* supports all basic
+collection types residing in `System.Collections`, `System.Collections.Generic`
+and `System.Collections.Specialized`.
 
 
 ### Configuration
 
-*SharpXml* intends to work in a convention based manner meaning that there won't be too many configuration options to change its basic (de-)serialization behavior. A few options to modify *SharpXml's* output exist anyways:
+*SharpXml* intends to work in a convention based manner meaning that there
+won't be too many configuration options to change its basic (de-)serialization
+behavior. A few options to modify *SharpXml's* output exist anyways:
 
-- `XmlConfig.IncludeNullValues`: Whether to include `null` values in the generated/serialized output (default: `false`)
+- `XmlConfig.IncludeNullValues`: Whether to include `null` values in the
+  generated/serialized output (default: `false`)
 
-- `XmlConfig.ExcludeTypeInfo`: Whether to include additional type information for dynamic or anonymous types (default: `false`)
+- `XmlConfig.ExcludeTypeInfo`: Whether to include additional type information
+  for dynamic or anonymous types (default: `false`)
 
-- `XmlConfig.EmitCamelCaseNames`: Whether to convert property/type names into camel-case output, i.e. `MyClass -> "myClass"` (default: `false`)
+- `XmlConfig.EmitCamelCaseNames`: Whether to convert property/type names into
+  camel-case output, i.e. `MyClass -> "myClass"` (default: `false`)
 
-- `XmlConfig.WriteXmlHeader`: Whether to include a XML header sequence (`<?xml ... ?>`) in the serialized output (default: `false`)
+- `XmlConfig.WriteXmlHeader`: Whether to include a XML header sequence (`<?xml
+  ... ?>`) in the serialized output (default: `false`)
 
-- `XmlConfig.ThrowOnError`: Whether to throw an exception on deserialization errors or silently ignore errors (default: `false`)
+- `XmlConfig.ThrowOnError`: Whether to throw an exception on deserialization
+  errors or silently ignore errors (default: `false`)
 
 
 ### Custom serialization
 
-Although *SharpXml* comes with built-in support of all basic .NET types there are two ways to modify its de-/serialization behavior. You can either add custom serialization and/or deserialization logic by registering serialization delegates for a specified type on the static `XmlConfig` class or you modify serialization of collections using the `XmlElementAttribute` in the `SharpXml.Common` namespace.
+Although *SharpXml* comes with built-in support of all basic .NET types there
+are two ways to modify its de-/serialization behavior. You can either add
+custom serialization and/or deserialization logic by registering serialization
+delegates for a specified type on the static `XmlConfig` class or you modify
+serialization of collections using the `XmlElementAttribute` in the
+`SharpXml.Common` namespace.
 
 
 #### Registering delegates
@@ -58,29 +74,38 @@ Although *SharpXml* comes with built-in support of all basic .NET types there ar
 
     /// Clear all registered custom serializer delegates
     void ClearSerializers();
-     
+
     /// Clear all registered custom deserializer delegates
     void ClearDeserializers();
 
 
 #### XmlElementAttribute
 
-The `XmlElementAttribute` in `SharpXml.Common` allows you to modify the default serialization of .NET types using a few properties to choose from:
+The `XmlElementAttribute` in `SharpXml.Common` allows you to modify the default
+serialization of .NET types using a few properties to choose from:
 
 - `[XmlElement Name="..."]`: Override the default name of the property/class
 
-- `[XmlElement ItemName="..."]`: Override the default name of collection's items (default: `"item"`)
+- `[XmlElement ItemName="..."]`: Override the default name of collection's
+  items (default: `"item"`)
 
-- `[XmlElement KeyName="..."]`: Override the default name of keys in dictionary types (default: `"key"`)
+- `[XmlElement KeyName="..."]`: Override the default name of keys in dictionary
+  types (default: `"key"`)
 
-- `[XmlElement ValueName="..."]`: Override the default name of values in dictionary types (default: `"value"`)
+- `[XmlElement ValueName="..."]`: Override the default name of values in
+  dictionary types (default: `"value"`)
 
 
 ## XML format
 
-In the following section I want to give a *short* description of the format *SharpXml* generates and expects on deserialization.
+In the following section I want to give a *short* description of the format
+*SharpXml* generates and expects on deserialization.
 
-The first thing to mention is that *public properties* are serialized and deserialized only. Fields whether public or not are not serialized at the moment and won't be in the future! Apart from that serialization is pretty straight-forward and looks your XML looks like you would probably expect it too anyway - at least from my point of view :-)
+The first thing to mention is that *public properties* are serialized and
+deserialized only. Fields whether public or not are not serialized at the
+moment and won't be in the future! Apart from that serialization is pretty
+straight-forward and looks your XML looks like you would probably expect it too
+anyway - at least from my point of view :-)
 
 
 ### Basic serialization
@@ -100,7 +125,8 @@ An instance of the class above will be serialized like the following:
 		<Bar>I like SharpXml very much</Bar>
 	</MyClass>
 
-Using `XmlConfig.EmitCamelCaseNames = true;` the generated XML output would look like this instead:
+Using `XmlConfig.EmitCamelCaseNames = true;` the generated XML output would
+look like this instead:
 
 	<myClass>
 		<foo>144</foo>
@@ -183,7 +209,8 @@ Some random things I am planning to work on in the future:
 
 ## Maintainer
 
-*SharpXml* is written by Gregor Uhlenheuer. You can reach me at [kongo2002@gmail.com][3]
+*SharpXml* is written by Gregor Uhlenheuer. You can reach me at
+[kongo2002@gmail.com][3]
 
 
 ## License
@@ -199,3 +226,5 @@ Some random things I am planning to work on in the future:
 [1]: http://github.com/ServiceStack/ServiceStack.Text
 [2]: http://www.apache.org/licenses/LICENSE-2.0
 [3]: mailto:kongo2002@gmail.com
+
+<!-- vim: set noet ts=4 sw=4 sts=4 tw=80: -->
