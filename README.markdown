@@ -106,10 +106,11 @@ In the following section I want to give a *short* description of the format
 *SharpXml* generates and expects on deserialization.
 
 The first thing to mention is that *public properties* are serialized and
-deserialized only. Fields whether public or not are not serialized at the
-moment and won't be in the future! Apart from that serialization is pretty
-straight-forward and looks your XML looks like you would probably expect it too
-anyway - at least from my point of view :-)
+deserialized only. Fields whether public or not are not serialized at the moment
+and won't be in the future! Attributes placed inside the XML tags are not
+supported either and are simply ignored. Apart from that serialization is pretty
+straight-forward and your XML looks like you would probably expect it anyway
+- at least from my point of view :-)
 
 
 ### Basic serialization
@@ -306,7 +307,7 @@ delegates to the static `XmlConfig` class using the aforementioned
 	}
 
 	// register custom serializer
-	XmlConfig.RegisterSerializer<SomeClass>(x => return x.Width + "x" x.Height);
+	XmlConfig.RegisterSerializer<SomeClass>(x => return x.Width + "x" + x.Height);
 
 	// register custom deserializer
 	XmlConfig.RegisterDeserializer<SomeClass>(v => {
@@ -320,6 +321,35 @@ delegates to the static `XmlConfig` class using the aforementioned
 
 The resulting XML will look pretty much the same as the struct example described
 earlier but you can imagine the possibilities given by this approach.
+
+
+### Deserialization
+
+The deserialization logic of *SharpXml* can be described as very fault-tolerant
+meaning that usually bad formatted or even invalid XML may be deserialized
+without errors.
+
+- Tag name matching is *case insensitive*
+
+- Closing tags don't have to be the same as the opening tag. The nesting of tags
+  is more important here.
+
+- The order of the tags is irrelevant
+
+- Tag attributes are not supported and therefore ignored
+
+- XML namespaces are ignored as well
+
+In order to provide a better view on how fault-tolerant *SharpXml* works I will
+give an example of a *very bad formatted* XML input that will be deserialized
+without any errors:
+
+	<myclass>
+		< foo >20</fo>
+		<BAR attr="ignored anyway">ham eggs< /bar>
+	</MyClass>
+
+This XML above will be successfully deserialized into an instance of `MyClass`.
 
 
 ## Todo
