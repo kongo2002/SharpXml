@@ -131,18 +131,22 @@ var test = new MyClass { Foo = 144, Bar = "I like SharpXml very much" };
 
 An instance of the class above will be serialized like the following:
 
-	<MyClass>
-		<Foo>144</Foo>
-		<Bar>I like SharpXml very much</Bar>
-	</MyClass>
+```xml
+<MyClass>
+	<Foo>144</Foo>
+	<Bar>I like SharpXml very much</Bar>
+</MyClass>
+```
 
 Using `XmlConfig.EmitCamelCaseNames = true;` the generated XML output would
 look like this instead:
 
-	<myClass>
-		<foo>144</foo>
-		<bar>I like SharpXml very much</bar>
-	</myClass>
+```xml
+<myClass>
+	<foo>144</foo>
+	<bar>I like SharpXml very much</bar>
+</myClass>
+```
 
 
 ### Collections
@@ -163,13 +167,15 @@ var test = new ListClass
 
 *SharpXml* will generate the following XML:
 
-	<ListClass>
-		<Id>20</Id>
-		<Items>
-			<Item>one</Item>
-			<Item>two</Item>
-		</Items>
-	</ListClass>
+```xml
+<ListClass>
+	<Id>20</Id>
+	<Items>
+		<Item>one</Item>
+		<Item>two</Item>
+	</Items>
+</ListClass>
+```
 
 
 ### Key-value collections (dictionaries)
@@ -194,19 +200,21 @@ var test = new DictClass
 
 The serialized output by *SharpXml* looks like the following:
 
-	<DictClass>
-		<Id>753</Id>
-		<Values>
-			<Item>
-				<Key>ten</Key>
-				<Value>10</Value>
-			</Item>
-			<Item>
-				<Key>eight</Key>
-				<Value>8</Value>
-			</Item>
-		</Values>
-	</DictClass>
+```xml
+<DictClass>
+	<Id>753</Id>
+	<Values>
+		<Item>
+			<Key>ten</Key>
+			<Value>10</Value>
+		</Item>
+		<Item>
+			<Key>eight</Key>
+			<Value>8</Value>
+		</Item>
+	</Values>
+</DictClass>
+```
 
 **Note**: In all XML examples above indentation is added for convenience only.
 
@@ -241,19 +249,21 @@ var test = new CustomDictClass
 This example shows the effect of all four available options given by the
 `XmlElementAttribute`: `Name`, `ItemName`, `KeyName` and `ValueName`.
 
-	<CustomClass>
-		<Id>753</Id>
-		<Values>
-			<Element>
-				<String>ten</String>
-				<Int>10</Int>
-			</Element>
-			<Element>
-				<String>eight</String>
-				<Int>8</Int>
-			</Element>
-		</Values>
-	</CustomClass>
+```xml
+<CustomClass>
+	<Id>753</Id>
+	<Values>
+		<Element>
+			<String>ten</String>
+			<Int>10</Int>
+		</Element>
+		<Element>
+			<String>eight</String>
+			<Int>8</Int>
+		</Element>
+	</Values>
+</CustomClass>
+```
 
 
 ### Struct types
@@ -302,10 +312,12 @@ Using the struct type described above results in the following output:
 
 Without the custom implementations the struct would be serialized like this:
 
-	<MyStruct>
-		<X>200</X>
-		<Y>50</Y>
-	</MyStruct>
+```xml
+<MyStruct>
+	<X>200</X>
+	<Y>50</Y>
+</MyStruct>
+```
 
 
 ### Custom serialization delegates
@@ -360,10 +372,12 @@ In order to provide a better view on how fault-tolerant *SharpXml* works I will
 give an example of a *very bad formatted* XML input that will be deserialized
 without any errors:
 
-	<myclass>
-		< foo >20</fo>
-		<BAR attr="ignored anyway">ham eggs< /bar>
-	</MyClass>
+```xml
+<myclass>
+	< foo >20</fo>
+	<BAR attr="ignored anyway">ham eggs< /bar>
+</MyClass>
+```
 
 This XML above will be successfully deserialized into an instance of `MyClass`.
 
