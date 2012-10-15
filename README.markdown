@@ -57,6 +57,10 @@ delegates for a specified type on the static `XmlConfig` class or you modify
 serialization of collections using the `XmlElementAttribute` in the
 `SharpXml.Common` namespace.
 
+Moreover the serialization and deserialization of struct types may be customized
+by overriding the public `ToString()` method and/or providing a static
+`ParseXml()` function.
+
 
 #### Registering delegates
 
@@ -202,6 +206,7 @@ As mentioned before you can use the `XmlElementAttribute` to customize the
 generated XML output which is especially useful for collection and dictionary
 types.
 
+	[XmlElement("CustomClass")]
 	public class CustomDictClass
 	{
 		public int Id { get; set; }
@@ -220,10 +225,10 @@ types.
 				}
 		};
 
-This example show the effect of all three available options given by the
-`XmlElementAttribute`: `ItemName`, `KeyName' and `ValueName`.
+This example shows the effect of all four available options given by the
+`XmlElementAttribute`: `Name`, `ItemName`, `KeyName` and `ValueName`.
 
-	<CustomDictClass>
+	<CustomClass>
 		<Id>753</Id>
 		<Values>
 			<Element>
@@ -235,7 +240,86 @@ This example show the effect of all three available options given by the
 				<Int>8</Int>
 			</Element>
 		</Values>
-	</CustomDictClass>
+	</CustomClass>
+
+
+### Struct types
+
+Non-reference types like struct may provide custom implementation of the methods
+`ToString()` and/or `ParseXml()` in order to customize *SharpXml's*
+serialization behavior.
+
+A typical example might look like this:
+
+	public struct MyStruct
+	{
+		public int X { get; set; }
+		public int Y { get; set; }
+
+		/// <summary>
+		/// Custom ToString() implementation - will be used by SharpXml
+		/// </summary>
+		public override string ToString()
+		{
+			return X + "x" + Y;
+		}
+
+		/// <summary>
+		/// Custom deserialization function used by SharpXml
+		/// </summary>
+		public static MyStruct ParseXml(string input)
+		{
+			var parts = input.Split('x');
+
+			return new MyStruct
+				{
+					X = int.Parse(parts[0]),
+					Y = int.Parse(parts[1])
+				};
+		}
+	}
+
+	var test = new MyStruct { X = 200, Y = 50 };
+
+Using the struct type described above results in the following output:
+
+	<MyStruct>200x50</MyStruct>
+
+Without the custom implementations the struct would be serialized like this:
+
+	<MyStruct>
+		<X>200</X>
+		<Y>50</Y>
+	</MyStruct>
+
+
+### Custom serialization delegates
+
+Moreover reference types can be customized by registering custom serialization
+delegates to the static `XmlConfig` class using the aforementioned
+`RegisterSerializer` and `RegisterDeserializer` functions.
+
+	public class SomeClass
+	{
+		public double Width { get; set; }
+		public double Height { get; set; }
+	}
+
+	// register custom serializer
+	XmlConfig.RegisterSerializer<SomeClass>(x => return x.Width + "x" x.Height);
+
+	// register custom deserializer
+	XmlConfig.RegisterDeserializer<SomeClass>(v => {
+			var parts = v.Split('x');
+			return new SomeClass
+				{
+					Width = double.Parse(parts[0]),
+					Height = double.Parse(parts[1])
+				};
+		});
+
+The resulting XML will look pretty much the same as the struct example described
+earlier but you can imagine the possibilities given by this approach.
 
 
 ## Todo
