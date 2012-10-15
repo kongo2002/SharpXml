@@ -10,16 +10,18 @@ The project is inspired by the great .NET JSON serializer
 
 ## Lean API
 
-The API intends to appear small and descriptive at the same time:
+The API tries to appear small and descriptive at the same time:
 
-	// Serialization functions
-	string XmlSerializer.SerializeToString<T>(T element);
-	void XmlSerializer.SerializeToWriter<T>(TextWriter writer, T element);
+```cs
+// Serialization functions
+string XmlSerializer.SerializeToString<T>(T element);
+void XmlSerializer.SerializeToWriter<T>(TextWriter writer, T element);
 
-	// Deserialization functions
-	T XmlSerializer.DeserializeFromString<T>(string value);
-	T XmlSerializer.DeserializeFromReader<T>(TextReader reader);
-	T XmlSerializer.DeserializeFromStream<T>(Stream stream);
+// Deserialization functions
+T XmlSerializer.DeserializeFromString<T>(string value);
+T XmlSerializer.DeserializeFromReader<T>(TextReader reader);
+T XmlSerializer.DeserializeFromStream<T>(Stream stream);
+```
 
 *T* can be any .NET POCO type. Apart from others *SharpXml* supports all basic
 collection types residing in `System.Collections`, `System.Collections.Generic`
@@ -53,7 +55,7 @@ behavior. A few options to modify *SharpXml's* output exist anyways:
 Although *SharpXml* comes with built-in support of all basic .NET types there
 are two ways to modify its de-/serialization behavior. You can either add
 custom serialization and/or deserialization logic by registering serialization
-delegates for a specified type on the static `XmlConfig` class or you modify
+delegates for a specified type on the static `XmlConfig` class or you can modify
 serialization of collections using the `XmlElementAttribute` in the
 `SharpXml.Common` namespace.
 
@@ -64,23 +66,25 @@ by overriding the public `ToString()` method and/or providing a static
 
 #### Registering delegates
 
-    /// Register a serializer delegate for the specified type
-    void RegisterSerializer<T>(SerializerFunc func);
+```cs
+/// Register a serializer delegate for the specified type
+void RegisterSerializer<T>(SerializerFunc func);
 
-    /// Register a deserializer delegate for the specified type
-    void RegisterDeserializer<T>(DeserializerFunc func);
+/// Register a deserializer delegate for the specified type
+void RegisterDeserializer<T>(DeserializerFunc func);
 
-    /// Unregister the serializer delegate for the specified type
-    void UnregisterSerializer<T>();
+/// Unregister the serializer delegate for the specified type
+void UnregisterSerializer<T>();
 
-    /// Unregister the deserializer delegate for the specified type
-    void UnregisterDeserializer<T>();
+/// Unregister the deserializer delegate for the specified type
+void UnregisterDeserializer<T>();
 
-    /// Clear all registered custom serializer delegates
-    void ClearSerializers();
+/// Clear all registered custom serializer delegates
+void ClearSerializers();
 
-    /// Clear all registered custom deserializer delegates
-    void ClearDeserializers();
+/// Clear all registered custom deserializer delegates
+void ClearDeserializers();
+```
 
 
 #### XmlElementAttribute
@@ -110,18 +114,20 @@ deserialized only. Fields whether public or not are not serialized at the moment
 and won't be in the future! Attributes placed inside the XML tags are not
 supported either and are simply ignored. Apart from that serialization is pretty
 straight-forward and your XML looks like you would probably expect it anyway
-- at least from my point of view :-)
+-- at least from my point of view :-)
 
 
 ### Basic serialization
 
-	public class MyClass
-	{
-		public int Foo { get; set; }
-		public string Bar { get; set; }
-	}
+```cs
+public class MyClass
+{
+	public int Foo { get; set; }
+	public string Bar { get; set; }
+}
 
-	var test = new MyClass { Foo = 144, Bar = "I like SharpXml very much" };
+var test = new MyClass { Foo = 144, Bar = "I like SharpXml very much" };
+```
 
 An instance of the class above will be serialized like the following:
 
@@ -141,17 +147,19 @@ look like this instead:
 
 ### Collections
 
-	public class ListClass
-	{
-		public int Id { get; set; }
-		public List<string> Items { get; set; }
-	}
+```cs
+public class ListClass
+{
+	public int Id { get; set; }
+	public List<string> Items { get; set; }
+}
 
-	var test = new ListClass
-		{
-			Id = 20,
-			Items = new List<string> { "one", "two" }
-		};
+var test = new ListClass
+	{
+		Id = 20,
+		Items = new List<string> { "one", "two" }
+	};
+```
 
 *SharpXml* will generate the following XML:
 
@@ -166,21 +174,23 @@ look like this instead:
 
 ### Key-value collections (dictionaries)
 
-	public class DictClass
-	{
-		public int Id { get; set; }
-		public Dictionary<string, int> Values { get; set; }
-	}
+```cs
+public class DictClass
+{
+	public int Id { get; set; }
+	public Dictionary<string, int> Values { get; set; }
+}
 
-	var test = new DictClass
-		{
-			Id = 753,
-			Values = new Dictionary<string, int>
-				{
-					{ "ten", 10 },
-					{ "eight", 8 }
-				}
-		};
+var test = new DictClass
+	{
+		Id = 753,
+		Values = new Dictionary<string, int>
+			{
+				{ "ten", 10 },
+				{ "eight", 8 }
+			}
+	};
+```
 
 The serialized output by *SharpXml* looks like the following:
 
@@ -207,24 +217,26 @@ As mentioned before you can use the `XmlElementAttribute` to customize the
 generated XML output which is especially useful for collection and dictionary
 types.
 
-	[XmlElement("CustomClass")]
-	public class CustomDictClass
+```cs
+[XmlElement("CustomClass")]
+public class CustomDictClass
+{
+	public int Id { get; set; }
+
+	[XmlElement(ItemName="Element", KeyName="String", ValueName="Int")]
+	public Dictionary<string, int> Values { get; set; }
+}
+
+var test = new CustomDictClass
 	{
-		public int Id { get; set; }
-
-		[XmlElement(ItemName="Element", KeyName="String", ValueName="Int")]
-		public Dictionary<string, int> Values { get; set; }
-	}
-
-	var test = new CustomDictClass
-		{
-			Id = 753,
-			Values = new Dictionary<string, int>
-				{
-					{ "ten", 10 },
-					{ "eight", 8 }
-				}
-		};
+		Id = 753,
+		Values = new Dictionary<string, int>
+			{
+				{ "ten", 10 },
+				{ "eight", 8 }
+			}
+	};
+```
 
 This example shows the effect of all four available options given by the
 `XmlElementAttribute`: `Name`, `ItemName`, `KeyName` and `ValueName`.
@@ -252,35 +264,37 @@ serialization behavior.
 
 A typical example might look like this:
 
-	public struct MyStruct
+```cs
+public struct MyStruct
+{
+	public int X { get; set; }
+	public int Y { get; set; }
+
+	/// <summary>
+	/// Custom ToString() implementation - will be used by SharpXml
+	/// </summary>
+	public override string ToString()
 	{
-		public int X { get; set; }
-		public int Y { get; set; }
-
-		/// <summary>
-		/// Custom ToString() implementation - will be used by SharpXml
-		/// </summary>
-		public override string ToString()
-		{
-			return X + "x" + Y;
-		}
-
-		/// <summary>
-		/// Custom deserialization function used by SharpXml
-		/// </summary>
-		public static MyStruct ParseXml(string input)
-		{
-			var parts = input.Split('x');
-
-			return new MyStruct
-				{
-					X = int.Parse(parts[0]),
-					Y = int.Parse(parts[1])
-				};
-		}
+		return X + "x" + Y;
 	}
 
-	var test = new MyStruct { X = 200, Y = 50 };
+	/// <summary>
+	/// Custom deserialization function used by SharpXml
+	/// </summary>
+	public static MyStruct ParseXml(string input)
+	{
+		var parts = input.Split('x');
+
+		return new MyStruct
+			{
+				X = int.Parse(parts[0]),
+				Y = int.Parse(parts[1])
+			};
+	}
+}
+
+var test = new MyStruct { X = 200, Y = 50 };
+```
 
 Using the struct type described above results in the following output:
 
@@ -300,24 +314,26 @@ Moreover reference types can be customized by registering custom serialization
 delegates to the static `XmlConfig` class using the aforementioned
 `RegisterSerializer` and `RegisterDeserializer` functions.
 
-	public class SomeClass
-	{
-		public double Width { get; set; }
-		public double Height { get; set; }
-	}
+```cs
+public class SomeClass
+{
+	public double Width { get; set; }
+	public double Height { get; set; }
+}
 
-	// register custom serializer
-	XmlConfig.RegisterSerializer<SomeClass>(x => return x.Width + "x" + x.Height);
+// register custom serializer
+XmlConfig.RegisterSerializer<SomeClass>(x => return x.Width + "x" + x.Height);
 
-	// register custom deserializer
-	XmlConfig.RegisterDeserializer<SomeClass>(v => {
-			var parts = v.Split('x');
-			return new SomeClass
-				{
-					Width = double.Parse(parts[0]),
-					Height = double.Parse(parts[1])
-				};
-		});
+// register custom deserializer
+XmlConfig.RegisterDeserializer<SomeClass>(v => {
+		var parts = v.Split('x');
+		return new SomeClass
+			{
+				Width = double.Parse(parts[0]),
+				Height = double.Parse(parts[1])
+			};
+	});
+```
 
 The resulting XML will look pretty much the same as the struct example described
 earlier but you can imagine the possibilities given by this approach.
