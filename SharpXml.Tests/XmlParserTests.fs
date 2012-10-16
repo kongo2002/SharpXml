@@ -16,6 +16,7 @@ namespace SharpXml.Tests
 
 module XmlParserTests =
 
+    open System
     open System.Diagnostics
 
     open NUnit.Framework

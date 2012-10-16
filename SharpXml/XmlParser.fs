@@ -14,10 +14,14 @@
 
 namespace SharpXml
 
+#nowarn "9"
+#nowarn "51"
+
 module internal XmlParser =
 
     open System
     open System.Collections.Generic
+    open Microsoft.FSharp.NativeInterop
 
     type XmlElem =
         | SingleElem of string
@@ -28,6 +32,12 @@ module internal XmlParser =
         | Open = 0
         | Single = 1
         | Close = 2
+
+    type ParseState =
+        | Start = 0
+        | Tag = 1
+        | TagName = 2
+        | EndTag = 3
 
     let whitespaceChars =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
@@ -49,78 +59,78 @@ module internal XmlParser =
     /// type being one of Open, Close or Single
     let eatTag (input : char[]) index =
         let len = input.Length
-        let nothing = 0, null, TagType.Open
+        let mutable i = index
+        let mutable name = Unchecked.defaultof<string>
+        let mutable nameStart = 0
+        let mutable tag = TagType.Single
+        let mutable buffer = &&input.[index]
+        let mutable close = false
+        let mutable state = ParseState.Start
+        let mutable found = false
 
-        let rec endTag i name tagType =
-            if i >= len then nothing
-            else
-                let chr = input.[i]
-                if chr = '>' then
-                    i, name, tagType
-                elif chr = '/' then
-                    endTag (i+1) name TagType.Single
-                else endTag (i+1) name tagType
-
-        let rec getName i start close =
-            if i >= len then nothing
-            else
-                let chr = input.[i]
+        while i < len && not found do
+            let chr = NativePtr.read buffer
+            i <- i + 1
+            buffer <- NativePtr.add buffer 1
+            match state with
+            | ParseState.Start ->
+                if chr = '<' then state <- ParseState.Tag
+            | ParseState.Tag ->
+                if not (isWhitespace chr) then
+                    if chr = '/' then
+                        close <- true
+                        nameStart <- i
+                    else
+                        nameStart <- i - 1
+                    state <- ParseState.TagName
+            | ParseState.TagName ->
                 if isWhitespace chr then
                     if not close then
-                        let tag = String(input, start, (i-start))
-                        endTag (i+1) tag TagType.Open
-                    else
-                        getName (i+1) start close
+                        name <- String(input, nameStart, (i-nameStart-1))
+                        tag <- TagType.Open
+                        state <- ParseState.EndTag
                 elif chr = '/' then
-                    let tag = String(input, start, (i-start))
-                    endTag (i+1) tag TagType.Single
+                    name <- String(input, nameStart, (i-nameStart-1))
+                    tag <- TagType.Single
+                    state <- ParseState.EndTag
                 elif chr = '>' then
-                    let tag = String(input, start, (i-start))
-                    let tagType = if close then TagType.Close else TagType.Open
-                    i, tag, tagType
-                else
-                    getName (i+1) start close
-
-        let rec findName i =
-            if i >= len then nothing
-            else
-                let chr = input.[i]
-                if isWhitespace chr then
-                    findName (i+1)
+                    name <- String(input, nameStart, (i-nameStart-1))
+                    tag <- if close then TagType.Close else TagType.Open
+                    i <- i - 1
+                    found <- true
+            | _ ->
+                if chr = '>' then
+                    i <- i - 1
+                    found <- true
                 elif chr = '/' then
-                    getName (i+1) (i+1) true
-                else getName (i+1) i false
+                    tag <- TagType.Single
 
-        let rec findStart i =
-            if i >= len then nothing
-            elif input.[i] = '<' then findName (i+1)
-            else findStart (i+1)
-
-        findStart index
+        i, name, tag
 
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index
-    let eatContent (input : char[]) index =
-        let len = input.Length
-        let replace (f : string) (t : string) (i : string) =
-            i.Replace(f, t)
-        let rec inner i esc =
-            let next = i + 1
-            // end of string, this is probably an error
-            if next > len then String(input, index, len), len, esc
-            elif input.[i] = '<' then
-                let length = i - index
-                String(input, index, length), i, esc
-            elif input.[i] = '&' then
-                inner next true
-            else inner next esc
-        // TODO: this replacements probably could be done more performant,
-        // like while doing the search for the end tag
-        let result, endIndex, escaped = inner index false
-        if escaped then
-            result |> replace "&gt;" ">" |> replace "&lt;" "<", endIndex
+    let eatContent (input : char[]) start =
+        let length = input.Length - start
+        let mutable len = length
+        let mutable found = false
+        let mutable encoded = false
+        let mutable buffer = &&input.[start]
+        while not found do
+            if len > 0 then
+                let chr = NativePtr.read buffer
+                if chr = '<' then
+                    found <- true
+                else
+                    if chr = '&' then encoded <- true
+                    len <- len - 1
+                    buffer <- NativePtr.add buffer 1
+            else
+                found <- true
+        let result, index = String(input, start, length - len), (length - len + start)
+        if encoded then
+            result.Replace("&gt;", ">").Replace("&lt;", "<"), index
         else
-            result, endIndex
+            result, index
 
     /// Parse the given input string starting from the specified
     /// index into an XML AST
