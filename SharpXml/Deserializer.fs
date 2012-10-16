@@ -367,7 +367,7 @@ module internal Deserializer =
     /// Build the TypeBuilderInfo record for the given Type
     and buildTypeBuilderInfo (t : Type) =
         let map =
-            ReflectionHelpers.getSerializableProperties t
+            ReflectionHelpers.getDeserializableProperties t
             |> Seq.map (fun p ->
                 let name =
                     match getAttribute<SharpXml.Common.XmlElementAttribute> p with

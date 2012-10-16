@@ -12,6 +12,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+#nowarn "9"
+#nowarn "51"
+
 namespace SharpXml
 
 /// Record type containing the type specific information
@@ -47,13 +50,17 @@ module internal SerializerBase =
 
     /// General purpose XML tags writer function
     let writeTag (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
-        w.Write("<{0}>", name)
+        w.Write('<'); w.Write(name); w.Write('>')
         writeFunc info w value
-        w.Write("</{0}>", name)
+        w.Write("</"); w.Write(name); w.Write('>')
 
     /// Empty tag writer function
     let writeEmptyTag (name : string) (w : TextWriter) =
-        w.Write("<{0}></{0}>", name)
+        w.Write('<')
+        w.Write(name);
+        w.Write("></");
+        w.Write(name);
+        w.Write('>');
 
 /// Module containing the serialization logic
 /// for value types
@@ -63,6 +70,8 @@ module internal ValueTypeSerializer =
     open System.Globalization
     open System.IO
     open System.Xml
+
+    open Microsoft.FSharp.NativeInterop
 
     open SharpXml.Extensions
 
@@ -85,13 +94,18 @@ module internal ValueTypeSerializer =
         elif day.Milliseconds = 0 then date.ToUniversal().ToString(xsdFormatSeconds)
         else toXsdFormat date
 
-    let writeString (writer : TextWriter) (content : string) =
-        let inline sanitize c =
-            match c with
+    let inline writeString (writer : TextWriter) (content : string) =
+        let chars = content.ToCharArray()
+        let len = chars.Length
+        let mutable curr = 0
+        let mutable char = NativePtr.read &&chars.[0]
+        while curr < len do
+            match char with
             | '<' -> writer.Write("&lt;")
             | '>' -> writer.Write("&gt;")
-            | _ -> writer.Write(c)
-        Seq.iter sanitize content
+            | _ -> writer.Write(char)
+            curr <- curr + 1
+            if curr < len then char <- NativePtr.read &&chars.[curr]
 
     let inline nullableWriter n writer value func =
         if value <> null then func n writer value
@@ -103,23 +117,23 @@ module internal ValueTypeSerializer =
     let writeObject _ (writer : TextWriter) (value : obj) =
         writer.Write(value)
 
-    let writeDateTime _ writer (value : obj) =
+    let writeDateTime _ (writer : TextWriter) (value : obj) =
         let v = toShortestXsdFormat (unbox value)
-        writeString writer v
+        writer.Write(v)
 
     let writeNullableDateTime n writer (value : obj) =
         nullableWriter n writer value writeDateTime
 
-    let writeDateTimeOffset _ writer (value : obj) =
+    let writeDateTimeOffset _ (writer : TextWriter) (value : obj) =
         let v : DateTimeOffset = unbox value
-        writeString writer (v.ToString("o"))
+        writer.Write(v.ToString("o"))
 
     let writeNullableDateTimeOffset n writer (value : obj) =
         nullableWriter n writer value writeDateTimeOffset
 
-    let writeGuid _ writer (value : obj) =
+    let writeGuid _ (writer : TextWriter) (value : obj) =
         let v : Guid = unbox value
-        writeString writer (v.ToString("N"))
+        writer.Write(v.ToString("N"))
 
     let writeNullableGuid n writer (value : obj) =
         nullableWriter n writer value writeGuid
@@ -182,9 +196,9 @@ module internal ValueTypeSerializer =
         | true -> writer.Write("true")
         | false -> writer.Write("false")
 
-    let writeDecimal _ writer (value : obj) =
+    let writeDecimal _ (writer : TextWriter) (value : obj) =
         let v : decimal = unbox value
-        writeString writer (v.ToString(CultureInfo.InvariantCulture))
+        writer.Write(v.ToString(CultureInfo.InvariantCulture))
 
     let writeEnum n writer (value : obj) =
         writeObject n writer value
@@ -411,7 +425,7 @@ module internal Serializer =
           Default = ReflectionHelpers.getDefaultValue propInfo.PropertyType }
 
     /// Try to determine a enumerable serialization function
-    and getEnumerableWriter attr (t : Type) = fun () ->
+    and getEnumerableWriter (t : Type) = fun () ->
         match t with
         | GenericTypeOf GenericTypes.iEnum elemType ->
             let elemWriter = getWriterFunc elemType
@@ -495,7 +509,6 @@ module internal Serializer =
     /// Determine the associated serialization writer
     /// function for the specified type
     and determineWriter (t : Type) =
-        let attr = getAttribute<XmlElementAttribute> t
         let writer = attempt {
             let! strWriter = getStringWriter t
             let! customWriter = getCustomWriter t
@@ -503,7 +516,7 @@ module internal Serializer =
             let! specialWriter = getSpecialWriters t
             let! arrayWriter = getArrayWriter t
             let! dictWriter = getDictionaryWriter t
-            let! enumerableWriter = getEnumerableWriter attr t
+            let! enumerableWriter = getEnumerableWriter t
             let! instanceWriter = getInstanceWriter t
             let! staticWriter = getStaticWriter t
             let! classWriter = getClassWriter t

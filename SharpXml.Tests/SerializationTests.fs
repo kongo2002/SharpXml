@@ -24,8 +24,9 @@ module SerializationTests =
     open SharpXml.Tests.TestHelpers
     open SharpXml.Tests.Types
 
+    XmlConfig.Instance.EmitCamelCaseNames <- true
+
     let serialize<'a> (element : 'a) =
-        XmlConfig.Instance.EmitCamelCaseNames <- true
         XmlSerializer.SerializeToString<'a>(element)
 
     [<Test>]
@@ -263,6 +264,11 @@ module SerializationTests =
         serialize cls |> should equal "<dictClass><v1><keyValuePair><string>foo</string><int32>1</int32></keyValuePair><keyValuePair><string>bar</string><int32>2</int32></keyValuePair></v1><v2>200</v2></dictClass>"
 
     [<Test>]
+    let ``Can serialize arrays of classes``() =
+        let cls = GenericClass<Guest[]>(V1 = 984, V2 = [| Guest(1); Guest(2, FirstName = "foo", LastName = "bar") |])
+        serialize cls |> should equal "<genericClass><v1>984</v1><v2><guest><id>1</id></guest><guest><firstName>foo</firstName><lastName>bar</lastName><id>2</id></guest></v2></genericClass>"
+
+    [<Test>]
     let ``Can serialize IEnumerables``() =
         let cls = IEnumerableClass(V1 = "foo bar", V2 = List<int>(seq { 1 .. 2 }))
         serialize cls |> should equal "<iEnumerableClass><v1>foo bar</v1><v2><int32>1</int32><int32>2</int32></v2></iEnumerableClass>"
@@ -354,9 +360,3 @@ module SerializationTests =
         serialize booking |> should equal "<booking><name>booking</name><guests><guest><firstName></firstName><lastName></lastName><id>94</id></guest></guests></booking>"
         XmlConfig.Instance.IncludeNullValues <- false
 
-    [<Test>]
-    let ``Profile simple serialization``() =
-        let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
-        let cls = Booking("testBooking", list)
-        time (fun () -> serialize cls |> ignore) 1000
-        time (fun () -> serialize cls |> ignore) 10000
