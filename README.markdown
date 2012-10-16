@@ -308,7 +308,9 @@ var test = new MyStruct { X = 200, Y = 50 };
 
 Using the struct type described above results in the following output:
 
-	<MyStruct>200x50</MyStruct>
+```xml
+<MyStruct>200x50</MyStruct>
+```
 
 Without the custom implementations the struct would be serialized like this:
 
