@@ -5,8 +5,11 @@
 *.ncrunchsolution.user
 *.suo
 *.userprefs
+Backup
+UpgradeLog.*
 _NCrunch*
 _ReSharper*
+_UpgradeReport_Files
 bin
 obj
 test-results/
