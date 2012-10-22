@@ -168,3 +168,16 @@ module XmlParserTests =
     let parseAST08() =
         let input = "<one>ham eggs</one><two>foo bar</two><three>cheese bacon</three>"
         parse input |> should equal [ ContentElem("three", "cheese bacon"); ContentElem("two", "foo bar"); ContentElem("one", "ham eggs") ]
+
+    [<Test>]
+    let eatClosingTag01() =
+        let input = "<one>ham eggs</one><two>foo bar</two>".ToCharArray()
+        let index = 5
+        XmlParser.eatClosingTag input index |> should equal 19
+
+    [<Test>]
+    let eatClosingTag02() =
+        let input = "<one>ham eggs</one>".ToCharArray()
+        let index = 4
+        XmlParser.eatClosingTag input index |> should equal input.Length
+        

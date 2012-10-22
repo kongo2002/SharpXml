@@ -62,6 +62,25 @@ module internal XmlParser =
         if index >= input.Length || not (isWhitespace input.[index]) then index
         else skipWhitespace input (index + 1)
 
+    /// Eat a closing XML tag and return the end index
+    let eatClosingTag (input : char[]) index =
+        let len = input.Length
+        let mutable i = index
+        let mutable buffer = &&input.[index]
+        let mutable state = ParseState.Start
+        let mutable found = false
+
+        while i < len && not found do
+            let chr = NativePtr.read buffer
+            i <- i + 1
+            buffer <- NativePtr.add buffer 1
+            match state with
+            | ParseState.Start ->
+                if chr = '<' then state <- ParseState.Tag
+            | _ ->
+                if chr = '>' then found <- true
+        i
+
     /// Eat a XML tag and return its name, the end index and
     /// type being one of Open, Close or Single
     let eatTag (input : char[]) index =
