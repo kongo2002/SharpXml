@@ -17,6 +17,13 @@ namespace SharpXml
 #nowarn "9"
 #nowarn "51"
 
+[<Struct>]
+type internal ParserInfo(value : string) =
+    [<DefaultValue>]
+    val mutable Index : int
+    member x.Value = value.ToCharArray()
+    member x.Length = value.Length
+
 module internal XmlParser =
 
     open System
