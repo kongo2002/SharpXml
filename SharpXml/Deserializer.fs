@@ -19,7 +19,7 @@ namespace SharpXml
 exception SharpXmlException of string
 
 /// Reader function delegate
-type internal ReaderFunc = XmlParser.XmlElem -> obj
+type internal ReaderFunc = XmlParser.ParserInfo -> obj
 
 /// Record type containing the deserialization information
 /// for a specific property member
@@ -42,15 +42,10 @@ module internal ValueTypeDeserializer =
 
     open SharpXml.XmlParser
 
-    let inline buildValueReader reader = fun xml ->
-        match xml with
-        | ContentElem(_, str) -> reader str
-        | _ -> null
-
-    let inline extractString xml =
-        match xml with
-        | ContentElem(_, str) -> str
-        | _ -> null
+    let inline buildValueReader reader = fun info ->
+        let str = eatContent info
+        if not info.IsEnd then reader str
+        else null
 
     let getEnumReader (t : Type) = fun () ->
         if t.IsEnum then
@@ -82,6 +77,24 @@ module internal ValueTypeDeserializer =
         | Some r -> Some(buildValueReader r)
         | _ -> None
 
+module internal DeserializerBase =
+
+    open SharpXml.XmlParser
+
+    /// read the next xml tag using the given reader function
+    let itemReader itemReader info =
+        match eatTag info with
+        | _, TagType.Open ->
+            if not info.IsEnd then
+                let value = itemReader info
+                if not info.IsEnd then
+                    eatClosingTag info
+                    Some value
+                else None
+            else None
+        | _ -> None
+
+
 /// Dictionary related deserialization logic
 module internal DictionaryDeserializer =
 
@@ -91,48 +104,43 @@ module internal DictionaryDeserializer =
 
     open SharpXml.XmlParser
 
+    let parseKeyValueCollection invoker (keyReader : ReaderFunc) (valueReader : ReaderFunc) (input : ParserInfo) =
+        let rec inner() =
+            if not input.IsEnd then
+                let _, kTag = eatTag input
+                if not input.IsEnd && kTag <> TagType.Close then
+                    let key = keyReader input
+                    eatClosingTag input
+                    let _, vTag = eatTag input
+                    if not input.IsEnd && vTag <> TagType.Close then
+                        let value = valueReader input
+                        invoker key value
+                        eatClosingTag input
+                        inner()
+        inner()
+
     /// Dictionary reader function
     let dictReader<'a, 'b when 'a : equality> (keyReader : ReaderFunc) (valueReader : ReaderFunc) xml =
-        let readDictElem = function
-            // TODO: key and value tags are reversed
-            | GroupElem(_, [ v; k ]) ->
-                let key = keyReader(k) :?> 'a
-                let value = valueReader(v) :?> 'b
-                (key, value) |> Some
-            | _ -> None
         let dictionary = Dictionary<'a, 'b>()
-        match xml with
-        | GroupElem(_, elements) ->
-            elements
-            |> List.choose readDictElem
-            |> List.iter (fun (k, v) -> dictionary.[k] <- v)
-        | _ -> ()
+        let invoker (key : obj) (value : obj) =
+            dictionary.[key :?> 'a] <- value :?> 'b
+        parseKeyValueCollection invoker keyReader valueReader xml
         dictionary
 
+    /// Reader function for non-generic NameValueCollection
     let nameValueCollectionReader (ctor : unit -> #NameValueCollection) xml =
         let collection = ctor()
-        let processElement = function
-            | GroupElem(_, [ v; k ]) ->
-                let key = ValueTypeDeserializer.extractString k
-                let value = ValueTypeDeserializer.extractString v
-                collection.[key] <- value
-            | _ -> ()
-        match xml with
-        | GroupElem(_, elements) -> List.iter processElement elements
-        | _ -> ()
+        let invoker (key : obj) (value : obj) =
+            collection.[key :?> string] <- value :?> string
+        parseKeyValueCollection invoker box box xml
         box collection
 
+    /// Reader function for non-generic HashTable
     let hashTableReader xml =
         let table = Hashtable()
-        let processElement = function
-            | GroupElem(_, [ v; k ]) ->
-                let key = ValueTypeDeserializer.extractString k
-                let value = ValueTypeDeserializer.extractString v
-                table.Add(key, value)
-            | _ -> ()
-        match xml with
-        | GroupElem(_, elements) -> List.iter processElement elements
-        | _ -> ()
+        let invoker (key : obj) (value : obj) =
+            table.Add(key :?> string, value :?> string)
+        parseKeyValueCollection invoker box box xml
         box table
 
 /// List related deserialization logic
@@ -151,85 +159,63 @@ module internal ListDeserializer =
         | null -> None
         | x -> Some(x :?> 'a)
 
-    /// Build a new list in reversed order
-    let revBuild processor elements =
-        let rec inner list acc =
-            match list with
-            | h :: t ->
-                match processor h with
-                | Some result -> inner t (result :: acc)
-                | _ -> inner t acc
-            | _ -> acc
-        inner elements []
+    let parseList<'a> (elemParser : ReaderFunc) (info : ParserInfo) =
+        let list = List<'a>()
+        let rec inner() =
+            if not info.IsEnd then
+                let _, tag = eatTag info
+                if not info.IsEnd && tag <> TagType.Close then
+                    // TODO: maybe use an option value in here
+                    // TODO: ...parseListElement
+                    let value = elemParser info :?> 'a
+                    eatClosingTag info
+                    list.Add(value)
+                    inner()
+        inner()
+        list
 
-    /// Generic collection processing function that
-    /// processes the items in reverse order
-    let revProcessor<'a> action (reader : ReaderFunc) = function
-        | GroupElem(_, elems) ->
-            revBuild (parseListElement<'a> reader) elems
-            |> List.iter action
-        | _ -> ()
-
-    /// Generic collection processing function
-    let collectionProcessor<'a> action (reader : ReaderFunc) = function
-        | GroupElem(_, elems) ->
-            elems
-            |> List.iter(fun x ->
-                match parseListElement<'a> reader x with
-                | Some result ->
-                    action result
-                | _ -> ())
-        | _ -> ()
+    let parseListUntyped (lst : IList) (elemParser : ReaderFunc) (info : ParserInfo) =
+        let rec inner() =
+            if not info.IsEnd then
+                let _, tag = eatTag info
+                if not info.IsEnd && tag <> TagType.Close then
+                    // TODO: maybe use an option value in here
+                    // TODO: ...parseListElement
+                    let value = elemParser info
+                    lst.Add(value) |> ignore
+                    eatClosingTag info
+                    inner()
+        inner()
 
     /// Reader function for immutable F# lists
     let listReader<'a> (reader : ReaderFunc) xml =
-        match xml with
-        | GroupElem(_, elems) ->
-            elems
-            |> revBuild (parseListElement<'a> reader)
-        | _ -> []
+        let list = parseList reader xml
+        List.ofSeq list
 
     /// Reader function for CLR list (System.Collections.Generic.List<T>)
     let clrListReader<'a> (reader : ReaderFunc) xml =
-        let list = List<'a>()
-        match xml with
-        | GroupElem(_, elems) ->
-            elems
-            |> revBuild (parseListElement<'a> reader)
-            |> list.AddRange
-        | _ -> ()
-        list
+        parseList reader xml
 
     /// Reader function for arrays
     let arrayReader<'a> (reader : ReaderFunc) xml =
-        match xml with
-        | GroupElem(_, elems) ->
-            elems
-            |> revBuild (parseListElement<'a> reader)
-            |> Array.ofList
-        | _ -> Array.empty<'a>
+        let list = parseList reader xml
+        list.ToArray()
 
     /// Reader function for untyped collections
     let collectionReader (ctor : EmptyConstructor) xml =
         let list = ctor.Invoke() :?> IList
-        match xml with
-        | GroupElem(_, elems) ->
-            elems
-            |> revBuild (parseListElement (box |> ValueTypeDeserializer.buildValueReader))
-            |> List.iter (list.Add >> ignore)
-        | _ -> ()
+        parseListUntyped list box xml
         list
 
     /// Reader function for hash sets
     let hashSetReader<'a> (reader : ReaderFunc) xml =
-        let set = HashSet<'a>()
-        revProcessor (set.Add >> ignore) reader xml
-        set
+        HashSet(parseList reader xml)
 
     /// Reader function for generic collections
     let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : EmptyConstructor) xml =
         let collection = ctor.Invoke() :?> ICollection<'a>
-        revProcessor collection.Add reader xml
+        let list = parseList reader xml
+        list.ForEach(fun elem -> collection.Add(elem))
         collection
 
     let genericROReader<'a> (reader : ReaderFunc) (ctor : System.Reflection.ConstructorInfo) xml =
@@ -238,22 +224,15 @@ module internal ListDeserializer =
 
     /// Reader function for queues
     let queueReader<'a> (reader : ReaderFunc) xml =
-        let queue = Queue<'a>()
-        revProcessor queue.Enqueue reader xml
-        queue
+        Queue<'a>(parseList reader xml)
 
     /// Reader function for stacks
     let stackReader<'a> (reader : ReaderFunc) xml =
-        let stack = Stack<'a>()
-        collectionProcessor stack.Push reader xml
-        stack
+        Stack<'a>(parseList reader xml)
 
     /// Reader function for generic linked lists
     let linkedListReader<'a> (reader : ReaderFunc) xml =
-        let list = LinkedList<'a>()
-        let addTo (item : 'a) = list.AddFirst(item) |> ignore
-        collectionProcessor addTo reader xml
-        list
+        LinkedList<'a>(parseList reader xml)
 
     /// Specialized reader function for string arrays
     let stringArrayReader xml =
@@ -266,21 +245,15 @@ module internal ListDeserializer =
         listReader<int> intReader xml |> List.toArray |> box
 
     /// Specialized reader function for byte arrays
-    let byteArrayReader = function
-        | ContentElem(_, value) when Utils.notEmpty value ->
-            Convert.FromBase64String(value) |> box
-        | _ -> Array.empty<byte> |> box
+    let byteArrayReader xml =
+        let reader = ValueTypeDeserializer.buildValueReader Convert.FromBase64String
+        reader xml |> box
 
     /// Specialized reader function for char arrays
-    let charArrayReader = function
-        | ContentElem(_, value) when Utils.notEmpty value ->
-            value.ToCharArray() |> box
-        | GroupElem(_, elements) ->
-            elements
-            |> revBuild (function | ContentElem(_, str) when Utils.notEmpty str -> Some str.[0] | _ -> None)
-            |> List.toArray
-            |> box
-        | _ -> Array.empty<char> |> box
+    let charArrayReader xml =
+        let reader = ValueTypeDeserializer.buildValueReader (fun v -> v.ToCharArray())
+        reader xml |> box
+
 
 /// Deserialization logic
 module internal Deserializer =
@@ -390,7 +363,7 @@ module internal Deserializer =
     and buildGenericFunction name t =
         let mtd = getGenericListFunction name t
         let elemReader = getReaderFunc t
-        fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; xml |])
+        fun (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; xml |])
 
     /// Get a reader function for generic lists
     and getTypedListReader =
@@ -421,13 +394,13 @@ module internal Deserializer =
         let mtd = getGenericListFunction "genericCollectionReader" t
         let elemReader = getReaderFunc t
         let ctor = ReflectionHelpers.getConstructorMethod listType
-        fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
+        fun (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
 
     /// Get a reader function for generic readonly collections
     and getGenericROReader ctor (listType : Type) (t : Type) =
         let mtd = getGenericListFunction "genericROReader" t
         let elemReader = getReaderFunc t
-        fun (xml : XmlElem) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
+        fun (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; xml |])
 
     /// Try to determine a reader function for array types
     and getArrayReader (t : Type) = fun () ->
@@ -472,7 +445,7 @@ module internal Deserializer =
         let mtd = reader.MakeGenericMethod([| key; value |])
         let keyReader = getReaderFunc key
         let valueReader = getReaderFunc value
-        fun (xml : XmlElem) -> mtd.Invoke(null, [| keyReader; valueReader; xml |])
+        fun (xml : ParserInfo) -> mtd.Invoke(null, [| keyReader; valueReader; xml |])
 
     and getDictionaryReader (t : Type) = fun () ->
         let dictInterface = typeof<IDictionary>
@@ -486,32 +459,27 @@ module internal Deserializer =
         else None
 
     /// Class reader function
-    and readClass (builder : TypeBuilderInfo) xml =
+    and readClass (builder : TypeBuilderInfo) (xml : ParserInfo) =
         let instance = builder.Ctor.Invoke()
-        let rec inner inst elems =
-            match elems with
-            | (GroupElem(name, _)  as h :: t)
-            | (ContentElem(name, _) as h :: t) ->
-                match builder.Props.TryGetValue name with
-                | true, prop ->
-                    try
-                        let reader = prop.Reader
-                        prop.Setter.Invoke(inst, reader(h))
-                    with _ ->
-                        let error = sprintf "Unable to deserialize property '%s' of type '%s'" prop.Info.Name prop.Info.DeclaringType.FullName
-                        if XmlConfig.Instance.ThrowOnError then
-                            raise (SharpXmlException error)
-                        else
-                            Diagnostics.Trace.WriteLine(error)
-                    inner inst t
-                | _ -> inner inst t
-            | SingleElem _ :: t ->
-                // TODO: maybe we want to set the default value in here
-                inner inst t
-            | [] -> ()
-        match xml with
-        | GroupElem(_, subElements) -> inner instance subElements
-        | _ -> ()
+        let rec inner() =
+            if not xml.IsEnd then
+                let name, tag = eatTag xml
+                if tag = TagType.Open then
+                    match builder.Props.TryGetValue name with
+                    | true, prop ->
+                        try
+                            let reader = prop.Reader
+                            prop.Setter.Invoke(instance, reader(xml))
+                        with _ ->
+                            let error = sprintf "Unable to deserialize property '%s' of type '%s'" prop.Info.Name prop.Info.DeclaringType.FullName
+                            if XmlConfig.Instance.ThrowOnError then
+                                raise (SharpXmlException error)
+                            else
+                                Diagnostics.Trace.WriteLine(error)
+                    | _ -> ()
+                    eatClosingTag xml
+                inner()
+        inner()
         instance
 
     /// Try to determine a matching class reader function

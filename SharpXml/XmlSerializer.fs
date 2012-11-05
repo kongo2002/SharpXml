@@ -35,9 +35,8 @@ type XmlSerializer() =
         if notEmpty input then
             try
                 let reader = Deserializer.getReaderFunc typeof<'T>
-                match XmlParser.parseAST input 0 with
-                | [ xml ] -> reader xml :?> 'T
-                | _ -> invalidArg "the input XML has no root element" "input"
+                let info = XmlParser.ParserInfo input
+                reader info :?> 'T
             with
             | :? SharpXmlException -> Unchecked.defaultof<'T>
         else
