@@ -44,7 +44,10 @@ module internal ValueTypeDeserializer =
 
     let inline buildValueReader reader = fun info ->
         let str = eatContent info
-        if not info.IsEnd then reader str
+        if not info.IsEnd then
+            let value = reader str
+            eatClosingTag info
+            value
         else null
 
     let getEnumReader (t : Type) = fun () ->
@@ -115,7 +118,7 @@ module internal DictionaryDeserializer =
                     if not input.IsEnd && vTag <> TagType.Close then
                         let value = valueReader input
                         invoker key value
-                        eatClosingTag input
+                        //eatClosingTag input
                         inner()
         inner()
 
@@ -168,7 +171,7 @@ module internal ListDeserializer =
                     // TODO: maybe use an option value in here
                     // TODO: ...parseListElement
                     let value = elemParser info :?> 'a
-                    eatClosingTag info
+                    //eatClosingTag info
                     list.Add(value)
                     inner()
         inner()
@@ -183,22 +186,22 @@ module internal ListDeserializer =
                     // TODO: ...parseListElement
                     let value = elemParser info
                     lst.Add(value) |> ignore
-                    eatClosingTag info
+                    //eatClosingTag info
                     inner()
         inner()
 
     /// Reader function for immutable F# lists
     let listReader<'a> (reader : ReaderFunc) xml =
-        let list = parseList reader xml
+        let list = parseList<'a> reader xml
         List.ofSeq list
 
     /// Reader function for CLR list (System.Collections.Generic.List<T>)
     let clrListReader<'a> (reader : ReaderFunc) xml =
-        parseList reader xml
+        parseList<'a> reader xml
 
     /// Reader function for arrays
     let arrayReader<'a> (reader : ReaderFunc) xml =
-        let list = parseList reader xml
+        let list = parseList<'a> reader xml
         list.ToArray()
 
     /// Reader function for untyped collections
@@ -209,12 +212,12 @@ module internal ListDeserializer =
 
     /// Reader function for hash sets
     let hashSetReader<'a> (reader : ReaderFunc) xml =
-        HashSet(parseList reader xml)
+        HashSet(parseList<'a> reader xml)
 
     /// Reader function for generic collections
     let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : EmptyConstructor) xml =
         let collection = ctor.Invoke() :?> ICollection<'a>
-        let list = parseList reader xml
+        let list = parseList<'a> reader xml
         list.ForEach(fun elem -> collection.Add(elem))
         collection
 
@@ -224,15 +227,15 @@ module internal ListDeserializer =
 
     /// Reader function for queues
     let queueReader<'a> (reader : ReaderFunc) xml =
-        Queue<'a>(parseList reader xml)
+        Queue<'a>(parseList<'a> reader xml)
 
     /// Reader function for stacks
     let stackReader<'a> (reader : ReaderFunc) xml =
-        Stack<'a>(parseList reader xml)
+        Stack<'a>(parseList<'a> reader xml)
 
     /// Reader function for generic linked lists
     let linkedListReader<'a> (reader : ReaderFunc) xml =
-        LinkedList<'a>(parseList reader xml)
+        LinkedList<'a>(parseList<'a> reader xml)
 
     /// Specialized reader function for string arrays
     let stringArrayReader xml =
@@ -464,21 +467,24 @@ module internal Deserializer =
         let rec inner() =
             if not xml.IsEnd then
                 let name, tag = eatTag xml
-                if tag = TagType.Open then
+                match tag with
+                | TagType.Open ->
                     match builder.Props.TryGetValue name with
                     | true, prop ->
                         try
                             let reader = prop.Reader
                             prop.Setter.Invoke(instance, reader(xml))
-                        with _ ->
+                        with ex ->
                             let error = sprintf "Unable to deserialize property '%s' of type '%s'" prop.Info.Name prop.Info.DeclaringType.FullName
                             if XmlConfig.Instance.ThrowOnError then
                                 raise (SharpXmlException error)
                             else
                                 Diagnostics.Trace.WriteLine(error)
                     | _ -> ()
-                    eatClosingTag xml
-                inner()
+                    //eatClosingTag xml
+                    inner()
+                | TagType.Close -> ()
+                | TagType.Single -> () // TODO
         inner()
         instance
 

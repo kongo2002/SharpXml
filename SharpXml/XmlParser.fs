@@ -114,7 +114,7 @@ module internal XmlParser =
                 elif chr = '>' then
                     name <- String(input.Value, nameStart, (input.Index-nameStart-1))
                     tag <- if close then TagType.Close else TagType.Open
-                    input.Index <- input.Index - 1
+                    //input.Index <- input.Index - 1
                     found <- true
             | _ ->
                 if chr = '>' then

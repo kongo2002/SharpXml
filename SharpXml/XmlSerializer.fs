@@ -36,6 +36,7 @@ type XmlSerializer() =
             try
                 let reader = Deserializer.getReaderFunc typeof<'T>
                 let info = XmlParser.ParserInfo input
+                XmlParser.eatTag info |> ignore
                 reader info :?> 'T
             with
             | :? SharpXmlException -> Unchecked.defaultof<'T>
