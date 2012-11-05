@@ -80,23 +80,9 @@ module internal ValueTypeDeserializer =
         | Some r -> Some(buildValueReader r)
         | _ -> None
 
-module internal DeserializerBase =
-
-    open SharpXml.XmlParser
-
-    /// read the next xml tag using the given reader function
-    let itemReader itemReader info =
-        match eatTag info with
-        | _, TagType.Open ->
-            if not info.IsEnd then
-                let value = itemReader info
-                if not info.IsEnd then
-                    eatClosingTag info
-                    Some value
-                else None
-            else None
-        | _ -> None
-
+    /// String reader function
+    let stringReader : ParserInfo -> obj =
+        box |> buildValueReader
 
 /// Dictionary related deserialization logic
 module internal DictionaryDeserializer =
@@ -110,15 +96,16 @@ module internal DictionaryDeserializer =
     let parseKeyValueCollection invoker (keyReader : ReaderFunc) (valueReader : ReaderFunc) (input : ParserInfo) =
         let rec inner() =
             if not input.IsEnd then
-                let _, kTag = eatTag input
-                if not input.IsEnd && kTag <> TagType.Close then
+                let _, itemTag = eatTag input
+                if not input.IsEnd && itemTag <> TagType.Close then
+                    // read key tag
+                    eatTag input |> ignore
                     let key = keyReader input
-                    eatClosingTag input
                     let _, vTag = eatTag input
                     if not input.IsEnd && vTag <> TagType.Close then
                         let value = valueReader input
                         invoker key value
-                        //eatClosingTag input
+                        eatClosingTag input
                         inner()
         inner()
 
@@ -135,7 +122,8 @@ module internal DictionaryDeserializer =
         let collection = ctor()
         let invoker (key : obj) (value : obj) =
             collection.[key :?> string] <- value :?> string
-        parseKeyValueCollection invoker box box xml
+        let reader = ValueTypeDeserializer.stringReader
+        parseKeyValueCollection invoker reader reader xml
         box collection
 
     /// Reader function for non-generic HashTable
@@ -143,7 +131,8 @@ module internal DictionaryDeserializer =
         let table = Hashtable()
         let invoker (key : obj) (value : obj) =
             table.Add(key :?> string, value :?> string)
-        parseKeyValueCollection invoker box box xml
+        let reader = ValueTypeDeserializer.stringReader
+        parseKeyValueCollection invoker reader reader xml
         box table
 
 /// List related deserialization logic
@@ -171,7 +160,6 @@ module internal ListDeserializer =
                     // TODO: maybe use an option value in here
                     // TODO: ...parseListElement
                     let value = elemParser info :?> 'a
-                    //eatClosingTag info
                     list.Add(value)
                     inner()
         inner()
@@ -186,7 +174,6 @@ module internal ListDeserializer =
                     // TODO: ...parseListElement
                     let value = elemParser info
                     lst.Add(value) |> ignore
-                    //eatClosingTag info
                     inner()
         inner()
 
@@ -207,7 +194,7 @@ module internal ListDeserializer =
     /// Reader function for untyped collections
     let collectionReader (ctor : EmptyConstructor) xml =
         let list = ctor.Invoke() :?> IList
-        parseListUntyped list box xml
+        parseListUntyped list ValueTypeDeserializer.stringReader xml
         list
 
     /// Reader function for hash sets
@@ -239,8 +226,7 @@ module internal ListDeserializer =
 
     /// Specialized reader function for string arrays
     let stringArrayReader xml =
-        let stringReader = box |> ValueTypeDeserializer.buildValueReader
-        listReader<string> stringReader xml |> List.toArray |> box
+        listReader<string> ValueTypeDeserializer.stringReader xml |> List.toArray |> box
 
     /// Specialized reader function for integer arrays
     let intArrayReader xml =
@@ -256,7 +242,6 @@ module internal ListDeserializer =
     let charArrayReader xml =
         let reader = ValueTypeDeserializer.buildValueReader (fun v -> v.ToCharArray())
         reader xml |> box
-
 
 /// Deserialization logic
 module internal Deserializer =
@@ -481,10 +466,9 @@ module internal Deserializer =
                             else
                                 Diagnostics.Trace.WriteLine(error)
                     | _ -> ()
-                    //eatClosingTag xml
                     inner()
-                | TagType.Close -> ()
                 | TagType.Single -> () // TODO
+                | _ -> ()
         inner()
         instance
 

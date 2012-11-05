@@ -57,11 +57,6 @@ module DeserializationTests =
         out |> should equal [| 'c'; 'h'; 'a'; 'r' |]
 
     [<Test>]
-    let ``Can deserialize char arrays from elements``() =
-        let out = deserialize<char[]> "<array><x>c</x><x>h</x><x>a</x><x>r</x></array>"
-        out |> should equal [| 'c'; 'h'; 'a'; 'r' |]
-
-    [<Test>]
     let ``Can deserialize byte arrays``() =
         let array = [| 99uy; 100uy; 101uy |]
         let bytes = Convert.ToBase64String(array)
@@ -165,8 +160,8 @@ module DeserializationTests =
         let out = deserialize<GenericClass<Stack<string>>> "<genericClass><v1>100</v1><v2><item>foo</item><item>bar</item></v2></genericClass>"
         out.V1 |> should equal 100
         out.V2.Count |> should equal 2
-        out.V2 |> Seq.head |> should equal "foo"
-        out.V2 |> Seq.nth 1 |> should equal "bar"
+        out.V2 |> Seq.head |> should equal "bar"
+        out.V2 |> Seq.nth 1 |> should equal "foo"
 
     [<Test>]
     let ``Can deserialize NameValueCollections``() =
