@@ -72,7 +72,7 @@ module XmlParserTests =
         let input = "xxxx<fooBar>xxxxxxxxxx"
         let index, value, t = eat input
         value |> should equal "fooBar"
-        index |> should equal 11
+        index |> should equal 12
         t |> should equal TagType.Open
 
     [<Test>]
@@ -88,7 +88,7 @@ module XmlParserTests =
         let input = "</fooBar>"
         let index, value, t = eat input
         value |> should equal "fooBar"
-        index |> should equal 8
+        index |> should equal input.Length
         t |> should equal TagType.Close
 
     [<Test>]
@@ -124,11 +124,11 @@ module XmlParserTests =
     let eatClosingTag01() =
         let input = "<one>ham eggs</one><two>foo bar</two>"
         let index, _, _ = eatAt input 5
-        index |> should equal 18
+        index |> should equal 19
 
     [<Test>]
     let eatClosingTag02() =
         let input = "<one>ham eggs</one>"
         let index, _, _ = eatAt input 4
-        index |> should equal (input.Length - 1)
+        index |> should equal input.Length
         
