@@ -125,6 +125,33 @@ module internal XmlParser =
 
         name, tag
 
+    /// Parse the XML root node and the optional <?xml ?> tag
+    let eatRoot (input : ParserInfo) =
+        let mutable buffer = &&input.Value.[input.Index]
+        let mutable state = ParseState.Start
+        let mutable found = false
+
+        // eat optional xml doc tag
+        while not input.IsEnd && not found do
+            let chr = NativePtr.read buffer
+            input.Index <- input.Index + 1
+            buffer <- NativePtr.add buffer 1
+
+            match state with
+            | ParseState.Start ->
+                if chr = '<' then state <- ParseState.Tag
+            | ParseState.Tag ->
+                if chr = '?' then
+                    state <- ParseState.TagName
+                elif not (isWhitespace chr) then
+                    input.Index <- 0
+                    found <- true
+            | _ ->
+                if chr = '>' then found <- true
+
+        // eat first root node
+        eatTag input |> ignore
+
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index
     let eatContent (input : ParserInfo) =

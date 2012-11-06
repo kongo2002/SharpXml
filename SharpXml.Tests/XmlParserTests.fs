@@ -132,3 +132,26 @@ module XmlParserTests =
         let index, _, _ = eatAt input 4
         index |> should equal input.Length
         
+    [<Test>]
+    let eatRoot01() =
+        let input = ParserInfo "<root><one>ham eggs</one></root>"
+        eatRoot input
+        input.Index |> should equal 6
+
+    [<Test>]
+    let eatRoot02() =
+        let input = ParserInfo "   < root><one>ham eggs</one></ root>"
+        eatRoot input
+        input.Index |> should equal 10
+
+    [<Test>]
+    let eatRoot03() =
+        let input = ParserInfo "<?xml version=\"1.0\"?><root><one>ham eggs</one></ root>"
+        eatRoot input
+        input.Index |> should equal 27
+
+    [<Test>]
+    let eatRoot04() =
+        let input = ParserInfo "  <?xml version=\"1.0\"?> < root><one>ham eggs</one></ root>"
+        eatRoot input
+        input.Index |> should equal 31
