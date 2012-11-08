@@ -82,14 +82,14 @@ module DataContractSerializerTests =
     [<Test>]
     let ``DCS: can serialize newline characters``() =
         let special = "foo\r\nbar"
-        let cls = TestClass(200, special)
-        contractSerialize cls |> should equal "<Types.TestClass><v1>200</v1><v2>foo\r\nbar</v2></Types.TestClass>"
+        let cls = new ContractClass(V1 = special, V2 = 200)
+        contractSerialize cls |> should equal "<ContractClass><V1>foo\r\nbar</V1><V2>200</V2></ContractClass>"
 
     [<Test>]
     let ``DCS: can serialize XML encoded characters``() =
         let special = "</v2>"
-        let cls = TestClass(210, special)
-        contractSerialize cls |> should equal "<Types.TestClass><v1>210</v1><v2>&lt;/v2&gt;</v2></Types.TestClass>"
+        let cls = new ContractClass(V1 = special, V2 = 210)
+        contractSerialize cls |> should equal "<ContractClass><V1>&lt;/v2&gt;</V1><V2>210</V2></ContractClass>"
 
     [<Test>]
     let ``DCS: can deserialize simple classes``() =
