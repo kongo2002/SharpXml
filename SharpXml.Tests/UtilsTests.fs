@@ -23,7 +23,7 @@ module UtilsTests =
     open SharpXml.Tests.TestHelpers
 
     [<Test>]
-    let attempt01() =
+    let ``Attempt monad 1``() =
         let runs = ref 0
         let func v = fun () -> runs := !runs + 1; v
         let result = attempt {
@@ -35,7 +35,7 @@ module UtilsTests =
         !runs |> should equal 3
 
     [<Test>]
-    let attempt02() =
+    let ``Attempt monad 2``() =
         let runs = ref 0
         let func v = fun () -> runs := !runs + 1; v
         let result = attempt {
@@ -47,7 +47,7 @@ module UtilsTests =
         !runs |> should equal 2
 
     [<Test>]
-    let attempt03() =
+    let ``Attempt monad 3``() =
         let runs = ref 0
         let func v = fun () -> runs := !runs + 1; v
         let result = attempt {
@@ -59,7 +59,7 @@ module UtilsTests =
         !runs |> should equal 3
 
     [<Test>]
-    let attempt04() =
+    let ``Attempt monad 4``() =
         let runs = ref 0
         let func v = fun () -> runs := !runs + 1; v
         let result = attempt {
