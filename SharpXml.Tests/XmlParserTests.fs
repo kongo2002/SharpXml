@@ -36,6 +36,10 @@ module XmlParserTests =
         let name, tag = eatTag info
         info.Index, name, tag
 
+    let private eatSome input =
+        let info = ParserInfo input
+        eatSomeTag info
+
     let private getContent input at =
         let info = ParserInfo input
         info.Index <- at
@@ -155,3 +159,15 @@ module XmlParserTests =
         let input = ParserInfo "  <?xml version=\"1.0\"?> < root><one>ham eggs</one></ root>"
         eatRoot input
         input.Index |> should equal 31
+
+    [<Test>]
+    let eatSomeTag01() =
+        eatSome "<foo>" |> should equal TagType.Open
+
+    [<Test>]
+    let eatSomeTag02() =
+        eatSome "</foo>" |> should equal TagType.Close
+
+    [<Test>]
+    let eatSomeTag03() =
+        eatSome "<foo />" |> should equal TagType.Single

@@ -59,7 +59,7 @@ module internal XmlParser =
         if index >= input.Length || not (isWhitespace input.[index]) then index
         else skipWhitespace input (index + 1)
 
-    /// Eat a closing XML tag and return the end index
+    /// Eat a closing XML tag
     let eatClosingTag (input : ParserInfo) =
         let mutable buffer = &&input.Value.[input.Index]
         let mutable state = ParseState.Start
@@ -75,7 +75,7 @@ module internal XmlParser =
             | _ ->
                 if chr = '>' then found <- true
 
-    /// Eat a XML tag and return its name, the end index and
+    /// Eat a XML tag and return its name and
     /// type being one of Open, Close or Single
     let eatTag (input : ParserInfo) =
         let mutable name = Unchecked.defaultof<string>
@@ -114,7 +114,6 @@ module internal XmlParser =
                 elif chr = '>' then
                     name <- String(input.Value, nameStart, (input.Index-nameStart-1))
                     tag <- if close then TagType.Close else TagType.Open
-                    //input.Index <- input.Index - 1
                     found <- true
             | _ ->
                 if chr = '>' then
@@ -124,6 +123,37 @@ module internal XmlParser =
                     tag <- TagType.Single
 
         name, tag
+
+    /// Eat a XML tag and return its type being one of Open, Close or Single
+    let eatSomeTag (input : ParserInfo) =
+        let mutable tag = TagType.Open
+        let mutable buffer = &&input.Value.[input.Index]
+        let mutable close = false
+        let mutable state = ParseState.Start
+        let mutable found = false
+
+        while not input.IsEnd && not found do
+            let chr = NativePtr.read buffer
+            input.Index <- input.Index + 1
+            buffer <- NativePtr.add buffer 1
+            match state with
+            | ParseState.Start ->
+                if chr = '<' then state <- ParseState.Tag
+            | ParseState.Tag ->
+                if chr = '>' then
+                    found <- true
+                elif chr = '/' then
+                    close <- true
+                    tag <- TagType.Close
+                    state <- ParseState.TagName
+                elif not (isWhitespace chr) then
+                    state <- ParseState.TagName
+            | _ ->
+                if chr = '>' then
+                    found <- true
+                elif chr = '/' then
+                    tag <- TagType.Single
+        tag
 
     /// Parse the XML root node and the optional <?xml ?> tag
     let eatRoot (input : ParserInfo) =
