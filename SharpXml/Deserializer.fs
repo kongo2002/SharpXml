@@ -96,12 +96,12 @@ module internal DictionaryDeserializer =
     let parseKeyValueCollection invoker (keyReader : ReaderFunc) (valueReader : ReaderFunc) (input : ParserInfo) =
         let rec inner() =
             if not input.IsEnd then
-                let _, itemTag = eatTag input
+                let itemTag = eatSomeTag input
                 if not input.IsEnd && itemTag <> TagType.Close then
                     // read key tag
-                    eatTag input |> ignore
+                    eatSomeTag input |> ignore
                     let key = keyReader input
-                    let _, vTag = eatTag input
+                    let vTag = eatSomeTag input
                     if not input.IsEnd && vTag <> TagType.Close then
                         let value = valueReader input
                         invoker key value
@@ -155,7 +155,7 @@ module internal ListDeserializer =
         let list = List<'a>()
         let rec inner() =
             if not info.IsEnd then
-                let _, tag = eatTag info
+                let tag = eatSomeTag info
                 if not info.IsEnd && tag <> TagType.Close then
                     // TODO: maybe use an option value in here
                     // TODO: ...parseListElement
@@ -168,7 +168,7 @@ module internal ListDeserializer =
     let parseListUntyped (lst : IList) (elemParser : ReaderFunc) (info : ParserInfo) =
         let rec inner() =
             if not info.IsEnd then
-                let _, tag = eatTag info
+                let tag = eatSomeTag info
                 if not info.IsEnd && tag <> TagType.Close then
                     // TODO: maybe use an option value in here
                     // TODO: ...parseListElement
