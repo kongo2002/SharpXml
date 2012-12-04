@@ -42,6 +42,7 @@ module internal XmlParser =
         | Tag = 1
         | TagName = 2
         | EndTag = 3
+        | InString = 4
 
     let whitespaceChars =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
@@ -115,10 +116,15 @@ module internal XmlParser =
                     name <- String(input.Value, nameStart, (input.Index-nameStart-1))
                     tag <- if close then TagType.Close else TagType.Open
                     found <- true
+            | ParseState.InString ->
+                if chr = '"' then
+                    state <- ParseState.EndTag
             | _ ->
                 if chr = '>' then
-                    input.Index <- input.Index - 1
+                    input.Index <- input.Index
                     found <- true
+                elif chr = '"' then
+                    state <- ParseState.InString
                 elif chr = '/' then
                     tag <- TagType.Single
 
@@ -148,9 +154,13 @@ module internal XmlParser =
                     state <- ParseState.TagName
                 elif not (isWhitespace chr) then
                     state <- ParseState.TagName
+            | ParseState.InString ->
+                if chr = '"' then state <- ParseState.TagName
             | _ ->
                 if chr = '>' then
                     found <- true
+                elif chr = '"' then
+                    state <- ParseState.InString
                 elif chr = '/' then
                     tag <- TagType.Single
         tag

@@ -221,3 +221,10 @@ module DeserializationTests =
         out.V2.Count |> should equal 2
         Seq.head out.V2 |> should equal "one"
         Seq.nth 1 out.V2 |> should equal "two"
+
+    [<Test>]
+    let ``Can deserialize string attributes with special chars``() =
+        let out = deserialize<TestClass> "<testClass><v1 attr=\"http://url.com\">42</v1><v2>bar</v2></testClass>"
+        out.V1 |> should equal 42
+        out.V2 |> should equal "bar"
+        
