@@ -388,11 +388,12 @@ This XML above will be successfully deserialized into an instance of `MyClass`.
 
 Some random things I am planning to work on in the future:
 
-- Mono support
+- Verify full Mono support
 - Extend documentation/README
 - Make `SharpXml.Common` an optional dependency
 - Investigate into additional performance tweaks
 - Additional unit tests
+- Improve error messages/handling
 
 
 ## Maintainer
