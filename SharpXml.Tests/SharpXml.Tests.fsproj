@@ -53,6 +53,7 @@
     <Compile Include="DataContractSerializerTests.fs" />
     <Compile Include="DeserializationTests.fs" />
     <Compile Include="ProfilingTests.fs" />
+    <Compile Include="SoapTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SharpXml.Common\SharpXml.Common.fsproj">
