@@ -43,6 +43,19 @@ type XmlSerializer() =
         else
             Unchecked.defaultof<'T>
 
+    /// Deserialize the input string into the specified type
+    static member DeserializeFromString(input, targetType) =
+        if notEmpty input then
+            try
+                let reader = Deserializer.getReaderFunc targetType
+                let info = XmlParser.ParserInfo input
+                XmlParser.eatRoot info
+                reader info
+            with
+            | :? SharpXmlException -> null
+        else
+            null
+
     /// Deserialize the input reader into the specified type
     static member DeserializeFromReader<'T> (reader : TextReader) =
         XmlSerializer.DeserializeFromString<'T>(reader.ReadToEnd())
