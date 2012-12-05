@@ -537,7 +537,7 @@ module internal Serializer =
                 raise (SharpXmlException err)
 
     /// Write the given type using the appropriate serialization logic
-    let writeType<'a> (writer : TextWriter) (element : 'a) =
-        let tInfo = getTypeInfo typeof<'a>
+    let writeType (writer : TextWriter) element targetType =
+        let tInfo = getTypeInfo targetType
         let name = getDefaultNameInfo tInfo.ClsName
-        writeTag name.Name name writer (getWriterFunc typeof<'a>) element
+        writeTag name.Name name writer (getWriterFunc targetType) element

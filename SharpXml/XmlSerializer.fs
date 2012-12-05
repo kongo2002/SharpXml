@@ -67,12 +67,16 @@ type XmlSerializer() =
         XmlSerializer.DeserializeFromString<'T>(reader.ReadToEnd())
 
     /// Serialize the given object into a XML string
-    static member SerializeToString<'T> (element : 'T) =
+    static member SerializeToString (element : obj, targetType) =
         let sb = StringBuilder()
         use writer = new StringWriter(sb, CultureInfo.InvariantCulture)
         if XmlConfig.Instance.WriteXmlHeader then writer.Write(xmlHeader)
-        Serializer.writeType writer element
+        Serializer.writeType writer element targetType
         sb.ToString()
+
+    /// Serialize the given object into a XML string
+    static member SerializeToString<'T> (element : 'T) =
+        XmlSerializer.SerializeToString(element, typeof<'T>)
 
     /// Serialize the given object into XML output using the specified TextWriter
     static member SerializeToWriter<'T> (writer : TextWriter, element : 'T) =
