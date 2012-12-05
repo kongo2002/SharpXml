@@ -30,14 +30,18 @@ type XmlSerializer() =
     /// Header string for XML output
     static let xmlHeader = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
 
+    /// Deserialization of the input string into the specified target type
+    static let deserialize input targetType =
+        let reader = Deserializer.getReaderFunc targetType
+        let info = XmlParser.ParserInfo input
+        XmlParser.eatRoot info
+        reader info
+
     /// Deserialize the input string into the specified type
     static member DeserializeFromString<'T> input =
         if notEmpty input then
             try
-                let reader = Deserializer.getReaderFunc typeof<'T>
-                let info = XmlParser.ParserInfo input
-                XmlParser.eatRoot info
-                reader info :?> 'T
+                deserialize input typeof<'T> :?> 'T
             with
             | :? SharpXmlException -> Unchecked.defaultof<'T>
         else
@@ -47,10 +51,7 @@ type XmlSerializer() =
     static member DeserializeFromString(input, targetType) =
         if notEmpty input then
             try
-                let reader = Deserializer.getReaderFunc targetType
-                let info = XmlParser.ParserInfo input
-                XmlParser.eatRoot info
-                reader info
+                deserialize input targetType
             with
             | :? SharpXmlException -> null
         else
