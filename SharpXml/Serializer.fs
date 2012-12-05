@@ -69,7 +69,6 @@ module internal ValueTypeSerializer =
     open System
     open System.Globalization
     open System.IO
-    open System.Xml
 
     open Microsoft.FSharp.NativeInterop
 
@@ -82,17 +81,12 @@ module internal ValueTypeSerializer =
     let xsdFormat3F = "yyyy-MM-ddTHH:mm:ss.fffZ"
     let xsdFormatSeconds = "yyyy-MM-ddTHH:mm:ssZ"
 
-    /// Convert the given DateTime into XSD format
-    let toXsdFormat (date : DateTime) =
-        // TODO: replace this with own logic
-        XmlConvert.ToString(date.ToUniversal(), XmlDateTimeSerializationMode.Utc)
-
     /// Convert the given DateTime into the shortest possible XSD format
     let toShortestXsdFormat (date : DateTime) =
         let day = date.TimeOfDay
         if day.Ticks = 0L then date.ToString(shortDateTimeFormat)
         elif day.Milliseconds = 0 then date.ToUniversal().ToString(xsdFormatSeconds)
-        else toXsdFormat date
+        else date.ToString() // TODO
 
     let inline writeString (writer : TextWriter) (content : string) =
         let chars = content.ToCharArray()
