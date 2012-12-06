@@ -48,7 +48,7 @@ type XmlSerializer() =
             Unchecked.defaultof<'T>
 
     /// Deserialize the input string into the specified type
-    static member DeserializeFromString(input, targetType) =
+    static member DeserializeFromString (input, targetType) =
         if notEmpty input then
             try
                 deserialize input targetType
@@ -61,10 +61,19 @@ type XmlSerializer() =
     static member DeserializeFromReader<'T> (reader : TextReader) =
         XmlSerializer.DeserializeFromString<'T>(reader.ReadToEnd())
 
+    /// Deserialize the input reader into the specified type
+    static member DeserializeFromReader (reader : TextReader, targetType) =
+        XmlSerializer.DeserializeFromString(reader.ReadToEnd(), targetType)
+
     /// Deserialize the input stream into the specified type
     static member DeserializeFromStream<'T> (stream : Stream) =
         use reader = new StreamReader(stream, utf8encoding)
         XmlSerializer.DeserializeFromString<'T>(reader.ReadToEnd())
+
+    /// Deserialize the input stream into the specified type
+    static member DeserializeFromStream (stream : Stream, targetType) =
+        use reader = new StreamReader(stream, utf8encoding)
+        XmlSerializer.DeserializeFromString(reader.ReadToEnd(), targetType)
 
     /// Serialize the given object into a XML string
     static member SerializeToString (element : obj, targetType) =
