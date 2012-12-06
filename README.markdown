@@ -388,12 +388,13 @@ This XML above will be successfully deserialized into an instance of `MyClass`.
 
 Some random things I am planning to work on in the future:
 
-- Verify full Mono support
+- Verify full [mono][4] support
 - Extend documentation/README
 - Make `SharpXml.Common` an optional dependency
 - Investigate into additional performance tweaks
 - Additional unit tests
 - Improve error messages/handling
+- Add [nuget][5] support
 
 
 ## Maintainer
@@ -415,5 +416,7 @@ Some random things I am planning to work on in the future:
 [1]: http://github.com/ServiceStack/ServiceStack.Text
 [2]: http://www.apache.org/licenses/LICENSE-2.0
 [3]: mailto:kongo2002@gmail.com
+[4]: http://www.mono-project.com/
+[5]: http://nuget.org/
 
 <!-- vim: set noet ts=4 sw=4 sts=4 tw=80: -->
