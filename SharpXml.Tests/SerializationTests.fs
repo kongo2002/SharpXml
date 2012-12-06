@@ -360,3 +360,7 @@ module SerializationTests =
         serialize booking |> should equal "<booking><name>booking</name><guests><guest><firstName></firstName><lastName></lastName><id>94</id></guest></guests></booking>"
         XmlConfig.Instance.IncludeNullValues <- false
 
+    [<Test>]
+    let ``Can serialize root type with namespace``() =
+        let cls = NamespaceClass(542, "foo")
+        serialize cls |> should equal "<namespaceClass xmlns=\"SharpXml.Types\"><v1>542</v1><v2>foo</v2></namespaceClass>"

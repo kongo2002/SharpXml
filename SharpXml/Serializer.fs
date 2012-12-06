@@ -22,7 +22,8 @@ namespace SharpXml
 type internal TypeInfo = {
     Type : System.Type
     OriginalName : string
-    ClsName : string }
+    ClsName : string
+    Namespace : string option }
 
 type internal NameInfo = {
     Name : string
@@ -51,6 +52,12 @@ module internal SerializerBase =
     /// General purpose XML tags writer function
     let writeTag (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
         w.Write('<'); w.Write(name); w.Write('>')
+        writeFunc info w value
+        w.Write("</"); w.Write(name); w.Write('>')
+
+    /// XML tag writer function with an additional namespace attribute
+    let writeTagNamespace (name : string) (ns : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
+        w.Write('<'); w.Write(name); w.Write(" xmlns=\""); w.Write(ns); w.Write("\">")
         writeFunc info w value
         w.Write("</"); w.Write(name); w.Write('>')
 
@@ -333,13 +340,21 @@ module internal Serializer =
             baseName
 
     /// Build a TypeInfo object based on the given Type
-    let buildTypeInfo t = {
-        Type = t
-        OriginalName = t.Name
-        ClsName =
-            match getAttribute<SharpXml.Common.XmlElementAttribute> t with
-            | Some attr when notWhite attr.Name -> attr.Name
-            | _ -> getTypeName t }
+    let buildTypeInfo t =
+        match getAttribute<XmlElementAttribute> t with
+        | Some attr ->
+            { Type = t
+              OriginalName = t.Name
+              ClsName = if notWhite attr.Name then attr.Name else getTypeName t
+              Namespace =
+                  match String.IsNullOrWhiteSpace(attr.Namespace) with
+                  | false -> Some attr.Namespace
+                  | true  -> None }
+        | None ->
+            { Type = t
+              OriginalName = t.Name
+              ClsName = getTypeName t
+              Namespace = None }
 
     /// Get the TypeInfo object associated with the given Type
     let getTypeInfo (t : Type) =
@@ -534,4 +549,9 @@ module internal Serializer =
     let writeType (writer : TextWriter) element targetType =
         let tInfo = getTypeInfo targetType
         let name = getDefaultNameInfo tInfo.ClsName
-        writeTag name.Name name writer (getWriterFunc targetType) element
+        let writerFunc = getWriterFunc targetType
+        match tInfo.Namespace with
+        | Some ns ->
+            writeTagNamespace name.Name ns name writer writerFunc element
+        | None ->
+            writeTag name.Name name writer writerFunc element

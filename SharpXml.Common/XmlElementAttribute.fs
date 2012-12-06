@@ -26,6 +26,7 @@ type XmlElementAttribute() =
     let mutable itemName = Unchecked.defaultof<string>
     let mutable keyName = Unchecked.defaultof<string>
     let mutable valueName = Unchecked.defaultof<string>
+    let mutable ns = Unchecked.defaultof<string>
 
     /// Name to override the property name
     member x.Name
@@ -47,3 +48,7 @@ type XmlElementAttribute() =
         with get() = valueName
         and set(v) = valueName <- v
 
+    /// Optional namespace to use on serialization
+    member x.Namespace
+        with get() = ns
+        and set(v) = ns <- v

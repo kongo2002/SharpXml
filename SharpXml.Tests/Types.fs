@@ -82,6 +82,19 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
+    [<XmlElement(Namespace = "SharpXml.Types")>]
+    type NamespaceClass(val1 : int, val2 : string) =
+
+        let mutable v1 = val1
+        let mutable v2 = val2
+
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
     type SimpleClass() =
 
         let mutable v1 = Unchecked.defaultof<string>
