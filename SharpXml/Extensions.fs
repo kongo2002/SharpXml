@@ -49,7 +49,7 @@ module internal Extensions =
     type System.Reflection.MemberInfo with
 
         member x.IsDTO() =
-            hasAttribute x dataContract
+            not(hasAttributeType x typeof<System.SerializableAttribute>) && hasAttribute x dataContract
 
         member x.IsDataMember() =
             hasAttribute x dataMember
