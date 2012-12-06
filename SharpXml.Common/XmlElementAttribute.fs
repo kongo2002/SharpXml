@@ -19,14 +19,16 @@ open System
 /// Attribute that allows customization of the serialization
 /// and deserialization behavior of the SharpXml.XmlSerializer
 [<AttributeUsage(AttributeTargets.Class ||| AttributeTargets.Property)>]
-type XmlElementAttribute() =
+type XmlElementAttribute(name : string) =
     inherit Attribute()
 
-    let mutable name = Unchecked.defaultof<string>
+    let mutable name = name
     let mutable itemName = Unchecked.defaultof<string>
     let mutable keyName = Unchecked.defaultof<string>
     let mutable valueName = Unchecked.defaultof<string>
     let mutable ns = Unchecked.defaultof<string>
+
+    new() = XmlElementAttribute(null)
 
     /// Name to override the property name
     member x.Name
