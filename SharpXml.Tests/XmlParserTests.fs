@@ -56,7 +56,7 @@ module XmlParserTests =
         let input = " foo <testTag rest/> <hamEggs/>"
         let index, value, t = eat input
         value |> should equal "testTag"
-        index |> should equal 19
+        index |> should equal 20
         t |> should equal TagType.Single
 
     [<Test>]
@@ -64,7 +64,7 @@ module XmlParserTests =
         let input = "<testTag />"
         let index, value, t = eat input
         value |> should equal "testTag"
-        index |> should equal 10
+        index |> should equal 11
         t |> should equal TagType.Single
 
 
@@ -73,7 +73,7 @@ module XmlParserTests =
         let input = "< fooBar /> < testTag />"
         let index, value, t = eatAt input 10
         value |> should equal "testTag"
-        index |> should equal 23
+        index |> should equal 24
         t |> should equal TagType.Single
 
     [<Test>]
@@ -89,7 +89,7 @@ module XmlParserTests =
         let input = "< fooBar / >"
         let index, value, t = eat input
         value |> should equal "fooBar"
-        index |> should equal 11
+        index |> should equal 12
         t |> should equal TagType.Single
 
     [<Test>]
@@ -105,7 +105,7 @@ module XmlParserTests =
         let input = "<one/><two/><three/><four/>"
         let index, value, t = eatAt input 12
         value |> should equal "three"
-        index |> should equal 19
+        index |> should equal 20
         t |> should equal TagType.Single
 
     [<Test>]
