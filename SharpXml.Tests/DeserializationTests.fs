@@ -227,4 +227,10 @@ module DeserializationTests =
         let out = deserialize<TestClass> "<testClass><v1 attr=\"http://url.com\">42</v1><v2>bar</v2></testClass>"
         out.V1 |> should equal 42
         out.V2 |> should equal "bar"
-        
+
+    [<Test>]
+    let ``Can correctly skip single/empty fields``() =
+        let out = deserialize<GenericClass<LinkedList<string>>> "<genericClass><v1 /><v2><item>one</item><item>two</item></v2></genericClass>"
+        out.V1 |> should equal 0
+        out.V2.Count |> should equal 2
+        Seq.head out.V2 |> should equal "one"

@@ -467,7 +467,7 @@ module internal Deserializer =
                                 Diagnostics.Trace.WriteLine(error)
                     | _ -> ()
                     inner()
-                | TagType.Single -> () // TODO
+                | TagType.Single -> inner() // TODO
                 | _ -> ()
         inner()
         instance
