@@ -103,6 +103,9 @@ serialization of .NET types using a few properties to choose from:
 - `[XmlElement ValueName="..."]`: Override the default name of values in
   dictionary types (default: `"value"`)
 
+- `[XmlElement Namespace="..."]`: Defines a XML namespace attribute for the
+  selected type or property (*Note:* this attribute is currently used for
+  serialization of root types only)
 
 ## XML format
 
@@ -246,7 +249,7 @@ var test = new CustomDictClass
 	};
 ```
 
-This example shows the effect of all four available options given by the
+This example shows the effect of the four major options given by the
 `XmlElementAttribute`: `Name`, `ItemName`, `KeyName` and `ValueName`.
 
 ```xml
@@ -265,6 +268,32 @@ This example shows the effect of all four available options given by the
 </CustomClass>
 ```
 
+
+#### Root type namespaces
+
+Using the property `Namespace` of the `XmlElementAttribute` you can set an
+optional namespace string that will be used on serialization of the root element
+of the resulting XML document:
+
+```cs
+[XmlElement(Namespace = "Some.Namespace")]
+public class NamespaceClass
+{
+	public int Id { get; set; }
+	public string Name { get; set; }
+}
+
+var test = new NamespaceClass { Id = 201, Name = "foo" };
+```
+
+The class described above will be serialized like the following:
+
+```xml
+<NamespaceClass xmlns="Some.Namespace">
+	<Id>201</Id>
+	<Name>foo</Name>
+</NamespaceClass>
+```
 
 ### Struct types
 
