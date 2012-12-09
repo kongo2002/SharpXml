@@ -10,8 +10,9 @@ The project is inspired by the great .NET JSON serializer
 
 ## Get it
 
-You can get *SharpXml* either by installing via [nuget][5] or by cloning the git
-repository from [github][7] and compiling the library on your own.
+You can get *SharpXml* either by installing via [nuget][5], by downloading the
+precompiled binaries or by cloning the git repository from [github][7] and
+compiling the library on your own.
 
 
 ### NuGet
@@ -21,9 +22,17 @@ SharpXml can be found and installed via [nuget][6]:
 	PM> Install-Package SharpXml
 
 
-### Git
+### Download binaries
 
-Alternatively you can clone the git repository and compile the project by
+You can also download the latest precompiled binaries using the *downloads* page
+on github:
+
+- <https://github.com/kongo2002/SharpXml/downloads/>
+
+
+### Source files
+
+Alternatively you can clone the *git repository* and compile the project by
 yourself:
 
 	git clone git://github.com/kongo2002/SharpXml.git
