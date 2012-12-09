@@ -5,6 +5,7 @@
 *.ncrunchsolution.user
 *.suo
 *.userprefs
+*.zip
 Backup
 UpgradeLog.*
 _NCrunch*
