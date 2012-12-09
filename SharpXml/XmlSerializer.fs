@@ -88,6 +88,10 @@ type XmlSerializer() =
         XmlSerializer.SerializeToString(element, typeof<'T>)
 
     /// Serialize the given object into XML output using the specified TextWriter
-    static member SerializeToWriter<'T> (writer : TextWriter, element : 'T) =
+    static member SerializeToWriter (writer : TextWriter, element : obj, targetType : Type) =
         if XmlConfig.Instance.WriteXmlHeader then writer.Write(xmlHeader)
-        Serializer.writeType writer element
+        Serializer.writeType writer element targetType
+
+    /// Serialize the given object into XML output using the specified TextWriter
+    static member SerializeToWriter<'T> (writer : TextWriter, element : 'T) =
+        XmlSerializer.SerializeToWriter(writer, element, typeof<'T>)
