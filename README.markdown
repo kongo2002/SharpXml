@@ -37,13 +37,23 @@ The API tries to appear small and descriptive at the same time:
 
 ```cs
 // Serialization functions
+
 string XmlSerializer.SerializeToString<T>(T element);
+string XmlSerializer.SerializeToString(object element, Type targetType);
+
 void XmlSerializer.SerializeToWriter<T>(TextWriter writer, T element);
+void XmlSerializer.SerializeToWriter(TextWriter writer, object element, Type targetType);
 
 // Deserialization functions
+
 T XmlSerializer.DeserializeFromString<T>(string value);
+object XmlSerializer.DeserializeFromString(string value, Type targetType);
+
 T XmlSerializer.DeserializeFromReader<T>(TextReader reader);
+object XmlSerializer.DeserializeFromReader(TextReader reader, Type targetType);
+
 T XmlSerializer.DeserializeFromStream<T>(Stream stream);
+object XmlSerializer.DeserializeFromStream(Stream stream, Type targetType);
 ```
 
 *T* can be any .NET POCO type. Apart from others *SharpXml* supports all basic
