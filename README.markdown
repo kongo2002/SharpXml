@@ -21,7 +21,7 @@ SharpXml can be found and installed via [nuget][6]:
 	PM> Install-Package SharpXml
 
 
-### Git repository
+### Git
 
 Alternatively you can clone the git repository and compile the project by
 yourself:
@@ -456,7 +456,6 @@ Some random things I am planning to work on in the future:
 - Investigate into additional performance tweaks
 - Additional unit tests
 - Improve error messages/handling
-- Add [nuget][5] support
 
 
 ## Maintainer
