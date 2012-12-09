@@ -36,7 +36,7 @@ Alternatively you can clone the *git repository* and compile the project by
 yourself:
 
 	git clone git://github.com/kongo2002/SharpXml.git
-	cd SharpXml
+	cd SharpXml\SharpXml
 	msbuild
 
 
