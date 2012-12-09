@@ -8,6 +8,29 @@ The project is inspired by the great .NET JSON serializer
 [ServiceStack.Text][1].
 
 
+## Get it
+
+You can get *SharpXml* either by installing via [nuget][5] or by cloning the git
+repository from [github][7] and compiling the library on your own.
+
+
+### NuGet
+
+SharpXml can be found and installed via [nuget][6]:
+
+	PM> Install-Package SharpXml
+
+
+### Git repository
+
+Alternatively you can clone the git repository and compile the project by
+yourself:
+
+	git clone git://github.com/kongo2002/SharpXml.git
+	cd SharpXml
+	msbuild
+
+
 ## Lean API
 
 The API tries to appear small and descriptive at the same time:
@@ -447,5 +470,7 @@ Some random things I am planning to work on in the future:
 [3]: mailto:kongo2002@gmail.com
 [4]: http://www.mono-project.com/
 [5]: http://nuget.org/
+[6]: http://nuget.org/packages/SharpXml/
+[7]: https://github.com/kongo2002/SharpXml/
 
 <!-- vim: set noet ts=4 sw=4 sts=4 tw=80: -->
