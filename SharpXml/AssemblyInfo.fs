@@ -19,7 +19,7 @@ open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
 
 [<assembly:AssemblyTitle("SharpXml")>]
-[<assembly:AssemblyDescription("")>]
+[<assembly:AssemblyDescription("Fast and dependency-free XML serializer for .NET written in F#")>]
 [<assembly:AssemblyConfiguration("")>]
 [<assembly:AssemblyCompany("Gregor Uhlenheuer")>]
 [<assembly:AssemblyProduct("SharpXml")>]
