@@ -353,6 +353,10 @@ module internal Deserializer =
         let elemReader = getReaderFunc t
         fun (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; xml |])
 
+    /// Get a reader function for generic F# lists
+    and getTypedFsListReader =
+        buildGenericFunction "listReader"
+
     /// Get a reader function for generic lists
     and getTypedListReader =
         buildGenericFunction "clrListReader"
@@ -417,6 +421,7 @@ module internal Deserializer =
                 else Some <| getGenericCollectionReader t gen
             | GenericTypeOf GenericTypes.queue gen -> Some <| getQueueReader gen
             | GenericTypeOf GenericTypes.stack gen -> Some <| getStackReader gen
+            | GenericTypeOf GenericTypes.fsList gen -> Some <| getTypedFsListReader gen
             | _ -> None
         elif isOrDerived t typeof<NameValueCollection> then
             getNameValueCollectionReader t

@@ -234,3 +234,10 @@ module DeserializationTests =
         out.V1 |> should equal 0
         out.V2.Count |> should equal 2
         Seq.head out.V2 |> should equal "one"
+
+    [<Test>]
+    let ``Can deserialize immutable F# list``() =
+        let out = deserialize<FSharpListClass> "<fSharpListClass><v1>4</v1><v2><item>one</item><item>two</item></v2></fSharpListClass>"
+        out.V1 |> should equal 4
+        out.V2.Length |> should equal 2
+        out.V2 |> List.head |> should equal "one"

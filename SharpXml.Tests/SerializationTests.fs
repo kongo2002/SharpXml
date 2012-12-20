@@ -348,6 +348,11 @@ module SerializationTests =
         serialize cls |> should equal (sprintf "<genericClass><v1>999</v1><v2>%s</v2></genericClass>" (now.ToShortDateString()))
 
     [<Test>]
+    let ``Can serialize empty strings``() =
+        let cls = TestClass(93, String.Empty)
+        serialize cls |> should equal "<testClass><v1>93</v1><v2></v2></testClass>"
+
+    [<Test>]
     let ``Can serialize empty values``() =
         XmlConfig.Instance.IncludeNullValues <- false
         let cls = ListClass(V1 = null, V2 = 992)

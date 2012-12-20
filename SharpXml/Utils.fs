@@ -170,6 +170,7 @@ module internal GenericTypes =
     open System.Collections.ObjectModel
 
     let iList = typedefof<IList<_>>
+    let fsList = typedefof<Microsoft.FSharp.Collections.list<_>>
     let iDict = typedefof<IDictionary<_, _>>
     let iEnum = typedefof<IEnumerable<_>>
     let iColl = typedefof<ICollection<_>>
