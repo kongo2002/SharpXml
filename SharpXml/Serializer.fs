@@ -96,17 +96,18 @@ module internal ValueTypeSerializer =
         else date.ToString() // TODO
 
     let inline writeString (writer : TextWriter) (content : string) =
-        let chars = content.ToCharArray()
-        let len = chars.Length
-        let mutable curr = 0
-        let mutable char = NativePtr.read &&chars.[0]
-        while curr < len do
-            match char with
-            | '<' -> writer.Write("&lt;")
-            | '>' -> writer.Write("&gt;")
-            | _ -> writer.Write(char)
-            curr <- curr + 1
-            if curr < len then char <- NativePtr.read &&chars.[curr]
+        let len = content.Length
+        if len > 0 then
+            let chars = content.ToCharArray()
+            let mutable curr = 0
+            let mutable char = NativePtr.read &&chars.[0]
+            while curr < len do
+                match char with
+                | '<' -> writer.Write("&lt;")
+                | '>' -> writer.Write("&gt;")
+                | _ -> writer.Write(char)
+                curr <- curr + 1
+                if curr < len then char <- NativePtr.read &&chars.[curr]
 
     let inline nullableWriter n writer value func =
         if value <> null then func n writer value
