@@ -29,12 +29,19 @@ type internal PropertyReaderInfo = {
     Setter : SetterFunc }
 
 /// Record type containing the deserialization information
-/// of a specific type and all its members that have to deserialized
+/// of a specific type and all its members that have to be deserialized
 type internal TypeBuilderInfo = {
     Type : System.Type
     // TODO: I would love to use a case-insensitive FSharpMap instead
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
     Ctor : EmptyConstructor }
+
+/// Record type containing the deserialization information
+/// for record types
+type internal RecordBuilderInfo = {
+    Type : System.Type
+    Fields : ReaderFunc array
+    Ctor : obj[] -> obj }
 
 module internal ValueTypeDeserializer =
 
@@ -252,6 +259,8 @@ module internal Deserializer =
     open System.Collections.ObjectModel
     open System.Collections.Specialized
     open System.Reflection
+
+    open Microsoft.FSharp.Reflection
 
     open SharpXml.Attempt
     open SharpXml.Extensions
@@ -485,6 +494,36 @@ module internal Deserializer =
             |> Some
         else None
 
+    and getRecordBuilderInfo (t : Type) =
+        let readers =
+            FSharpType.GetRecordFields t
+            |> Array.map (fun pi -> getReaderFunc pi.PropertyType)
+        { Type = t; Fields = readers; Ctor = FSharpValue.PreComputeRecordConstructor(t) }
+
+    and readRecord (rb : RecordBuilderInfo) (xml : ParserInfo) =
+        let fields =
+            rb.Fields
+            |> Array.map (fun reader ->
+                if not xml.IsEnd then
+                    try
+                        eatSomeTag xml |> ignore
+                        reader(xml)
+                    with ex ->
+                        let error = sprintf "Unable to deserialize field of record type '%s'" rb.Type.FullName
+                        if XmlConfig.Instance.ThrowOnError then
+                            raise (SharpXmlException error)
+                        else
+                            Diagnostics.Trace.WriteLine(error); null
+                else null)
+        rb.Ctor fields
+
+    and getFsRecordReader (t : Type) = fun() ->
+        if FSharpType.IsRecord(t) then
+            getRecordBuilderInfo t
+            |> readRecord
+            |> Some
+        else None
+
     /// Determine the ReaderFunc delegate for the given Type
     and determineReader (objType : Type) =
         let t = objType.NullableUnderlying()
@@ -497,6 +536,7 @@ module internal Deserializer =
             let! staticReader = getStaticParseMethod t
             let! stringCtor = getStringTypeConstructor t
             let! parseXmlReader = getStaticParseMethod t
+            let! recordReader = getFsRecordReader t
             let! classReader = getClassReader t
             classReader }
         reader

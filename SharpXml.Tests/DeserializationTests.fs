@@ -241,3 +241,9 @@ module DeserializationTests =
         out.V1 |> should equal 4
         out.V2.Length |> should equal 2
         out.V2 |> List.head |> should equal "one"
+
+    [<Test>]
+    let ``Can deserialize F# records``() =
+        let out = deserialize<TestRecord> "<testRecord><value>842</value><name>foobar</name></testRecord>"
+        out.Value |> should equal 842
+        out.Name |> should equal "foobar"
