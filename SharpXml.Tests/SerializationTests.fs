@@ -229,7 +229,7 @@ module SerializationTests =
 
     [<Test>]
     let ``Can serialize F# record types``() =
-        let record = { Value = 99; Name = "ham & eggs" }
+        let record : TestRecord = { Value = 99; Name = "ham & eggs" }
         serialize record |> should equal "<testRecord><value>99</value><name>ham & eggs</name></testRecord>"
 
     [<Test>]

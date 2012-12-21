@@ -40,8 +40,9 @@ type internal TypeBuilderInfo = {
 /// for record types
 type internal RecordBuilderInfo = {
     Type : System.Type
-    Fields : ReaderFunc array
-    Ctor : obj[] -> obj }
+    Readers : Map<string, (ReaderFunc * int)>
+    Ctor : obj[] -> obj
+    Fields : int }
 
 module internal ValueTypeDeserializer =
 
@@ -495,27 +496,40 @@ module internal Deserializer =
         else None
 
     and getRecordBuilderInfo (t : Type) =
+        let fields = FSharpType.GetRecordFields t
         let readers =
-            FSharpType.GetRecordFields t
-            |> Array.map (fun pi -> getReaderFunc pi.PropertyType)
-        { Type = t; Fields = readers; Ctor = FSharpValue.PreComputeRecordConstructor(t) }
+            fields
+            // we have to lowercase the property name because
+            // the F# map is case-sensitive
+            |> Array.mapi (fun i pi -> pi.Name.ToLowerInvariant(), (getReaderFunc pi.PropertyType, i))
+            |> Map.ofArray
+        { Type = t; Readers = readers; Ctor = FSharpValue.PreComputeRecordConstructor(t); Fields = fields.Length }
 
     and readRecord (rb : RecordBuilderInfo) (xml : ParserInfo) =
-        let fields =
-            rb.Fields
-            |> Array.map (fun reader ->
-                if not xml.IsEnd then
-                    try
-                        eatSomeTag xml |> ignore
-                        reader(xml)
-                    with ex ->
-                        let error = sprintf "Unable to deserialize field of record type '%s'" rb.Type.FullName
-                        if XmlConfig.Instance.ThrowOnError then
-                            raise (SharpXmlException error)
-                        else
-                            Diagnostics.Trace.WriteLine(error); null
-                else null)
-        rb.Ctor fields
+        let objects = Array.zeroCreate<obj> rb.Fields
+        let rec inner() =
+            if not xml.IsEnd then
+                let name, tag = eatTag xml
+                match tag with
+                | TagType.Open ->
+                    // we have to lowercase here because the map is case-sensitive
+                    let lower = name.ToLowerInvariant()
+                    match rb.Readers.TryFind lower with
+                    | Some (reader, i) ->
+                        try
+                            objects.[i] <- reader xml
+                        with ex ->
+                            let error = sprintf "Unable to deserialize field of record type '%s'" rb.Type.FullName
+                            if XmlConfig.Instance.ThrowOnError then
+                                raise (SharpXmlException error)
+                            else
+                                Diagnostics.Trace.WriteLine(error)
+                    | _ -> ()
+                    inner()
+                | TagType.Single -> inner()
+                | _ -> ()
+        inner()
+        rb.Ctor objects
 
     and getFsRecordReader (t : Type) = fun() ->
         if FSharpType.IsRecord(t) then

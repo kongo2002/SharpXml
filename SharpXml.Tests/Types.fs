@@ -405,6 +405,12 @@ module Types =
         Value : int
         Name : string }
 
+    type LargerRecord = {
+        Id : string
+        Value : int
+        Foo : string
+        Bar : string }
+
     [<DataContract(Name = "ContractClass2", Namespace = "")>]
     type ContractClass2() =
 

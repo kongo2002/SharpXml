@@ -247,3 +247,19 @@ module DeserializationTests =
         let out = deserialize<TestRecord> "<testRecord><value>842</value><name>foobar</name></testRecord>"
         out.Value |> should equal 842
         out.Name |> should equal "foobar"
+
+    [<Test>]
+    let ``Can deserialize F# records in random order``() =
+        let out = deserialize<LargerRecord> "<largerRecord><value>842</value><id>foobar</id><bar>bar</bar><foo>foo</foo></largerRecord>"
+        out.Value |> should equal 842
+        out.Id |> should equal "foobar"
+        out.Bar |> should equal "bar"
+        out.Foo |> should equal "foo"
+
+    [<Test>]
+    let ``Can deserialize F# records with missing fields``() =
+        let out = deserialize<LargerRecord> "<largerRecord><value>842</value><id>foobar</id></largerRecord>"
+        out.Value |> should equal 842
+        out.Id |> should equal "foobar"
+        out.Bar |> shouldBe Null
+        out.Foo |> shouldBe Null
