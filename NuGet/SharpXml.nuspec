@@ -11,7 +11,7 @@
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <description>Fast and dependency-free XML serializer for .NET written in F#</description>
     <releaseNotes>Add support for F# types and fix various bugs</releaseNotes>
-    <copyright>Copyright © 2012 Gregor Uhlenheuer</copyright>
+    <copyright>Copyright © 2012-2013 Gregor Uhlenheuer</copyright>
     <tags>xml serializer deserializer serialization deserialization fsharp F#</tags>
     <language>en-US</language>
   </metadata>
