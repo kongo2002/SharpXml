@@ -71,17 +71,17 @@ object XmlSerializer.DeserializeFromStream(Stream stream, Type targetType);
 collection types residing in `System.Collections`, `System.Collections.Generic`
 and `System.Collections.Specialized`:
 
-* List<T>
-* Dictionary<TKey, TValue>
-* ICollection<T>
-* IEnumerable<T>
+* List&lt;T&gt;
+* Dictionary&lt;TKey, TValue&gt;
+* ICollection&lt;T&gt;
+* IEnumerable&lt;T&gt;
 * IList
-* HashSet<T>
-* ReadOnlyCollection<T>
-* Queue<T>
-* Stack<T>
-* LinkedList<T>
-* SortedSet<T>
+* HashSet&lt;T&gt;
+* ReadOnlyCollection&lt;T&gt;
+* Queue&lt;T&gt;
+* Stack&lt;T&gt;
+* LinkedList&lt;T&gt;
+* SortedSet&lt;T&gt;
 * NameValueCollection
 * HashTable
 * ArrayList
