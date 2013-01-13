@@ -543,7 +543,7 @@ module internal Deserializer =
         let objects = Array.zeroCreate<obj> tb.Fields
         let rec inner index  =
             if not xml.IsEnd && index < tb.Fields then
-                let name, tag = eatTag xml
+                let tag = eatSomeTag xml
                 match tag with
                 | TagType.Open ->
                     try
