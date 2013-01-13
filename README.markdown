@@ -65,9 +65,34 @@ T XmlSerializer.DeserializeFromStream<T>(Stream stream);
 object XmlSerializer.DeserializeFromStream(Stream stream, Type targetType);
 ```
 
+### Supported types
+
 *T* can be any .NET POCO type. Apart from others *SharpXml* supports all basic
 collection types residing in `System.Collections`, `System.Collections.Generic`
-and `System.Collections.Specialized`.
+and `System.Collections.Specialized`:
+
+* List<T>
+* Dictionary<TKey, TValue>
+* ICollection<T>
+* IEnumerable<T>
+* IList
+* HashSet<T>
+* ReadOnlyCollection<T>
+* Queue<T>
+* Stack<T>
+* LinkedList<T>
+* SortedSet<T>
+* NameValueCollection
+* HashTable
+* ArrayList
+* CLR Arrays
+
+Moreover *SharpXml* supports serialization and deserialization of the basic
+**F# types** being:
+
+* F# records
+* F# and CLR tuples
+* Immutable F# lists
 
 
 ### Configuration
