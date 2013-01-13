@@ -270,3 +270,10 @@ module DeserializationTests =
         out.V1 |> should equal 53
         out.V2.Item1 |> should equal "something"
         out.V2.Item2 |> should equal 40
+
+    [<Test>]
+    let ``Can deserialize classes with F# tuples``() =
+        let out = deserialize<GenericClass<string * int>> "<genericClass><v1>53</v1><v2><item1>something</item1><item2>40</item2></v2></genericClass>"
+        out.V1 |> should equal 53
+        out.V2 |> fst |> should equal "something"
+        out.V2 |> snd |> should equal 40

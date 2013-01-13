@@ -44,6 +44,14 @@ type internal RecordBuilderInfo = {
     Ctor : obj[] -> obj
     Fields : int }
 
+/// Record type containing the deserialization information
+/// for tuple types
+type internal TupleBuilderInfo = {
+    Type : System.Type
+    Readers : ReaderFunc array
+    Ctor : obj[] -> obj
+    Fields : int }
+
 module internal ValueTypeDeserializer =
 
     open System
@@ -495,7 +503,7 @@ module internal Deserializer =
             |> Some
         else None
 
-    and getRecordBuilderInfo (t : Type) =
+    and getRecordBuilderInfo (t : Type) : RecordBuilderInfo =
         let fields = FSharpType.GetRecordFields t
         let readers =
             fields
@@ -503,7 +511,7 @@ module internal Deserializer =
             // the F# map is case-sensitive
             |> Array.mapi (fun i pi -> pi.Name.ToLowerInvariant(), (getReaderFunc pi.PropertyType, i))
             |> Map.ofArray
-        { Type = t; Readers = readers; Ctor = FSharpValue.PreComputeRecordConstructor(t); Fields = fields.Length }
+        { Type = t; Readers = readers; Ctor = FSharpValue.PreComputeRecordConstructor t; Fields = fields.Length }
 
     and readRecord (rb : RecordBuilderInfo) (xml : ParserInfo) =
         let objects = Array.zeroCreate<obj> rb.Fields
@@ -531,10 +539,46 @@ module internal Deserializer =
         inner()
         rb.Ctor objects
 
+    and readTuple (tb : TupleBuilderInfo) (xml : ParserInfo) =
+        let objects = Array.zeroCreate<obj> tb.Fields
+        let rec inner index  =
+            if not xml.IsEnd && index < tb.Fields then
+                let name, tag = eatTag xml
+                match tag with
+                | TagType.Open ->
+                    try
+                        objects.[index] <- tb.Readers.[index] xml
+                    with ex ->
+                        let error = sprintf "Unable to deserialize field of record type '%s'" tb.Type.FullName
+                        if XmlConfig.Instance.ThrowOnError then
+                            raise (SharpXmlException error)
+                        else
+                            Diagnostics.Trace.WriteLine(error)
+                    inner (index+1)
+                | TagType.Single -> inner (index+1)
+                | _ -> ()
+        inner 0
+        tb.Ctor objects
+
     and getFsRecordReader (t : Type) = fun() ->
-        if FSharpType.IsRecord(t) then
+        if FSharpType.IsRecord t then
             getRecordBuilderInfo t
             |> readRecord
+            |> Some
+        else None
+
+    and getTupleBuilderInfo (t : Type) : TupleBuilderInfo =
+        let items = FSharpType.GetTupleElements t
+        let readers =
+            items
+            |> Array.map getReaderFunc
+        let ctor = FSharpValue.PreComputeTupleConstructor t
+        { Type = t; Readers = readers; Fields = items.Length; Ctor = ctor }
+
+    and getFsTupleReader (t : Type) = fun() ->
+        if FSharpType.IsTuple t then
+            getTupleBuilderInfo t
+            |> readTuple
             |> Some
         else None
 
@@ -551,6 +595,7 @@ module internal Deserializer =
             let! stringCtor = getStringTypeConstructor t
             let! parseXmlReader = getStaticParseMethod t
             let! recordReader = getFsRecordReader t
+            let! tupleReader = getFsTupleReader t
             let! classReader = getClassReader t
             classReader }
         reader
