@@ -549,7 +549,7 @@ module internal Deserializer =
                     try
                         objects.[index] <- tb.Readers.[index] xml
                     with ex ->
-                        let error = sprintf "Unable to deserialize field of record type '%s'" tb.Type.FullName
+                        let error = sprintf "Unable to deserialize item %d of tuple type '%s'" (index+1) tb.Type.FullName
                         if XmlConfig.Instance.ThrowOnError then
                             raise (SharpXmlException error)
                         else
