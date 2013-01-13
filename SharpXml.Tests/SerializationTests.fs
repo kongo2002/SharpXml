@@ -369,3 +369,13 @@ module SerializationTests =
     let ``Can serialize root type with namespace``() =
         let cls = NamespaceClass(542, "foo")
         serialize cls |> should equal "<namespaceClass xmlns=\"SharpXml.Types\"><v1>542</v1><v2>foo</v2></namespaceClass>"
+
+    [<Test>]
+    let ``Can serialize classes with tuples``() =
+        let cls = TupleClass(V1 = 23, V2 = Tuple<string, int>("foobar", 204))
+        serialize cls |> should equal "<tupleClass><v1>23</v1><v2><item1>foobar</item1><item2>204</item2></v2></tupleClass>"
+
+    [<Test>]
+    let ``Can serialize classes with F# tuples``() =
+        let cls = GenericClass(V1 = 211, V2 = (100, "ham"))
+        serialize cls |> should equal "<genericClass><v1>211</v1><v2><item1>100</item1><item2>ham</item2></v2></genericClass>"

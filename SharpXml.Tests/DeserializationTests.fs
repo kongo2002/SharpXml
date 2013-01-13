@@ -263,3 +263,10 @@ module DeserializationTests =
         out.Id |> should equal "foobar"
         out.Bar |> shouldBe Null
         out.Foo |> shouldBe Null
+
+    [<Test>]
+    let ``Can deserialize classes with tuples``() =
+        let out = deserialize<TupleClass> "<tupleClass><v1>53</v1><v2><item1>something</item1><item2>40</item2></v2></tupleClass>"
+        out.V1 |> should equal 53
+        out.V2.Item1 |> should equal "something"
+        out.V2.Item2 |> should equal 40
