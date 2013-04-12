@@ -165,6 +165,17 @@ module internal XmlParser =
                     tag <- TagType.Single
         tag
 
+    /// Eat all content until the last closed tag
+    let eatUnknownTilClosing (input : ParserInfo) =
+        let rec inner level =
+            let tag = eatSomeTag input
+            match tag with
+            | TagType.Close when level = 0 -> ()
+            | TagType.Close -> inner (level - 1)
+            | TagType.Open -> inner (level + 1)
+            | _ -> inner level
+        inner 0
+
     /// Parse the XML root node and the optional <?xml ?> tag
     let eatRoot (input : ParserInfo) =
         let mutable buffer = &&input.Value.[input.Index]

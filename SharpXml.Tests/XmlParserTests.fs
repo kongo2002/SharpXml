@@ -45,6 +45,11 @@ module XmlParserTests =
         eatRoot info
         info.Index
 
+    let private eatUnknown input =
+        let info = ParserInfo input
+        eatUnknownTilClosing info
+        info
+
     let private getContent input at =
         let info = ParserInfo input
         info.Index <- at
@@ -172,3 +177,21 @@ module XmlParserTests =
     [<Test>]
     let eatSomeTag03() =
         eatSome "<foo />" |> should equal TagType.Single
+
+    [<Test>]
+    let eatUnknownTag01() =
+        let input = "<item>unknown</item></recipient><message>foobar</message><reference>2414059</reference></item></items>"
+        let info = eatUnknown input
+        info.Index |> should equal 32
+
+    [<Test>]
+    let eatUnknownTag02() =
+        let input = "unknown</item></recipient><message>foobar</message><reference>2414059</reference></item></items>"
+        let info = eatUnknown input
+        info.Index |> should equal 14
+
+    [<Test>]
+    let eatUnknownTag03() =
+        let input = "<item><inner>unknown</inner><inner></inner></item></recipient><message>foobar</message><reference>2414059</reference></item></items>"
+        let info = eatUnknown input
+        info.Index |> should equal 62

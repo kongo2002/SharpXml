@@ -488,8 +488,8 @@ module internal Deserializer =
                                 raise (SharpXmlException error)
                             else
                                 Diagnostics.Trace.WriteLine(error)
-                            eatClosingTag xml
-                    | _ -> eatClosingTag xml
+                            eatUnknownTilClosing xml
+                    | _ -> eatUnknownTilClosing xml
                     inner()
                 | TagType.Single -> inner()
                 | _ -> ()
