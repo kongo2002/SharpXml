@@ -27,6 +27,7 @@ module DeserializationTests =
     open SharpXml
     open SharpXml.Tests.TestHelpers
     open SharpXml.Tests.Types
+    open SharpXml.Tests.CSharp
 
     let deserialize<'a> input =
         XmlSerializer.DeserializeFromString<'a>(input)
@@ -277,3 +278,19 @@ module DeserializationTests =
         out.V1 |> should equal 53
         out.V2 |> fst |> should equal "something"
         out.V2 |> snd |> should equal 40
+
+    [<Test>]
+    let ``Can correctly skip unknown elements``() =
+        let testString = @"<items><item><recipient>unknown</recipient><message>foobar</message><reference>2414059</reference></item></items>"
+        let out = deserialize<List<Types.UnknownPropertyClass>> testString
+        out.Count |> should equal 1
+        out.[0].Reference |> should equal 2414059
+        out.[0].Message |> should equal "foobar"
+
+    [<Test>]
+    let ``Can correctly skip unknown collection elements``() =
+        let testString = @"<items><item><recipient><item>unknown</item></recipient><message>foobar</message><reference>2414059</reference></item></items>"
+        let out = deserialize<List<Types.UnknownPropertyClass>> testString
+        out.Count |> should equal 1
+        out.[0].Reference |> should equal 2414059
+        out.[0].Message |> should equal "foobar"
