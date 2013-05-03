@@ -112,12 +112,12 @@ module internal DictionaryDeserializer =
     let parseKeyValueCollection invoker (keyReader : ReaderFunc) (valueReader : ReaderFunc) (input : ParserInfo) =
         let rec inner() =
             if not input.IsEnd then
-                let itemTag = eatSomeTag input
+                let itemTag, _ = eatSomeTag input
                 if not input.IsEnd && itemTag <> TagType.Close then
                     // read key tag
                     eatSomeTag input |> ignore
                     let key = keyReader input
-                    let vTag = eatSomeTag input
+                    let vTag, _ = eatSomeTag input
                     if not input.IsEnd && vTag <> TagType.Close then
                         let value = valueReader input
                         invoker key value
@@ -171,7 +171,7 @@ module internal ListDeserializer =
         let list = List<'a>()
         let rec inner() =
             if not info.IsEnd then
-                let tag = eatSomeTag info
+                let tag, _ = eatSomeTag info
                 if not info.IsEnd && tag <> TagType.Close then
                     // TODO: maybe use an option value in here
                     // TODO: ...parseListElement
@@ -184,7 +184,7 @@ module internal ListDeserializer =
     let parseListUntyped (lst : IList) (elemParser : ReaderFunc) (info : ParserInfo) =
         let rec inner() =
             if not info.IsEnd then
-                let tag = eatSomeTag info
+                let tag, _ = eatSomeTag info
                 if not info.IsEnd && tag <> TagType.Close then
                     // TODO: maybe use an option value in here
                     // TODO: ...parseListElement
@@ -326,6 +326,15 @@ module internal Deserializer =
             |> ValueTypeDeserializer.buildValueReader
             |> Some
         | _ -> None
+
+    /// Reader function that utilizes a custom DeserializerFunc
+    let customDeserializerReader (func: DeserializerFunc) = fun (info: ParserInfo) ->
+        if not info.IsEnd then
+            let start = info.Index
+            let index = eatUnknownTilClosing info
+            let toParse = new String(info.Value, start, index - start)
+            func.Invoke(toParse)
+        else null
 
     /// Get a reader function for NameValueCollection types
     let getNameValueCollectionReader (t : Type) =
@@ -488,8 +497,8 @@ module internal Deserializer =
                                 raise (SharpXmlException error)
                             else
                                 Diagnostics.Trace.WriteLine(error)
-                            eatUnknownTilClosing xml
-                    | _ -> eatUnknownTilClosing xml
+                            eatUnknownTilClosing xml |> ignore
+                    | _ -> eatUnknownTilClosing xml |> ignore
                     inner()
                 | TagType.Single -> inner()
                 | _ -> ()
@@ -544,7 +553,7 @@ module internal Deserializer =
         let objects = Array.zeroCreate<obj> tb.Fields
         let rec inner index  =
             if not xml.IsEnd && index < tb.Fields then
-                let tag = eatSomeTag xml
+                let tag, _ = eatSomeTag xml
                 match tag with
                 | TagType.Open ->
                     try
@@ -604,11 +613,14 @@ module internal Deserializer =
     /// Get the ReaderFunc for the specified type.
     /// The function is either obtained from the cache or built on request
     and getReaderFunc (t : Type) =
-        match (!readerCache).TryGetValue t with
-        | true, reader -> reader
-        | _ ->
-            match determineReader t with
-            | Some func -> Atom.updateAtomDict readerCache t func
+        match XmlConfig.Instance.TryGetDeserializer t with
+        | Some custom -> customDeserializerReader custom
+        | None ->
+            match (!readerCache).TryGetValue t with
+            | true, reader -> reader
             | _ ->
-                let err = sprintf "could not determine deserialization logic for type '%s'" t.FullName
-                raise (SharpXmlException err)
+                match determineReader t with
+                | Some func -> Atom.updateAtomDict readerCache t func
+                | _ ->
+                    let err = sprintf "could not determine deserialization logic for type '%s'" t.FullName
+                    raise (SharpXmlException err)

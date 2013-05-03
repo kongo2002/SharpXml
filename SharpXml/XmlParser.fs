@@ -137,6 +137,7 @@ module internal XmlParser =
         let mutable close = false
         let mutable state = ParseState.Start
         let mutable found = false
+        let mutable beforeTag = input.Index
 
         while not input.IsEnd && not found do
             let chr = NativePtr.read buffer
@@ -144,7 +145,9 @@ module internal XmlParser =
             buffer <- NativePtr.add buffer 1
             match state with
             | ParseState.Start ->
-                if chr = '<' then state <- ParseState.Tag
+                if chr = '<' then
+                    state <- ParseState.Tag
+                    beforeTag <- input.Index - 1
             | ParseState.Tag ->
                 if chr = '>' then
                     found <- true
@@ -163,14 +166,14 @@ module internal XmlParser =
                     state <- ParseState.InString
                 elif chr = '/' then
                     tag <- TagType.Single
-        tag
+        tag, beforeTag
 
     /// Eat all content until the last closed tag
     let eatUnknownTilClosing (input : ParserInfo) =
         let rec inner level =
-            let tag = eatSomeTag input
+            let tag, before = eatSomeTag input
             match tag with
-            | TagType.Close when level = 0 -> ()
+            | TagType.Close when level = 0 -> before
             | TagType.Close -> inner (level - 1)
             | TagType.Open -> inner (level + 1)
             | _ -> inner level
