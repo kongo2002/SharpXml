@@ -298,9 +298,12 @@ module DeserializationTests =
     [<Test>]
     let ``Can deserialize using a custom deserializer``() =
         let input = "<genericClass><v1>100</v1><v2>100.532</v2></genericClass>"
+
+        // parse using a german culture
         let culture = Globalization.CultureInfo.GetCultureInfo("de")
         XmlConfig.Instance.RegisterDeserializer<decimal>(fun str ->
             Decimal.Parse(str, culture) |> box)
-        let germanParsing = deserialize<GenericClass<decimal>> input
-        germanParsing.V1 |> should equal 100
-        germanParsing.V2 |> should equal 100532m
+
+        let german = deserialize<GenericClass<decimal>> input
+        german.V1 |> should equal 100
+        german.V2 |> should equal 100532m
