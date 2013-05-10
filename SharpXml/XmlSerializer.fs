@@ -95,3 +95,16 @@ type XmlSerializer() =
     /// Serialize the given object into XML output using the specified TextWriter
     static member SerializeToWriter<'T> (writer : TextWriter, element : 'T) =
         XmlSerializer.SerializeToWriter(writer, element, typeof<'T>)
+
+    /// Clear the cache of deserializer functions
+    static member ClearDeserializerCache() =
+        Deserializer.clearCache()
+
+    /// Clear the cache of serializer functions
+    static member ClearSerializerCache() =
+        Serializer.clearCache()
+
+    /// Clear all type based serialization and deserialization functions
+    static member ClearCache() =
+        Serializer.clearCache()
+        Deserializer.clearCache()

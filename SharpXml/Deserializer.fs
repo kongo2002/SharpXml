@@ -624,3 +624,7 @@ module internal Deserializer =
                 | _ ->
                     let err = sprintf "could not determine deserialization logic for type '%s'" t.FullName
                     raise (SharpXmlException err)
+
+    /// Clear the deserializer cache
+    let clearCache() =
+        Atom.clearAtomDict readerCache

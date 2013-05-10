@@ -556,3 +556,7 @@ module internal Serializer =
             writeTagNamespace name.Name ns name writer writerFunc element
         | None ->
             writeTag name.Name name writer writerFunc element
+
+    /// Clear the serializer cache
+    let clearCache() =
+        Atom.clearAtomDict serializerCache
