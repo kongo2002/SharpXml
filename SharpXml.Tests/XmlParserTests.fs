@@ -38,7 +38,7 @@ module XmlParserTests =
 
     let private eatSome input =
         let info = ParserInfo input
-        eatSomeTag info
+        eatSomeTag info |> fst
 
     let private eatRoot input =
         let info = ParserInfo input
@@ -47,7 +47,7 @@ module XmlParserTests =
 
     let private eatUnknown input =
         let info = ParserInfo input
-        eatUnknownTilClosing info
+        eatUnknownTilClosing info |> ignore
         info
 
     let private getContent input at =
