@@ -172,12 +172,16 @@ module internal ListDeserializer =
         let rec inner() =
             if not info.IsEnd then
                 let tag, _ = eatSomeTag info
-                if not info.IsEnd && tag <> TagType.Close then
-                    // TODO: maybe use an option value in here
-                    // TODO: ...parseListElement
-                    let value = elemParser info :?> 'a
-                    list.Add(value)
-                    inner()
+                if not info.IsEnd then
+                    match tag with
+                    | TagType.Open -> 
+                        // TODO: maybe use an option value in here
+                        // TODO: ...parseListElement
+                        let value = elemParser info :?> 'a
+                        list.Add(value)
+                        inner()
+                    | TagType.Single -> inner()
+                    | _ -> ()
         inner()
         list
 

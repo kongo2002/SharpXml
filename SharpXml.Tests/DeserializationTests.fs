@@ -46,6 +46,13 @@ module DeserializationTests =
         out.V2 |> should equal 42
 
     [<Test>]
+    let ``Can deserialize string arrays with empty elements``() =
+        let out = deserialize<TestClass3> "<testClass><v1><item /><item>foo</item><item/></v1><v2>42</v2></testClass>"
+        out.V1.Length |> should equal 1
+        out.V1 |> should equal [| "foo" |]
+        out.V2 |> should equal 42
+
+    [<Test>]
     let ``Can deserialize integer arrays``() =
         let out = deserialize<GenericClass<int[]>> "<testClass><v1>201</v1><v2><item>1</item><item>2</item></v2></testClass>"
         out.V1 |> should equal 201
