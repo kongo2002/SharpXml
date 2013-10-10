@@ -32,8 +32,9 @@ type internal PropertyReaderInfo = {
 /// of a specific type and all its members that have to be deserialized
 type internal TypeBuilderInfo = {
     Type : System.Type
-    // TODO: I would love to use a case-insensitive FSharpMap instead
+    // TODO: I would love to use a case-insensitive FSharpMaps instead
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
+    Attrs : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
     Ctor : EmptyConstructor }
 
 /// Record type containing the deserialization information
@@ -356,19 +357,37 @@ module internal Deserializer =
         Reader = getReaderFunc p.PropertyType;
         Setter = ReflectionHelpers.getObjSetter p }
 
+    and determineProperty (pDict : Dictionary<string, PropertyReaderInfo>, aDict) (pi : PropertyInfo) =
+        let name =
+            match getAttribute<SharpXml.Common.XmlElementAttribute> pi with
+            | Some attr when notWhite attr.Name -> attr.Name
+            | _ -> pi.Name
+        pDict.Add(name, buildReaderInfo pi)
+        pDict, aDict
+
+    and determinePropertyWithAttribute (pDict : Dictionary<string, PropertyReaderInfo>, aDict : Dictionary<string, PropertyReaderInfo>) (pi : PropertyInfo) =
+        match getAttribute<SharpXml.Common.XmlAttributeAttribute> pi with
+        | Some attr when notWhite attr.Name ->
+            aDict.Add(attr.Name, buildReaderInfo pi)
+        | _ ->
+            let name =
+                match getAttribute<SharpXml.Common.XmlElementAttribute> pi with
+                | Some attr when notWhite attr.Name -> attr.Name
+                | _ -> pi.Name
+            pDict.Add(name, buildReaderInfo pi)
+        pDict, aDict
+
     /// Build the TypeBuilderInfo record for the given Type
     and buildTypeBuilderInfo (t : Type) =
-        let map =
+        let func = if XmlConfig.Instance.UseAttributes then determinePropertyWithAttribute else determineProperty
+        let props, attrs =
             ReflectionHelpers.getDeserializableProperties t
-            |> Seq.map (fun p ->
-                let name =
-                    match getAttribute<SharpXml.Common.XmlElementAttribute> p with
-                    | Some attr when notWhite attr.Name -> attr.Name
-                    | _ -> p.Name
-                name, buildReaderInfo p)
-            |> dict
+            |> Array.fold func
+                (Dictionary<string, PropertyReaderInfo>(StringComparer.OrdinalIgnoreCase),
+                 Dictionary<string, PropertyReaderInfo>(StringComparer.OrdinalIgnoreCase))
         { Type = t
-          Props = Dictionary(map, StringComparer.OrdinalIgnoreCase)
+          Props = props
+          Attrs = attrs
           Ctor = ReflectionHelpers.getConstructorMethod t }
 
     /// Determine the TypeBuilderInfo for the given Type

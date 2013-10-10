@@ -54,25 +54,21 @@ module internal ReflectionHelpers =
         if t.IsDTO() then
             getPublicProperties t
             |> Array.filter (fun p -> p.IsDataMember() && p.GetGetMethod() <> null)
-            |> Seq.ofArray
         else
             getPublicProperties t
             |> Array.filter (fun p ->
                 p.GetGetMethod() <> null &&
                 not (hasAttribute p "IgnoreDataMemberAttribute"))
-            |> Seq.ofArray
 
     let getDeserializableProperties (t : Type) =
         if t.IsDTO() then
             getPublicProperties t
             |> Array.filter (fun p -> p.IsDataMember() && p.GetSetMethod() <> null)
-            |> Seq.ofArray
         else
             getPublicProperties t
             |> Array.filter (fun p ->
                 p.GetSetMethod() <> null &&
                 not (hasAttribute p "IgnoreDataMemberAttribute"))
-            |> Seq.ofArray
 
     let getEmptyConstructor (t : Type) =
         let ctor = t.GetConstructor(Type.EmptyTypes)
