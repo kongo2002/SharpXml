@@ -398,6 +398,20 @@ module Types =
             with get() = _guests
             and set v = _guests <- v
 
+    type AttributeClass() =
+
+        let mutable value = Unchecked.defaultof<int>
+        let mutable attr = Unchecked.defaultof<string>
+
+        member x.Value
+            with get() = value
+            and set v = value <- v
+
+        [<XmlAttribute>]
+        member x.Attr
+            with get() = attr
+            and set v = attr <- v
+
     [<DataContract(Name = "ContractClass", Namespace = "")>]
     type ContractClass() =
 

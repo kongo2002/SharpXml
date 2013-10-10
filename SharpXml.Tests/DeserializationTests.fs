@@ -314,3 +314,22 @@ module DeserializationTests =
         let german = deserialize<GenericClass<decimal>> input
         german.V1 |> should equal 100
         german.V2 |> should equal 100532m
+
+    [<Test>]
+    let ``Can deserialize root classes with attributes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<attrClass attr=\"test value\"><value>932</value></attrClass>"
+        let result = deserialize<AttributeClass> input
+        result.Value |> should equal 932
+        result.Attr |> should equal "test value"
+
+    [<Test>]
+    let ``Can deserialize sub classes with attributes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<class><v2 attr=\"some attribute value\"><value>91</value></v2><v1>932</v1></class>"
+        let result = deserialize<GenericClass<AttributeClass>> input
+        result.V1 |> should equal 932
+        result.V2.Value |> should equal 91
+        result.V2.Attr |> should equal "test value"
