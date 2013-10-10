@@ -332,4 +332,4 @@ module DeserializationTests =
         let result = deserialize<GenericClass<AttributeClass>> input
         result.V1 |> should equal 932
         result.V2.Value |> should equal 91
-        result.V2.Attr |> should equal "test value"
+        result.V2.Attr |> should equal "some attribute value"
