@@ -533,11 +533,53 @@ module internal Deserializer =
         inner()
         instance
 
+    /// Class reader function with XML attribute support
+    and readClassWithAttributes (builder : TypeBuilderInfo) (xml : ParserInfo) =
+        let instance = builder.Ctor.Invoke()
+
+        let setAttributes attrs =
+            if builder.Attrs.Count > 0 then
+                List.iter (fun (k, v) ->
+                    match builder.Attrs.TryGetValue k with
+                    | true, prop ->
+                        try
+                            prop.Setter.Invoke(instance, prop.Reader(xml))
+                        with ex -> () // TODO: exception, warning
+                    | _ -> ()) attrs
+
+        let rec inner() =
+            if not xml.IsEnd then
+                let name, tag, attr = eatTagWithAttributes xml
+                match tag with
+                | TagType.Open ->
+                    match builder.Props.TryGetValue name with
+                    | true, prop ->
+                        try
+                            let reader = prop.Reader
+                            prop.Setter.Invoke(instance, reader(xml))
+                        with ex ->
+                            let error = sprintf "Unable to deserialize property '%s' of type '%s'" prop.Info.Name prop.Info.DeclaringType.FullName
+                            if XmlConfig.Instance.ThrowOnError then
+                                raise (SharpXmlException error)
+                            else
+                                Diagnostics.Trace.WriteLine(error)
+                            eatUnknownTilClosing xml |> ignore
+                    | _ -> eatUnknownTilClosing xml |> ignore
+                    setAttributes attr
+                    inner()
+                | TagType.Single ->
+                    setAttributes attr
+                    inner()
+                | _ -> ()
+        inner()
+        instance
+
     /// Try to determine a matching class reader function
     and getClassReader (t : Type) = fun () ->
         if t.IsClass && not t.IsAbstract then
+            let func = if XmlConfig.Instance.UseAttributes then readClass else readClassWithAttributes
             getTypeBuilderInfo t
-            |> readClass
+            |> func
             |> Some
         else None
 
