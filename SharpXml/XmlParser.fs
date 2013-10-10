@@ -41,8 +41,10 @@ module internal XmlParser =
         | Start = 0
         | Tag = 1
         | TagName = 2
-        | EndTag = 3
-        | InString = 4
+        | InTag = 3
+        | AttrName = 4
+        | StartString = 5
+        | InString = 6
 
     let whitespaceChars =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
@@ -107,21 +109,20 @@ module internal XmlParser =
                     if not close then
                         name <- String(input.Value, nameStart, (input.Index-nameStart-1))
                         tag <- TagType.Open
-                        state <- ParseState.EndTag
+                        state <- ParseState.InTag
                 elif chr = '/' then
                     name <- String(input.Value, nameStart, (input.Index-nameStart-1))
                     tag <- TagType.Single
-                    state <- ParseState.EndTag
+                    state <- ParseState.InTag
                 elif chr = '>' then
                     name <- String(input.Value, nameStart, (input.Index-nameStart-1))
                     tag <- if close then TagType.Close else TagType.Open
                     found <- true
             | ParseState.InString ->
                 if chr = '"' then
-                    state <- ParseState.EndTag
+                    state <- ParseState.InTag
             | _ ->
                 if chr = '>' then
-                    input.Index <- input.Index
                     found <- true
                 elif chr = '"' then
                     state <- ParseState.InString
@@ -129,6 +130,74 @@ module internal XmlParser =
                     tag <- TagType.Single
 
         name, tag
+
+    /// Eat a XML tag and return its name, type and a
+    /// list of attributes
+    let eatTagWithAttributes (input : ParserInfo) =
+        let mutable name = Unchecked.defaultof<string>
+        let mutable nameStart = 0
+        let mutable tag = TagType.Single
+        let mutable buffer = &&input.Value.[input.Index]
+        let mutable close = false
+        let mutable state = ParseState.Start
+        let mutable found = false
+        let mutable attr = Unchecked.defaultof<string>
+        let mutable attributes = []
+
+        // TODO: this function is a copy of 'eatTag'
+        // TODO: some refactoring required!
+
+        while input.Index < input.Length && not found do
+            let chr = NativePtr.read buffer
+            input.Index <- input.Index + 1
+            buffer <- NativePtr.add buffer 1
+            match state with
+            | ParseState.Start ->
+                if chr = '<' then state <- ParseState.Tag
+            | ParseState.Tag ->
+                if not (isWhitespace chr) then
+                    if chr = '/' then
+                        close <- true
+                        nameStart <- input.Index
+                    else
+                        nameStart <- input.Index - 1
+                    state <- ParseState.TagName
+            | ParseState.TagName ->
+                if isWhitespace chr then
+                    if not close then
+                        name <- String(input.Value, nameStart, (input.Index-nameStart-1))
+                        tag <- TagType.Open
+                        state <- ParseState.InTag
+                elif chr = '/' then
+                    name <- String(input.Value, nameStart, (input.Index-nameStart-1))
+                    tag <- TagType.Single
+                    state <- ParseState.InTag
+                elif chr = '>' then
+                    name <- String(input.Value, nameStart, (input.Index-nameStart-1))
+                    tag <- if close then TagType.Close else TagType.Open
+                    found <- true
+            | ParseState.AttrName ->
+                if chr = '=' || isWhitespace chr then
+                    attr <- String(input.Value, nameStart, (input.Index-nameStart-1))
+                    state <- ParseState.StartString
+            | ParseState.StartString ->
+                if chr = '"' then
+                    state <- ParseState.InString
+                    nameStart <- input.Index
+            | ParseState.InString ->
+                if chr = '"' then
+                    state <- ParseState.InTag
+                    attributes <- (attr, (String(input.Value, nameStart, (input.Index-nameStart-1)))) :: attributes
+            | _ ->
+                if chr = '>' then
+                    found <- true
+                elif chr = '/' then
+                    tag <- TagType.Single
+                elif not (isWhitespace chr) then
+                    state <- ParseState.AttrName
+                    nameStart <- input.Index - 1
+
+        name, tag, attributes
 
     /// Eat a XML tag and return its type being one of Open, Close or Single
     let eatSomeTag (input : ParserInfo) =

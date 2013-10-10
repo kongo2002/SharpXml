@@ -56,6 +56,10 @@ module XmlParserTests =
         let content = eatContent info
         info.Index, content
 
+    let private getAttr input =
+        let info = ParserInfo input
+        eatTagWithAttributes info
+
     [<Test>]
     let eatTag01() =
         let input = " foo <testTag rest/> <hamEggs/>"
@@ -195,3 +199,50 @@ module XmlParserTests =
         let input = "<item><inner>unknown</inner><inner></inner></item></recipient><message>foobar</message><reference>2414059</reference></item></items>"
         let info = eatUnknown input
         info.Index |> should equal 62
+
+    [<Test>]
+    let eatAttributes01() =
+        let input = "<tag one=\"1\" two=\"2\" three=\"3\">"
+        let name, tag, attr = getAttr input
+        name |> should equal "tag"
+        tag |> should equal TagType.Open
+        attr.Length |> should equal 3
+        attr.[0] |> should equal ("three", "3")
+        attr.[1] |> should equal ("two", "2")
+        attr.[2] |> should equal ("one", "1")
+
+    [<Test>]
+    let eatAttributes02() =
+        let input = "< tag  one = \"1\" two = \"2\" three = \"3\" >"
+        let name, tag, attr = getAttr input
+        name |> should equal "tag"
+        tag |> should equal TagType.Open
+        attr.Length |> should equal 3
+        attr.[0] |> should equal ("three", "3")
+        attr.[1] |> should equal ("two", "2")
+        attr.[2] |> should equal ("one", "1")
+
+    [<Test>]
+    let eatAttributes03() =
+        let input = "< tag  one = \" some attribute value \" /  >"
+        let name, tag, attr = getAttr input
+        name |> should equal "tag"
+        tag |> should equal TagType.Single
+        attr.Length |> should equal 1
+        attr.[0] |> should equal ("one", " some attribute value ")
+
+    [<Test>]
+    let eatAttributes04() =
+        let input = "<tag/>"
+        let name, tag, attr = getAttr input
+        name |> should equal "tag"
+        tag |> should equal TagType.Single
+        attr.Length |> should equal 0
+
+    [<Test>]
+    let eatAttributes05() =
+        let input = "<tag >"
+        let name, tag, attr = getAttr input
+        name |> should equal "tag"
+        tag |> should equal TagType.Open
+        attr.Length |> should equal 0
