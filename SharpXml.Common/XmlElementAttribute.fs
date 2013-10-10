@@ -17,7 +17,7 @@ namespace SharpXml.Common
 open System
 
 /// Attribute that allows customization of the serialization
-/// and deserialization behavior of the SharpXml.XmlSerializer
+/// and deserialization behavior of XML elements
 [<AttributeUsage(AttributeTargets.Class ||| AttributeTargets.Property)>]
 type XmlElementAttribute(name : string) =
     inherit Attribute()
@@ -54,3 +54,22 @@ type XmlElementAttribute(name : string) =
     member x.Namespace
         with get() = ns
         and set(v) = ns <- v
+
+
+/// Attribute to mark properties that should be associated
+/// with XML attributes
+[<AttributeUsage(AttributeTargets.Property)>]
+type XmlAttributeAttribute(name: string) =
+    inherit Attribute()
+
+    new() = XmlAttributeAttribute(null)
+
+    /// Name to override the property/attribute name
+    member x.Name
+        with get() = name
+
+/// Attribute that allows to specify a number of static
+/// XML attributes that should be used on serialization
+[<AttributeUsage(AttributeTargets.Class)>]
+type XmlNamespaceAttribute([<ParamArray>] attributes: (string * string) array) =
+    inherit Attribute()

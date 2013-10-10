@@ -34,6 +34,7 @@ type XmlConfig private() =
     let mutable emitCamelCaseNames = false
     let mutable writeXmlHeader = false
     let mutable throwOnError = false
+    let mutable useAttributes = false
 
     let serializerCache = ref (Dictionary<Type, SerializerFunc>())
     let deserializerCache = ref (Dictionary<Type, DeserializerFunc>())
@@ -70,6 +71,12 @@ type XmlConfig private() =
     member x.ThrowOnError
         with get() = throwOnError
         and set(v) = throwOnError <- v
+
+    /// Whether the serialization and deserialization process
+    /// should respect and parse XML attributes
+    member x.UseAttributes
+        with get() = useAttributes
+        and set(v) = useAttributes <- v
 
     /// Register a serializer delegate for the specified type
     member x.RegisterSerializer<'T> (func : SerializerFunc) =
