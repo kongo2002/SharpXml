@@ -351,29 +351,34 @@ module internal Deserializer =
                 fun() -> func.Invoke() :?> NameValueCollection
         Some <| DictionaryDeserializer.nameValueCollectionReader ctor
 
+    /// Determine the property that should be used for
+    /// deserialization purposes
+    let getPropertyName pi =
+        match getAttribute<SharpXml.Common.XmlElementAttribute> pi with
+        | Some attr when notWhite attr.Name -> attr.Name
+        | _ -> pi.Name
+
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
     let rec buildReaderInfo (p : PropertyInfo) = {
         Info = p;
         Reader = getReaderFunc p.PropertyType;
         Setter = ReflectionHelpers.getObjSetter p }
 
-    and determineProperty (pDict : Dictionary<string, PropertyReaderInfo>, aDict) (pi : PropertyInfo) =
-        let name =
-            match getAttribute<SharpXml.Common.XmlElementAttribute> pi with
-            | Some attr when notWhite attr.Name -> attr.Name
-            | _ -> pi.Name
+    /// Determine the property and its PropertyReaderInfo that
+    /// will be used for deserialization
+    and determineProperty (pDict : Dictionary<string, PropertyReaderInfo>, aDict) pi =
+        let name = getPropertyName pi
         pDict.Add(name, buildReaderInfo pi)
         pDict, aDict
 
-    and determinePropertyWithAttribute (pDict : Dictionary<string, PropertyReaderInfo>, aDict : Dictionary<string, PropertyReaderInfo>) (pi : PropertyInfo) =
+    /// Determine the property and its PropertyReaderInfo in case
+    /// XML attributes are supported
+    and determinePropertyWithAttribute (pDict : Dictionary<string, PropertyReaderInfo>, aDict : Dictionary<string, PropertyReaderInfo>) pi =
         match getAttribute<SharpXml.Common.XmlAttributeAttribute> pi with
         | Some attr when notWhite attr.Name ->
             aDict.Add(attr.Name, buildReaderInfo pi)
         | _ ->
-            let name =
-                match getAttribute<SharpXml.Common.XmlElementAttribute> pi with
-                | Some attr when notWhite attr.Name -> attr.Name
-                | _ -> pi.Name
+            let name = getPropertyName pi
             pDict.Add(name, buildReaderInfo pi)
         pDict, aDict
 
