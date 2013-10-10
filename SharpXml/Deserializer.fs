@@ -543,7 +543,7 @@ module internal Deserializer =
                     match builder.Attrs.TryGetValue k with
                     | true, prop ->
                         try
-                            prop.Setter.Invoke(instance, prop.Reader(xml))
+                            prop.Setter.Invoke(instance, v)
                         with ex -> () // TODO: exception, warning
                     | _ -> ()) attrs
 
@@ -577,7 +577,7 @@ module internal Deserializer =
     /// Try to determine a matching class reader function
     and getClassReader (t : Type) = fun () ->
         if t.IsClass && not t.IsAbstract then
-            let func = if XmlConfig.Instance.UseAttributes then readClass else readClassWithAttributes
+            let func = if XmlConfig.Instance.UseAttributes then readClassWithAttributes else readClass
             getTypeBuilderInfo t
             |> func
             |> Some
