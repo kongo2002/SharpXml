@@ -244,6 +244,13 @@ module DeserializationTests =
         Seq.head out.V2 |> should equal "one"
 
     [<Test>]
+    let ``Can correctly skip empty elements in untyped collections``() =
+        let out = deserialize<GenericClass<ArrayList>> "<genericClass><v1 /><v2><item /><item>one</item><item /></v2></genericClass>"
+        out.V1 |> should equal 0
+        out.V2.Count |> should equal 1
+        out.V2.[0] |> should equal "one"
+
+    [<Test>]
     let ``Can deserialize immutable F# list``() =
         let out = deserialize<FSharpListClass> "<fSharpListClass><v1>4</v1><v2><item>one</item><item>two</item></v2></fSharpListClass>"
         out.V1 |> should equal 4

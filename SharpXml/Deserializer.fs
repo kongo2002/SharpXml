@@ -192,11 +192,15 @@ module internal ListDeserializer =
             if not info.IsEnd then
                 let tag, _ = eatSomeTag info
                 if not info.IsEnd && tag <> TagType.Close then
-                    // TODO: maybe use an option value in here
-                    // TODO: ...parseListElement
-                    let value = elemParser attr info
-                    lst.Add(value) |> ignore
-                    inner()
+                    match tag with
+                    | TagType.Open ->
+                        // TODO: maybe use an option value in here
+                        // TODO: ...parseListElement
+                        let value = elemParser attr info
+                        lst.Add(value) |> ignore
+                        inner()
+                    | TagType.Single -> inner()
+                    | _ -> ()
         inner()
 
     /// Reader function for immutable F# lists
