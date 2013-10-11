@@ -169,17 +169,24 @@ module internal ListDeserializer =
         | null -> None
         | x -> Some(x :?> 'a)
 
+    let getListTag info =
+        if XmlConfig.Instance.UseAttributes then
+            let name, tag, attr = eatTagWithAttributes info
+            tag, attr
+        else
+            eatSomeTag info |> fst, []
+
     let parseList<'a> (elemParser : ReaderFunc) attr (info : ParserInfo) =
         let list = List<'a>()
         let rec inner() =
             if not info.IsEnd then
-                let tag, _ = eatSomeTag info
+                let tag, attrs = getListTag info
                 if not info.IsEnd then
                     match tag with
                     | TagType.Open -> 
                         // TODO: maybe use an option value in here
                         // TODO: ...parseListElement
-                        let value = elemParser attr info :?> 'a
+                        let value = elemParser attrs info :?> 'a
                         list.Add(value)
                         inner()
                     | TagType.Single -> inner()
@@ -190,13 +197,13 @@ module internal ListDeserializer =
     let parseListUntyped (lst : IList) (elemParser : ReaderFunc) attr (info : ParserInfo) =
         let rec inner() =
             if not info.IsEnd then
-                let tag, _ = eatSomeTag info
-                if not info.IsEnd && tag <> TagType.Close then
+                let tag, attrs = getListTag info
+                if not info.IsEnd then
                     match tag with
                     | TagType.Open ->
                         // TODO: maybe use an option value in here
                         // TODO: ...parseListElement
-                        let value = elemParser attr info
+                        let value = elemParser attrs info
                         lst.Add(value) |> ignore
                         inner()
                     | TagType.Single -> inner()
