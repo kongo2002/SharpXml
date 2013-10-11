@@ -102,6 +102,19 @@ module internal ValueTypeDeserializer =
     let stringReader : (string * string) list -> ParserInfo -> obj =
         box |> buildValueReader
 
+    /// Apply attribute values if necessary
+    let setAttributes (builder : TypeBuilderInfo) attrs inst =
+        if builder.Attrs.Count > 0 then
+            List.iter (fun (k, v) ->
+                match builder.Attrs.TryGetValue k with
+                | true, prop ->
+                    try
+                        prop.Setter.Invoke(inst, v)
+                    with ex ->
+                        System.Diagnostics.Trace.WriteLine(
+                            String.Format("Failed to set attribute '{0}': {1}", k, ex))
+                | _ -> ()) attrs
+
 /// Dictionary related deserialization logic
 module internal DictionaryDeserializer =
 
@@ -235,10 +248,11 @@ module internal ListDeserializer =
         HashSet(parseList<'a> reader attr xml)
 
     /// Reader function for generic collections
-    let genericCollectionReader<'a> (reader : ReaderFunc) (ctor : EmptyConstructor) attr xml =
-        let collection = ctor.Invoke() :?> ICollection<'a>
+    let genericCollectionReader<'a> (reader : ReaderFunc) (info : TypeBuilderInfo) attr xml =
+        let collection = info.Ctor.Invoke() :?> ICollection<'a>
         let list = parseList<'a> reader attr xml
         list.ForEach(fun elem -> collection.Add(elem))
+        ValueTypeDeserializer.setAttributes info attr collection
         collection
 
     let genericROReader<'a> (reader : ReaderFunc) (ctor : System.Reflection.ConstructorInfo) attr xml =
@@ -454,7 +468,7 @@ module internal Deserializer =
     and getGenericCollectionReader (listType : Type) (t : Type) =
         let mtd = getGenericListFunction "genericCollectionReader" t
         let elemReader = getReaderFunc t
-        let ctor = ReflectionHelpers.getConstructorMethod listType
+        let ctor = getTypeBuilderInfo listType
         fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; attr; xml |])
 
     /// Get a reader function for generic readonly collections
@@ -550,17 +564,6 @@ module internal Deserializer =
     /// Class reader function with XML attribute support
     and readClassWithAttributes (builder : TypeBuilderInfo) attr (xml : ParserInfo) =
         let instance = builder.Ctor.Invoke()
-
-        let setAttributes attrs =
-            if builder.Attrs.Count > 0 then
-                List.iter (fun (k, v) ->
-                    match builder.Attrs.TryGetValue k with
-                    | true, prop ->
-                        try
-                            prop.Setter.Invoke(instance, v)
-                        with ex -> () // TODO: exception, warning
-                    | _ -> ()) attrs
-
         let rec inner() =
             if not xml.IsEnd then
                 let name, tag, attrs = eatTagWithAttributes xml
@@ -579,10 +582,10 @@ module internal Deserializer =
                                 Diagnostics.Trace.WriteLine(error)
                             eatUnknownTilClosing xml |> ignore
                     | _ -> eatUnknownTilClosing xml |> ignore
-                    setAttributes attr
+                    ValueTypeDeserializer.setAttributes builder attr instance
                     inner()
                 | TagType.Single ->
-                    setAttributes attr
+                    ValueTypeDeserializer.setAttributes builder attr instance
                     inner()
                 | _ -> ()
         inner()

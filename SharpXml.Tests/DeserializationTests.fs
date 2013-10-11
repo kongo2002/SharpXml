@@ -353,3 +353,15 @@ module DeserializationTests =
         result.V2.[1].Attr |> should equal "second"
         result.V2.[0].Value |> should equal 1
         result.V2.[1].Value |> should equal 2
+
+    [<Test>]
+    let ``Can deserialize lists with attributes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<class><v2 attr=\"listattr\"><item>1</item><item>2</item></v2><v1>932</v1></class>"
+        let result = deserialize<GenericClass<AttributeList<int>>> input
+        result.V1 |> should equal 932
+        result.V2.Count |> should equal 2
+        result.V2.Attr |> should equal "listattr"
+        result.V2.[0] |> should equal 1
+        result.V2.[1] |> should equal 2

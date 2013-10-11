@@ -60,14 +60,18 @@ module internal ReflectionHelpers =
                 p.GetGetMethod() <> null &&
                 not (hasAttribute p "IgnoreDataMemberAttribute"))
 
+    let hasValidSetter (p : PropertyInfo) =
+        let setter = p.GetSetMethod()
+        setter <> null && setter.GetParameters().Length = 1
+
     let getDeserializableProperties (t : Type) =
         if t.IsDTO() then
             getPublicProperties t
-            |> Array.filter (fun p -> p.IsDataMember() && p.GetSetMethod() <> null)
+            |> Array.filter (fun p -> p.IsDataMember() && hasValidSetter p)
         else
             getPublicProperties t
             |> Array.filter (fun p ->
-                p.GetSetMethod() <> null &&
+                hasValidSetter p &&
                 not (hasAttribute p "IgnoreDataMemberAttribute"))
 
     let getEmptyConstructor (t : Type) =
