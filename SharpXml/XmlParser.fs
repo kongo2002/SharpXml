@@ -249,7 +249,7 @@ module internal XmlParser =
         inner 0
 
     /// Parse the XML root node and the optional <?xml ?> tag
-    let eatRoot (input : ParserInfo) =
+    let private eatRootFunc func (input : ParserInfo) =
         let mutable buffer = &&input.Value.[input.Index]
         let mutable state = ParseState.Start
         let mutable found = false
@@ -272,8 +272,18 @@ module internal XmlParser =
             | _ ->
                 if chr = '>' then found <- true
 
-        // eat first root node
-        eatTag input |> ignore
+        func input
+
+    /// Parse the XML root node and the optional <?xml ?> tag
+    let eatRoot input =
+        eatRootFunc eatTag |> ignore
+        []
+
+    /// Parse the XML root node and the optional <?xml ?> tag
+    /// along with optional attributes on the root node
+    let eatRootWithAttributes input =
+        let _, _, attr = eatRootFunc eatTagWithAttributes input
+        attr
 
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index

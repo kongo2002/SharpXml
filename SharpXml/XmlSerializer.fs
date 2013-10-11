@@ -34,9 +34,11 @@ type XmlSerializer() =
     static let deserialize input targetType =
         let reader = Deserializer.getReaderFunc targetType
         let info = XmlParser.ParserInfo input
-        // TODO: read attributes
-        XmlParser.eatRoot info
-        reader [] info
+        let attr = if XmlConfig.Instance.UseAttributes 
+                   then XmlParser.eatRootWithAttributes info
+                   else XmlParser.eatRoot info
+
+        reader attr info
 
     /// Deserialize the input string into the specified type
     static member DeserializeFromString<'T> input =
