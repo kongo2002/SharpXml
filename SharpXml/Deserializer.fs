@@ -26,7 +26,8 @@ type internal ReaderFunc = XmlParser.ParserInfo -> obj
 type internal PropertyReaderInfo = {
     Info : System.Reflection.PropertyInfo
     Reader : ReaderFunc
-    Setter : SetterFunc }
+    Setter : SetterFunc
+    Ctor : EmptyConstructor }
 
 /// Record type containing the deserialization information
 /// of a specific type and all its members that have to be deserialized
@@ -362,7 +363,8 @@ module internal Deserializer =
     let rec buildReaderInfo (p : PropertyInfo) = {
         Info = p;
         Reader = getReaderFunc p.PropertyType;
-        Setter = ReflectionHelpers.getObjSetter p }
+        Setter = ReflectionHelpers.getObjSetter p;
+        Ctor = ReflectionHelpers.getConstructorMethod p.PropertyType }
 
     /// Determine the property and its PropertyReaderInfo that
     /// will be used for deserialization
