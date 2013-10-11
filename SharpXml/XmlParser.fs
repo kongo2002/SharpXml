@@ -276,7 +276,7 @@ module internal XmlParser =
 
     /// Parse the XML root node and the optional <?xml ?> tag
     let eatRoot input =
-        eatRootFunc eatTag |> ignore
+        eatRootFunc eatTag input |> ignore
         []
 
     /// Parse the XML root node and the optional <?xml ?> tag
