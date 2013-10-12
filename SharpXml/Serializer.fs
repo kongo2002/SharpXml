@@ -496,10 +496,19 @@ module internal Serializer =
         match (!propertyCache).TryGetValue t with
         | true, props -> props
         | _ ->
-            let ps, attrs =
-                ReflectionHelpers.getSerializableProperties t
-                |> Array.fold determineWriterInfo ([], [])
-            let info = { Properties = List.rev ps; Attributes = List.rev attrs }
+            let properties = ReflectionHelpers.getSerializableProperties t
+            let info =
+                if XmlConfig.Instance.UseAttributes then
+                    let ps, attrs =
+                        properties
+                        |> Array.fold determineWriterInfo ([], [])
+                    { Properties = List.rev ps; Attributes = List.rev attrs }
+                else
+                    let ps =
+                        properties
+                        |> Array.map buildPropertyWriterInfo
+                        |> List.ofArray
+                    { Properties = ps; Attributes = [] }
             Atom.updateAtomDict propertyCache t info
 
     /// Writer for classes and other reference types
