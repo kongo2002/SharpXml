@@ -73,3 +73,6 @@ type XmlAttributeAttribute(name: string) =
 [<AttributeUsage(AttributeTargets.Class)>]
 type XmlNamespaceAttribute([<ParamArray>] attributes: (string * string) array) =
     inherit Attribute()
+
+    member x.Attributes
+        with get() = attributes

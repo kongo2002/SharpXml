@@ -23,7 +23,8 @@ type internal TypeInfo = {
     Type : System.Type
     OriginalName : string
     ClsName : string
-    Namespace : string option }
+    Namespace : string option
+    Attributes : (string * string) array }
 
 type internal NameInfo = {
     Name : string
@@ -44,6 +45,19 @@ type internal PropertyWriterInfo = {
     WriteFunc : Lazy<WriterFunc>
     Default : obj }
 
+/// Record type containing the serialization information
+/// for a specific XML attribute registered on a type
+type internal AttributeWriterInfo = {
+    Key : string
+    GetFunc : GetterFunc }
+
+/// Record containing all property and attribute writer
+/// information used for serialization of a specific type
+type internal TypeWriterInfo = {
+    Properties : PropertyWriterInfo list
+    Attributes : AttributeWriterInfo list }
+
+/// Internal module of convenience serialization functions
 module internal SerializerBase =
 
     open System
@@ -60,6 +74,16 @@ module internal SerializerBase =
         w.Write('<'); w.Write(name); w.Write(" xmlns=\""); w.Write(ns); w.Write("\">")
         writeFunc info w value
         w.Write("</"); w.Write(name); w.Write('>')
+
+    /// XML tag writer function with additional attributes
+    let writeTagAttributes (name : string) (attr : (string * string) list) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
+        if List.isEmpty attr then writeTag name info w writeFunc value
+        else
+            w.Write('<'); w.Write(name);
+            attr |> List.iter (fun (k, v) -> w.Write(' '); w.Write(k); w.Write("=\""); w.Write(v); w.Write("\""))
+            w.Write('>');
+            writeFunc info w value
+            w.Write("</"); w.Write(name); w.Write('>')
 
     /// Empty tag writer function
     let writeEmptyTag (name : string) (w : TextWriter) =
@@ -288,6 +312,12 @@ module internal ListSerializer =
         collection
         |> Seq.iter (writeTag name.Item name writer writeFunc)
 
+    /// Writer function for generic IEnumerables with attribute values
+    let writeGenericEnumerableAttributes<'a> (writeFunc : WriterFunc) name (writer : TextWriter) (attr: (string * string) list) (value : obj) =
+        let collection : IEnumerable<'a> = unbox value
+        collection
+        |> Seq.iter (writeTagAttributes name.Item attr name writer writeFunc)
+
     /// Wrapper function to get the generic IEnumerable writer
     let getGenericEnumerableWriter elemWriter t =
         // TODO: this does not look sane at all
@@ -314,7 +344,7 @@ module internal Serializer =
 
     open SerializerBase
 
-    let propertyCache = ref (Dictionary<Type, PropertyWriterInfo[]>())
+    let propertyCache = ref (Dictionary<Type, TypeWriterInfo>())
     let serializerCache = ref (Dictionary<Type, WriterFunc>())
     let typeInfoCache = ref (Dictionary<Type, TypeInfo>())
 
@@ -340,6 +370,11 @@ module internal Serializer =
         else
             baseName
 
+    let getNamespaceAttributes t =
+        match getAttribute<XmlNamespaceAttribute> t with
+        | Some attr -> attr.Attributes
+        | _ -> [||]
+
     /// Build a TypeInfo object based on the given Type
     let buildTypeInfo t =
         match getAttribute<XmlElementAttribute> t with
@@ -350,12 +385,14 @@ module internal Serializer =
               Namespace =
                   match String.IsNullOrWhiteSpace(attr.Namespace) with
                   | false -> Some attr.Namespace
-                  | true  -> None }
+                  | true  -> None
+              Attributes = getNamespaceAttributes t }
         | None ->
             { Type = t
               OriginalName = t.Name
               ClsName = getTypeName t
-              Namespace = None }
+              Namespace = None
+              Attributes = getNamespaceAttributes t }
 
     /// Get the TypeInfo object associated with the given Type
     let getTypeInfo (t : Type) =
@@ -444,22 +481,31 @@ module internal Serializer =
             Some <| ListSerializer.writeEnumerable getWriterFunc
         | _ -> None
 
+    and determineWriterInfo (ps, attrs) (pi : PropertyInfo) =
+        match getAttribute<XmlAttributeAttribute> pi with
+        | Some attr ->
+            let key = if notWhite attr.Name then attr.Name else pi.Name
+            let info = { GetFunc = ReflectionHelpers.getObjGetter pi; Key = key }
+            ps, info :: attrs 
+        | None ->
+            let info = buildPropertyWriterInfo pi
+            info :: ps, attrs
+
     /// Get the PropertyWriterInfo array for the given type
     and getProperties (t : Type) =
         match (!propertyCache).TryGetValue t with
         | true, props -> props
         | _ ->
-            let props =
+            let ps, attrs =
                 ReflectionHelpers.getSerializableProperties t
-                |> Seq.filter (fun p -> p.GetIndexParameters().Length = 0)
-                |> Seq.map buildPropertyWriterInfo
-                |> Array.ofSeq
-            Atom.updateAtomDict propertyCache t props
+                |> Array.fold determineWriterInfo ([], [])
+            let info = { Properties = List.rev ps; Attributes = List.rev attrs }
+            Atom.updateAtomDict propertyCache t info
 
     /// Writer for classes and other reference types
-    and writeClass props _ (writer : TextWriter) (value : obj) =
-        props
-        |> Array.iter (fun p ->
+    and writeClass (info: TypeWriterInfo) _ (writer : TextWriter) (value : obj) =
+        info.Properties
+        |> List.iter (fun p ->
             let v = p.GetFunc.Invoke(value)
             if v <> null then
                 let writeFunc = p.WriteFunc.Value

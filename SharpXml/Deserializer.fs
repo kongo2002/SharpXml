@@ -255,6 +255,7 @@ module internal ListDeserializer =
         ValueTypeDeserializer.setAttributes info attr collection
         collection
 
+    /// Reader function for readonly collections
     let genericROReader<'a> (reader : ReaderFunc) (ctor : System.Reflection.ConstructorInfo) attr xml =
         let list = clrListReader<'a> reader attr xml
         ctor.Invoke([| list |])
@@ -337,6 +338,8 @@ module internal Deserializer =
             |> Some
         | _ -> None
 
+    /// Try to retrieve the specified deserialization function of
+    /// SharpXml.ListDeserializer module via reflection
     let getGenericListFunction name t =
         // TODO: I don't like this string-based reflection at all
         let flags = BindingFlags.NonPublic ||| BindingFlags.Static

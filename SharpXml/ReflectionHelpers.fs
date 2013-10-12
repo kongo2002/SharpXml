@@ -53,11 +53,15 @@ module internal ReflectionHelpers =
     let getSerializableProperties (t : Type) =
         if t.IsDTO() then
             getPublicProperties t
-            |> Array.filter (fun p -> p.IsDataMember() && p.GetGetMethod() <> null)
+            |> Array.filter (fun p ->
+                p.IsDataMember() &&
+                p.GetGetMethod() <> null &&
+                p.GetIndexParameters().Length = 0)
         else
             getPublicProperties t
             |> Array.filter (fun p ->
                 p.GetGetMethod() <> null &&
+                p.GetIndexParameters().Length = 0 &&
                 not (hasAttribute p "IgnoreDataMemberAttribute"))
 
     let hasValidSetter (p : PropertyInfo) =
