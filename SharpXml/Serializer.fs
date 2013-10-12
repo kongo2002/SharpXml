@@ -71,7 +71,7 @@ module internal SerializerBase =
         w.Write("</"); w.Write(name); w.Write('>')
 
     /// XML tag writer function with an additional namespace attribute
-    let writeTagNamespace (name : string) (ns : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
+    let writeTagNamespace (ns : string) (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
         w.Write('<'); w.Write(name); w.Write(" xmlns=\""); w.Write(ns); w.Write("\">")
         writeFunc info w value
         w.Write("</"); w.Write(name); w.Write('>')
@@ -538,8 +538,8 @@ module internal Serializer =
                     { Properties = ps; Attributes = [] }
             Atom.updateAtomDict propertyCache t info
 
-    and writeClass (info: TypeWriterInfo) (name : NameInfo) (writer : TextWriter) (value : obj) =
-        writeTag name.Name name writer (writeClassInner info) value
+    and writeClass func (info: TypeWriterInfo) (name : NameInfo) (writer : TextWriter) (value : obj) =
+        func name.Name name writer (writeClassInner info) value
 
     and writeClassWithAttributes (info : TypeWriterInfo) (name : NameInfo) (writer : TextWriter) (value : obj) =
         let attr =
@@ -567,7 +567,15 @@ module internal Serializer =
                 Some writeAbstractProperties
             else
                 let writerInfo = getTypeWriterInfo t
-                Some (writeClass writerInfo)
+                if XmlConfig.Instance.UseAttributes then
+                    Some (writeClassWithAttributes writerInfo)
+                else
+                    let typeInfo = getTypeInfo t
+                    let func =
+                        match typeInfo.Namespace with
+                        | Some ns -> writeTagNamespace ns
+                        | None    -> writeTag
+                    Some (writeClass func writerInfo)
         else None
 
     /// Try to determine a writer function for a dictionary
@@ -641,17 +649,10 @@ module internal Serializer =
 
     /// Write the given type using the appropriate serialization logic
     let writeType (writer : TextWriter) element targetType =
-        let tInfo = getTypeInfo targetType
-        let name = getDefaultNameInfo tInfo.ClsName
+        let typeInfo = getTypeInfo targetType
+        let name = getDefaultNameInfo typeInfo.ClsName
         let writerFunc = getWriterFunc targetType
         writerFunc name writer element
-//        match tInfo.Namespace with
-//        | Some ns ->
-//            writeTagNamespace name.Name ns name writer writerFunc element
-//        | None ->
-//            if Array.isEmpty tInfo.Attributes
-//            then writeTag name.Name name writer writerFunc element
-//            else writeTagAttributes name.Name (List.ofArray tInfo.Attributes) name writer writerFunc element
 
     /// Clear the serializer cache
     let clearCache() =
