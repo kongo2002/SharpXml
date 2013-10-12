@@ -49,7 +49,8 @@ type internal PropertyWriterInfo = {
 /// for a specific XML attribute registered on a type
 type internal AttributeWriterInfo = {
     Key : string
-    GetFunc : GetterFunc }
+    GetFunc : GetterFunc
+    WriteFunc : Lazy<WriterFunc> }
 
 /// Record containing all property and attribute writer
 /// information used for serialization of a specific type
@@ -382,10 +383,7 @@ module internal Serializer =
             { Type = t
               OriginalName = t.Name
               ClsName = if notWhite attr.Name then attr.Name else getTypeName t
-              Namespace =
-                  match String.IsNullOrWhiteSpace(attr.Namespace) with
-                  | false -> Some attr.Namespace
-                  | true  -> None
+              Namespace = if notWhite attr.Namespace then Some attr.Namespace else None
               Attributes = getNamespaceAttributes t }
         | None ->
             { Type = t
@@ -481,11 +479,13 @@ module internal Serializer =
             Some <| ListSerializer.writeEnumerable getWriterFunc
         | _ -> None
 
+    /// Determine the TypeWriterInfo for the given PropertyInfo
     and determineWriterInfo (ps, attrs) (pi : PropertyInfo) =
         match getAttribute<XmlAttributeAttribute> pi with
         | Some attr ->
             let key = if notWhite attr.Name then attr.Name else pi.Name
-            let info = { GetFunc = ReflectionHelpers.getObjGetter pi; Key = key }
+            let getter = ReflectionHelpers.getObjGetter pi
+            let info = { GetFunc = getter; Key = key; WriteFunc = lazy getWriterFunc pi.PropertyType }
             ps, info :: attrs 
         | None ->
             let info = buildPropertyWriterInfo pi
@@ -610,7 +610,9 @@ module internal Serializer =
         | Some ns ->
             writeTagNamespace name.Name ns name writer writerFunc element
         | None ->
-            writeTag name.Name name writer writerFunc element
+            if Array.isEmpty tInfo.Attributes
+            then writeTag name.Name name writer writerFunc element
+            else writeTagAttributes name.Name (List.ofArray tInfo.Attributes) name writer writerFunc element
 
     /// Clear the serializer cache
     let clearCache() =

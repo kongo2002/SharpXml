@@ -51,6 +51,7 @@ type XmlElementAttribute(name : string) =
         and set(v) = valueName <- v
 
     /// Optional namespace to use on serialization
+    [<Obsolete("Use 'XmlNamespaceAttribute' instead")>]
     member x.Namespace
         with get() = ns
         and set(v) = ns <- v
