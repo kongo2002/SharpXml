@@ -379,3 +379,17 @@ module SerializationTests =
     let ``Can serialize classes with F# tuples``() =
         let cls = GenericClass(V1 = 211, V2 = (100, "ham"))
         serialize cls |> should equal "<genericClass><v1>211</v1><v2><item1>100</item1><item2>ham</item2></v2></genericClass>"
+
+    [<Test>]
+    let ``Can serialize root elements with static XML attributes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let cls = AttributeClass(Value = 24)
+        serialize cls |> should equal "<attributeClass foo=\"bar\"><value>24</value></attributeClass>"
+
+    [<Test>]
+    let ``Can serialize classes with XmlAttribute properties``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let cls = AttributeClass(Value = 9, Attr = "some value")
+        serialize cls |> should equal "<attributeClass foo=\"bar\" attr=\"some value\"><value>9</value></attributeClass>"

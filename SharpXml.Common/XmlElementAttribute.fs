@@ -72,7 +72,7 @@ type XmlAttributeAttribute(name: string) =
 /// Attribute that allows to specify a number of static
 /// XML attributes that should be used on serialization
 [<AttributeUsage(AttributeTargets.Class)>]
-type XmlNamespaceAttribute([<ParamArray>] attributes: (string * string) array) =
+type XmlNamespaceAttribute([<ParamArray>] attributes: string array) =
     inherit Attribute()
 
     member x.Attributes

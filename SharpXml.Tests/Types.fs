@@ -398,6 +398,7 @@ module Types =
             with get() = _guests
             and set v = _guests <- v
 
+    [<XmlNamespace("foo=bar")>]
     type AttributeClass() =
 
         let mutable value = Unchecked.defaultof<int>

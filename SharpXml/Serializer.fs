@@ -373,7 +373,12 @@ module internal Serializer =
 
     let getNamespaceAttributes t =
         match getAttribute<XmlNamespaceAttribute> t with
-        | Some attr -> attr.Attributes
+        | Some attr ->
+            attr.Attributes
+            |> Array.choose (fun a ->
+                match a.Split('=') with
+                | [|k; v|] when notWhite k -> Some (k.Trim(), v)
+                | _ -> None)
         | _ -> [||]
 
     /// Build a TypeInfo object based on the given Type
