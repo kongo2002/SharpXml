@@ -398,7 +398,6 @@ module Types =
             with get() = _guests
             and set v = _guests <- v
 
-    [<XmlNamespace("foo=bar")>]
     type AttributeClass() =
 
         let mutable value = Unchecked.defaultof<int>
@@ -408,10 +407,19 @@ module Types =
             with get() = value
             and set v = value <- v
 
-        [<XmlAttribute>]
+        [<XmlAttribute("attr")>]
         member x.Attr
             with get() = attr
             and set v = attr <- v
+
+    [<XmlNamespace("foo=bar")>]
+    type StaticAttributeClass() =
+        
+        let mutable value = Unchecked.defaultof<int>
+
+        member x.Value
+            with get() = value
+            and set v = value <- v
 
     type AttributeList<'T>() =
         inherit List<'T>()

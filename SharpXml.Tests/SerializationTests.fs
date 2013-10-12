@@ -26,6 +26,10 @@ module SerializationTests =
 
     XmlConfig.Instance.EmitCamelCaseNames <- true
 
+    [<SetUp>]
+    let init() =
+        XmlConfig.Instance.ClearSerializers()
+
     let serialize<'a> (element : 'a) =
         XmlSerializer.SerializeToString<'a>(element)
 
@@ -367,6 +371,8 @@ module SerializationTests =
 
     [<Test>]
     let ``Can serialize root type with namespace``() =
+        XmlConfig.Instance.UseAttributes <- false
+
         let cls = NamespaceClass(542, "foo")
         serialize cls |> should equal "<namespaceClass xmlns=\"SharpXml.Types\"><v1>542</v1><v2>foo</v2></namespaceClass>"
 
@@ -384,12 +390,12 @@ module SerializationTests =
     let ``Can serialize root elements with static XML attributes``() =
         XmlConfig.Instance.UseAttributes <- true
 
-        let cls = AttributeClass(Value = 24)
-        serialize cls |> should equal "<attributeClass foo=\"bar\"><value>24</value></attributeClass>"
+        let cls = StaticAttributeClass(Value = 24)
+        serialize cls |> should equal "<staticAttributeClass foo=\"bar\"><value>24</value></staticAttributeClass>"
 
     [<Test>]
     let ``Can serialize classes with XmlAttribute properties``() =
         XmlConfig.Instance.UseAttributes <- true
 
         let cls = AttributeClass(Value = 9, Attr = "some value")
-        serialize cls |> should equal "<attributeClass foo=\"bar\" attr=\"some value\"><value>9</value></attributeClass>"
+        serialize cls |> should equal "<attributeClass attr=\"some value\"><value>9</value></attributeClass>"

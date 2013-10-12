@@ -541,12 +541,14 @@ module internal Serializer =
     and writeClass func (info: TypeWriterInfo) (name : NameInfo) (writer : TextWriter) (value : obj) =
         func name.Name name writer (writeClassInner info) value
 
-    and writeClassWithAttributes (info : TypeWriterInfo) (name : NameInfo) (writer : TextWriter) (value : obj) =
+    and writeClassWithAttributes (typeInfo : TypeInfo) (info : TypeWriterInfo) (name : NameInfo) (writer : TextWriter) (value : obj) =
+        let statics = typeInfo.Attributes |> List.ofArray
         let attr =
             info.Attributes
             |> List.choose (fun a ->
                 let v = a.GetFunc.Invoke value
                 if v <> null then Some (a.Key, v.ToString()) else None)
+            |> List.append statics
         writeTagAttributes name.Name attr name writer (writeClassInner info) value
 
     /// Writer for classes and other reference types
@@ -566,11 +568,11 @@ module internal Serializer =
             if t.IsAbstract && not t.IsInterface then
                 Some writeAbstractProperties
             else
+                let typeInfo = getTypeInfo t
                 let writerInfo = getTypeWriterInfo t
                 if XmlConfig.Instance.UseAttributes then
-                    Some (writeClassWithAttributes writerInfo)
+                    Some (writeClassWithAttributes typeInfo writerInfo)
                 else
-                    let typeInfo = getTypeInfo t
                     let func =
                         match typeInfo.Namespace with
                         | Some ns -> writeTagNamespace ns
