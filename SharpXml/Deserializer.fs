@@ -189,7 +189,7 @@ module internal ListDeserializer =
         else
             eatSomeTag info |> fst, []
 
-    let parseList<'a> (bInfo : TypeBuilderInfo option) (elemParser : ReaderFunc) attr (info : ParserInfo) =
+    let parseList<'a> (elemInfo : TypeBuilderInfo option) (elemParser : ReaderFunc) attr (info : ParserInfo) =
         let list = List<'a>()
         let rec inner() =
             if not info.IsEnd then
@@ -197,14 +197,15 @@ module internal ListDeserializer =
                 if not info.IsEnd then
                     match tag with
                     | TagType.Open -> 
-                        // TODO: maybe use an option value in here
-                        // TODO: ...parseListElement
                         let value = elemParser attrs info :?> 'a
                         list.Add(value)
                         inner()
                     | TagType.Single ->
-                        match bInfo with
-                        | Some i -> 
+                        // a single XML tag could contain attributes
+                        // in that case we have to instantiate a new item
+                        // and try to set its attribute properties
+                        match elemInfo with
+                        | Some i ->
                             let value = i.Ctor.Invoke() :?> 'a
                             ValueTypeDeserializer.setAttributes i attrs value
                             list.Add(value)
@@ -221,8 +222,6 @@ module internal ListDeserializer =
                 if not info.IsEnd then
                     match tag with
                     | TagType.Open ->
-                        // TODO: maybe use an option value in here
-                        // TODO: ...parseListElement
                         let value = elemParser attrs info
                         lst.Add(value) |> ignore
                         inner()
