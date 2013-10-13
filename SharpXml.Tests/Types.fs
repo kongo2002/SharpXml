@@ -454,7 +454,7 @@ module Types =
 
         let mutable attr = Unchecked.defaultof<string>
 
-        [<XmlAttribute>]
+        [<XmlAttribute("attr")>]
         member x.Attr
             with get() = attr
             and set(v) = attr <- v

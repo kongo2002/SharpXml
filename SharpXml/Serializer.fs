@@ -97,6 +97,16 @@ module internal SerializerBase =
     let injectWriteTag (func : WriterFunc) = 
         fun (n : NameInfo) w x -> writeTag n.Name n w func x
 
+    let extractAttributeValues (info: TypeWriterInfo) (value : obj) =
+        info.Attributes
+        |> List.choose (fun a ->
+            let v = a.GetFunc.Invoke value
+            if v <> null then
+                // TODO: use a type specific writer function here
+                let str = v.ToString()
+                Some (a.Key, str)
+            else None)
+
 /// Module containing the serialization logic
 /// for value types
 module internal ValueTypeSerializer =
@@ -331,10 +341,14 @@ module internal ListSerializer =
         writeTag name.Name name writer inner value
 
     /// Writer function for generic IEnumerables with attribute values
-    let writeGenericEnumerableAttributes<'a> (writeFunc : WriterFunc) name (writer : TextWriter) (attr: (string * string) list) (value : obj) =
+    let writeGenericEnumerableAttributes<'a> (writeFunc : WriterFunc) (ti : TypeWriterInfo) (name : NameInfo) (writer : TextWriter) (value : obj) =
         let collection : IEnumerable<'a> = unbox value
-        collection
-        |> Seq.iter (writeTagAttributes name.Item attr name writer writeFunc)
+        let nameInfo = { name with Name = name.Item }
+        let attr = extractAttributeValues ti value
+        let inner _ _ _ =
+            collection
+            |> Seq.iter (writeFunc nameInfo writer)
+        writeTagAttributes name.Name attr name writer inner value
 
     /// Wrapper function to get the generic IEnumerable writer
     let getGenericEnumerableWriter elemWriter t =
@@ -343,7 +357,17 @@ module internal ListSerializer =
         let writer = Type.GetType("SharpXml.ListSerializer").GetMethod("writeGenericEnumerable", flags)
         let mtd = writer.MakeGenericMethod([| t |])
         fun n (w : TextWriter) x ->
+            // TODO: I guess this kind of invokation is slow...
             mtd.Invoke(null, [| elemWriter; n; w; x |]) |> ignore
+
+    let getGenericEnumerableAttributeWriter elemWriter t (ti : TypeWriterInfo) =
+        // TODO: this does not look sane at all
+        let flags = BindingFlags.NonPublic ||| BindingFlags.Static
+        let writer = Type.GetType("SharpXml.ListSerializer").GetMethod("writeGenericEnumerableAttributes", flags)
+        let mtd = writer.MakeGenericMethod([| t |])
+        fun n (w : TextWriter) x ->
+            // TODO: I guess this kind of invokation is slow...
+            mtd.Invoke(null, [| elemWriter; ti; n; w; x |]) |> ignore
 
 /// Serialization logic
 module internal Serializer =
@@ -501,7 +525,12 @@ module internal Serializer =
         match t with
         | GenericTypeOf GenericTypes.iEnum elemType ->
             let elemWriter = getWriterFunc elemType
-            Some <| ListSerializer.getGenericEnumerableWriter elemWriter elemType
+            if XmlConfig.Instance.UseAttributes
+            then
+                let info = getTypeWriterInfo t
+                Some <| ListSerializer.getGenericEnumerableAttributeWriter elemWriter elemType info
+            else
+                Some <| ListSerializer.getGenericEnumerableWriter elemWriter elemType
         | _ when matchInterface typeof<IEnumerable> t ->
             Some <| injectWriteTag (ListSerializer.writeEnumerable getWriterFunc)
         | _ -> None
@@ -546,12 +575,7 @@ module internal Serializer =
     and writeClassWithAttributes (typeInfo : TypeInfo) (info : TypeWriterInfo) (name : NameInfo) (writer : TextWriter) (value : obj) =
         let statics = typeInfo.Attributes |> List.ofArray
         let attr =
-            info.Attributes
-            |> List.choose (fun a ->
-                let v = a.GetFunc.Invoke value
-                // TODO: use a type specific writer function here
-                let str = v.ToString()
-                if v <> null then Some (a.Key, str) else None)
+            extractAttributeValues info value
             |> List.append statics
         writeTagAttributes name.Name attr name writer (writeClassInner info) value
 
