@@ -57,6 +57,22 @@ module internal Utils =
             fun (v : 'T) -> (tagReader v) = uc.Tag
         | _ -> failwith "invalid expression"
 
+    let shortDateTimeFormat = "yyyy-MM-dd"
+    let defaultFormat = "dd/MM/yyyy HH:mm:ss"
+    let defaultFormatWithFraction = "dd/MM/yyyy HH:mm:ss.fff"
+    let xsdFormat = "yyyy-MM-ddTHH:mm:ss.fffffffZ"
+    let xsdFormat3F = "yyyy-MM-ddTHH:mm:ss.fffZ"
+    let xsdFormatSeconds = "yyyy-MM-ddTHH:mm:ssZ"
+
+    let toUniversal x = TimeZoneInfo.ConvertTimeToUtc(x)
+
+    /// Convert the given DateTime into the shortest possible XSD format
+    let toShortestXsdFormat (date : DateTime) =
+        let day = date.TimeOfDay
+        if day.Ticks = 0L then date.ToString(shortDateTimeFormat)
+        elif day.Milliseconds = 0 then (toUniversal date).ToString(xsdFormatSeconds)
+        else (toUniversal date).ToString(xsdFormat3F)
+
 /// Module containing atomic operations like
 /// thread-safe dictionary update
 module internal Atom =

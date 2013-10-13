@@ -64,6 +64,9 @@ module internal SerializerBase =
     open System
     open System.IO
 
+    open Extensions
+    open Utils
+
     /// General purpose XML tags writer function
     let writeTag (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
         w.Write('<'); w.Write(name); w.Write('>')
@@ -102,8 +105,11 @@ module internal SerializerBase =
         |> List.choose (fun a ->
             let v = a.GetFunc.Invoke value
             if v <> null then
-                // TODO: use a type specific writer function here
-                let str = v.ToString()
+                // TODO: use a type specific writer functions here
+                let str =
+                    match Type.GetTypeCode(v.GetType().NullableUnderlying()) with
+                    | TypeCode.DateTime -> toShortestXsdFormat (unbox v)
+                    | _ -> v.ToString()
                 Some (a.Key, str)
             else None)
 
@@ -117,21 +123,8 @@ module internal ValueTypeSerializer =
 
     open Microsoft.FSharp.NativeInterop
 
-    open SharpXml.Extensions
-
-    let shortDateTimeFormat = "yyyy-MM-dd"
-    let defaultFormat = "dd/MM/yyyy HH:mm:ss"
-    let defaultFormatWithFraction = "dd/MM/yyyy HH:mm:ss.fff"
-    let xsdFormat = "yyyy-MM-ddTHH:mm:ss.fffffffZ"
-    let xsdFormat3F = "yyyy-MM-ddTHH:mm:ss.fffZ"
-    let xsdFormatSeconds = "yyyy-MM-ddTHH:mm:ssZ"
-
-    /// Convert the given DateTime into the shortest possible XSD format
-    let toShortestXsdFormat (date : DateTime) =
-        let day = date.TimeOfDay
-        if day.Ticks = 0L then date.ToString(shortDateTimeFormat)
-        elif day.Milliseconds = 0 then date.ToUniversal().ToString(xsdFormatSeconds)
-        else date.ToString() // TODO
+    open Extensions
+    open Utils
 
     let inline writeString (writer : TextWriter) (content : string) =
         let len = content.Length

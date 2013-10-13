@@ -99,8 +99,3 @@ module internal Extensions =
 
     let matchInterface (interfaceType : Type) (t : Type) =
         t.IsAssignableFrom(interfaceType) || t.HasInterface(interfaceType)
-
-    /// Extension methods for System.DateTime
-    type System.DateTime with
-
-        member x.ToUniversal() = TimeZoneInfo.ConvertTimeToUtc(x)
