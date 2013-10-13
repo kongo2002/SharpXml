@@ -394,6 +394,7 @@ module internal Serializer =
     let writerFuncName = "ToXml"
     let instanceFlags = BindingFlags.Public ||| BindingFlags.Instance
     let staticFlags = BindingFlags.Public ||| BindingFlags.Static
+    let namespaceRegex = Regex(@"^\s*""([^""]+)""", RegexOptions.Compiled)
 
     /// Try to determine one of a special serialization
     /// function, i.e. Exception, Uri
@@ -419,7 +420,11 @@ module internal Serializer =
             attr.Attributes
             |> Array.choose (fun a ->
                 match a.Split('=') with
-                | [|k; v|] when notWhite k -> Some (k.Trim(), v)
+                | [|k; v|] when notWhite k ->
+                    let m = namespaceRegex.Match(v)
+                    if m.Success && m.Groups.Count > 1
+                    then Some (k.Trim(), m.Groups.[1].Value)
+                    else None
                 | _ -> None)
         | _ -> [||]
 
