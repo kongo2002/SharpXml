@@ -205,11 +205,11 @@ module internal ListDeserializer =
                         // in that case we have to instantiate a new item
                         // and try to set its attribute properties
                         match elemInfo with
-                        | Some i ->
+                        | Some i when not attrs.IsEmpty ->
                             let value = i.Ctor.Invoke() :?> 'a
                             ValueTypeDeserializer.setAttributes i attrs value
                             list.Add(value)
-                        | None -> ()
+                        | _ -> ()
                         inner()
                     | _ -> ()
         inner()
