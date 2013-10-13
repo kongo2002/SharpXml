@@ -32,6 +32,10 @@ module DeserializationTests =
     let deserialize<'a> input =
         XmlSerializer.DeserializeFromString<'a>(input)
 
+    [<SetUp>]
+    let init() =
+        XmlConfig.Instance.ClearDeserializers()
+
     [<Test>]
     let ``Can deserialize a simple class``() =
         let out = deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>"
@@ -342,6 +346,16 @@ module DeserializationTests =
         result.V2.Attr |> should equal "some attribute value"
 
     [<Test>]
+    let ``Can deserialize attributed properties from single XML tags``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<class><v2 attr=\"some attribute value\" /><v1>932</v1></class>"
+        let result = deserialize<GenericClass<AttributeClass>> input
+        result.V1 |> should equal 932
+        result.V2.Value |> should equal 0
+        result.V2.Attr |> should equal "some attribute value"
+
+    [<Test>]
     let ``Can deserialize lists of classes with attributes``() =
         XmlConfig.Instance.UseAttributes <- true
 
@@ -353,6 +367,17 @@ module DeserializationTests =
         result.V2.[1].Attr |> should equal "second"
         result.V2.[0].Value |> should equal 1
         result.V2.[1].Value |> should equal 2
+
+    [<Test>]
+    let ``Can deserialize lists of classes with attributes from single XML tags``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<class><v2><item attr=\"first\" /><item attr=\"second\" /></v2><v1>932</v1></class>"
+        let result = deserialize<GenericClass<List<AttributeClass>>> input
+        result.V1 |> should equal 932
+        result.V2.Count |> should equal 2
+        result.V2.[0].Attr |> should equal "first"
+        result.V2.[1].Attr |> should equal "second"
 
     [<Test>]
     let ``Can deserialize lists with attributes``() =

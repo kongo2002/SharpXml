@@ -33,7 +33,7 @@ type internal PropertyReaderInfo = {
 /// of a specific type and all its members that have to be deserialized
 type internal TypeBuilderInfo = {
     Type : System.Type
-    // TODO: I would love to use a case-insensitive FSharpMaps instead
+    // TODO: I would love to use case-insensitive FSharpMaps instead
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
     Attrs : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
     Ctor : EmptyConstructor }
@@ -189,7 +189,7 @@ module internal ListDeserializer =
         else
             eatSomeTag info |> fst, []
 
-    let parseList<'a> (elemParser : ReaderFunc) attr (info : ParserInfo) =
+    let parseList<'a> (bInfo : TypeBuilderInfo option) (elemParser : ReaderFunc) attr (info : ParserInfo) =
         let list = List<'a>()
         let rec inner() =
             if not info.IsEnd then
@@ -202,7 +202,14 @@ module internal ListDeserializer =
                         let value = elemParser attrs info :?> 'a
                         list.Add(value)
                         inner()
-                    | TagType.Single -> inner()
+                    | TagType.Single ->
+                        match bInfo with
+                        | Some i -> 
+                            let value = i.Ctor.Invoke() :?> 'a
+                            ValueTypeDeserializer.setAttributes i attrs value
+                            list.Add(value)
+                        | None -> ()
+                        inner()
                     | _ -> ()
         inner()
         list
@@ -224,17 +231,17 @@ module internal ListDeserializer =
         inner()
 
     /// Reader function for immutable F# lists
-    let listReader<'a> (reader : ReaderFunc) attr xml =
-        let list = parseList<'a> reader attr xml
+    let listReader<'a> info (reader : ReaderFunc) attr xml =
+        let list = parseList<'a> info reader attr xml
         List.ofSeq list
 
     /// Reader function for CLR list (System.Collections.Generic.List<T>)
-    let clrListReader<'a> (reader : ReaderFunc) attr xml =
-        parseList<'a> reader attr xml
+    let clrListReader<'a> info (reader : ReaderFunc) attr xml =
+        parseList<'a> info reader attr xml
 
     /// Reader function for arrays
-    let arrayReader<'a> (reader : ReaderFunc) attr xml =
-        let list = parseList<'a> reader attr xml
+    let arrayReader<'a> info (reader : ReaderFunc) attr xml =
+        let list = parseList<'a> info reader attr xml
         list.ToArray()
 
     /// Reader function for untyped collections
@@ -244,42 +251,42 @@ module internal ListDeserializer =
         box list
 
     /// Reader function for hash sets
-    let hashSetReader<'a> (reader : ReaderFunc) attr xml =
-        HashSet(parseList<'a> reader attr xml)
+    let hashSetReader<'a> info (reader : ReaderFunc) attr xml =
+        HashSet(parseList<'a> info reader attr xml)
 
     /// Reader function for generic collections
-    let genericCollectionReader<'a> (reader : ReaderFunc) (info : TypeBuilderInfo) attr xml =
+    let genericCollectionReader<'a> (reader : ReaderFunc) (info : TypeBuilderInfo) elemInfo attr xml =
         let collection = info.Ctor.Invoke() :?> ICollection<'a>
-        let list = parseList<'a> reader attr xml
+        let list = parseList<'a> elemInfo reader attr xml
         list.ForEach(fun elem -> collection.Add(elem))
         ValueTypeDeserializer.setAttributes info attr collection
         collection
 
     /// Reader function for readonly collections
-    let genericROReader<'a> (reader : ReaderFunc) (ctor : System.Reflection.ConstructorInfo) attr xml =
-        let list = clrListReader<'a> reader attr xml
+    let genericROReader<'a> (reader : ReaderFunc) (ctor : System.Reflection.ConstructorInfo) info attr xml =
+        let list = clrListReader<'a> info reader attr xml
         ctor.Invoke([| list |])
 
     /// Reader function for queues
-    let queueReader<'a> (reader : ReaderFunc) attr xml =
-        Queue<'a>(parseList<'a> reader attr xml)
+    let queueReader<'a> info (reader : ReaderFunc) attr xml =
+        Queue<'a>(parseList<'a> info reader attr xml)
 
     /// Reader function for stacks
-    let stackReader<'a> (reader : ReaderFunc) attr xml =
-        Stack<'a>(parseList<'a> reader attr xml)
+    let stackReader<'a> info (reader : ReaderFunc) attr xml =
+        Stack<'a>(parseList<'a> info reader attr xml)
 
     /// Reader function for generic linked lists
-    let linkedListReader<'a> (reader : ReaderFunc) attr xml =
-        LinkedList<'a>(parseList<'a> reader attr xml)
+    let linkedListReader<'a> info (reader : ReaderFunc) attr xml =
+        LinkedList<'a>(parseList<'a> info reader attr xml)
 
     /// Specialized reader function for string arrays
     let stringArrayReader attr xml =
-        listReader<string> ValueTypeDeserializer.stringReader attr xml |> List.toArray |> box
+        listReader<string> None ValueTypeDeserializer.stringReader attr xml |> List.toArray |> box
 
     /// Specialized reader function for integer arrays
     let intArrayReader attr xml =
         let intReader = Int32.Parse >> box |> ValueTypeDeserializer.buildValueReader
-        listReader<int> intReader attr xml |> List.toArray |> box
+        listReader<int> None intReader attr xml |> List.toArray |> box
 
     /// Specialized reader function for byte arrays
     let byteArrayReader attr xml =
@@ -434,10 +441,18 @@ module internal Deserializer =
             let builder = buildTypeBuilderInfo t
             Atom.updateAtomDict propertyCache t builder
 
+    and setSingleTagAttributes (builder : TypeBuilderInfo) (prop : PropertyReaderInfo) attrs inst =
+        // TODO: get rid of this lookup
+        let info = getTypeBuilderInfo prop.Info.PropertyType
+        let instance = prop.Ctor.Invoke()
+        ValueTypeDeserializer.setAttributes info attrs instance
+        prop.Setter.Invoke(inst, instance)
+
     and buildGenericFunction name t =
         let mtd = getGenericListFunction name t
         let elemReader = getReaderFunc t
-        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; attr; xml |])
+        let etbi = getElemTypeBuilderInfo t
+        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| etbi; elemReader; attr; xml |])
 
     /// Get a reader function for generic F# lists
     and getTypedFsListReader =
@@ -467,18 +482,25 @@ module internal Deserializer =
     and getLinkedListReader =
         buildGenericFunction "linkedListReader"
 
+    and getElemTypeBuilderInfo t =
+        if XmlConfig.Instance.UseAttributes
+        then Some <| getTypeBuilderInfo t
+        else None
+
     /// Get a reader function for generic collections
     and getGenericCollectionReader (listType : Type) (t : Type) =
         let mtd = getGenericListFunction "genericCollectionReader" t
         let elemReader = getReaderFunc t
         let ctor = getTypeBuilderInfo listType
-        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; attr; xml |])
+        let etbi = getElemTypeBuilderInfo t
+        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; etbi; attr; xml |])
 
     /// Get a reader function for generic readonly collections
     and getGenericROReader ctor (listType : Type) (t : Type) =
         let mtd = getGenericListFunction "genericROReader" t
         let elemReader = getReaderFunc t
-        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; attr; xml |])
+        let etbi = getElemTypeBuilderInfo t
+        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; etbi; attr; xml |])
 
     /// Try to determine a reader function for array types
     and getArrayReader (t : Type) = fun () ->
@@ -585,9 +607,17 @@ module internal Deserializer =
                                 Diagnostics.Trace.WriteLine(error)
                             eatUnknownTilClosing xml |> ignore
                     | _ -> eatUnknownTilClosing xml |> ignore
+
                     ValueTypeDeserializer.setAttributes builder attr instance
                     inner()
                 | TagType.Single ->
+                    // the matching property is not initialized yet
+                    // but we maybe have to set one or more of its values
+                    if not attrs.IsEmpty then
+                        match builder.Props.TryGetValue name with
+                        | true, prop -> setSingleTagAttributes builder prop attrs instance
+                        | _ -> ()
+
                     ValueTypeDeserializer.setAttributes builder attr instance
                     inner()
                 | _ -> ()
