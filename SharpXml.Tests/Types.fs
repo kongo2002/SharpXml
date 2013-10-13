@@ -435,6 +435,20 @@ module Types =
             with get() = attr
             and set v = attr <- v
 
+    type AttributeOnlyClass() =
+        let mutable value = Unchecked.defaultof<int>
+        let mutable attr = Unchecked.defaultof<string>
+
+        [<XmlAttribute("value")>]
+        member x.Value
+            with get() = value
+            and set v = value <- v
+
+        [<XmlAttribute("attr")>]
+        member x.Attr
+            with get() = attr
+            and set v = attr <- v
+
     type AttributeList<'T>() =
         inherit List<'T>()
 

@@ -538,16 +538,20 @@ module internal Serializer =
                     { Properties = ps; Attributes = [] }
             Atom.updateAtomDict propertyCache t info
 
+    /// Class writer function without attribute support
     and writeClass func (info: TypeWriterInfo) (name : NameInfo) (writer : TextWriter) (value : obj) =
         func name.Name name writer (writeClassInner info) value
 
+    /// Class writer function with attribute support
     and writeClassWithAttributes (typeInfo : TypeInfo) (info : TypeWriterInfo) (name : NameInfo) (writer : TextWriter) (value : obj) =
         let statics = typeInfo.Attributes |> List.ofArray
         let attr =
             info.Attributes
             |> List.choose (fun a ->
                 let v = a.GetFunc.Invoke value
-                if v <> null then Some (a.Key, v.ToString()) else None)
+                // TODO: use a type specific writer function here
+                let str = v.ToString()
+                if v <> null then Some (a.Key, str) else None)
             |> List.append statics
         writeTagAttributes name.Name attr name writer (writeClassInner info) value
 

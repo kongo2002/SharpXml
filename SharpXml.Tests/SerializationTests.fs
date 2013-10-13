@@ -28,6 +28,9 @@ module SerializationTests =
 
     [<SetUp>]
     let init() =
+        // this is important if some unit tests use
+        // different settings that affect the behavior of
+        // cached serialization functions
         XmlConfig.Instance.ClearSerializers()
 
     let serialize<'a> (element : 'a) =
@@ -399,3 +402,24 @@ module SerializationTests =
 
         let cls = AttributeClass(Value = 9, Attr = "some value")
         serialize cls |> should equal "<attributeClass attr=\"some value\"><value>9</value></attributeClass>"
+
+    [<Test>]
+    let ``Can serialize elements with static and dynamic XML attributes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let cls = AttributeClass2(Value = 15, Attr = "attribute value")
+        serialize cls |> should equal "<attributeClass2 bar=\"foo\" attr=\"attribute value\"><value>15</value></attributeClass2>"
+
+    [<Test>]
+    let ``Can serialize integer attributes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let cls = AttributeOnlyClass(Value = 20)
+        serialize cls |> should equal "<attributeOnlyClass value=\"20\"></attributeOnlyClass>"
+
+    [<Test>]
+    let ``Can serialize attribute-only classes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let cls = AttributeOnlyClass(Value = 15, Attr = "attribute value")
+        serialize cls |> should equal "<attributeOnlyClass value=\"15\" attr=\"attribute value\"></attributeOnlyClass>"
