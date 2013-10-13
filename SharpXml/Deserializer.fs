@@ -412,7 +412,11 @@ module internal Deserializer =
               Reader = reader;
               Setter = ReflectionHelpers.getObjSetter p;
               Ctor = ReflectionHelpers.getConstructorMethod t } |> Some
-        | None -> None
+        | None ->
+            System.Diagnostics.Trace.WriteLine(
+                String.Format("Unable to determine deserializer for attribute property '{0}' of type {1}",
+                    p.Name, t))
+            None
 
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
     let rec buildReaderInfo (p : PropertyInfo) : PropertyReaderInfo = {
