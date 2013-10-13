@@ -30,12 +30,20 @@ type internal PropertyReaderInfo = {
     Ctor : EmptyConstructor }
 
 /// Record type containing the deserialization information
+/// for XML attribute properties
+type internal AttributeReaderInfo = {
+    Info : System.Reflection.PropertyInfo
+    Reader : string -> obj
+    Setter : SetterFunc
+    Ctor : EmptyConstructor }
+
+/// Record type containing the deserialization information
 /// of a specific type and all its members that have to be deserialized
 type internal TypeBuilderInfo = {
     Type : System.Type
     // TODO: I would love to use case-insensitive FSharpMaps instead
     Props : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
-    Attrs : System.Collections.Generic.Dictionary<string, PropertyReaderInfo>
+    Attrs : System.Collections.Generic.Dictionary<string, AttributeReaderInfo>
     Ctor : EmptyConstructor }
 
 /// Record type containing the deserialization information
@@ -75,26 +83,27 @@ module internal ValueTypeDeserializer =
             |> Some
         else None
 
+    let getValueParser t =
+        match Type.GetTypeCode(t) with
+        | TypeCode.Boolean -> Boolean.Parse >> box |> Some
+        | TypeCode.Byte -> Byte.Parse >> box |> Some
+        | TypeCode.Int16 -> Int16.Parse >> box |> Some
+        | TypeCode.Int32 -> Int32.Parse >> box |> Some
+        | TypeCode.Int64 -> Int64.Parse >> box |> Some
+        | TypeCode.Char -> Char.Parse >> box |> Some
+        | TypeCode.DateTime -> DateTime.Parse >> box |> Some
+        | TypeCode.Decimal -> Decimal.Parse >> box |> Some
+        | TypeCode.Double -> Double.Parse >> box |> Some
+        | TypeCode.SByte -> SByte.Parse >> box |> Some
+        | TypeCode.Single -> Single.Parse >> box |> Some
+        | TypeCode.UInt16 -> UInt16.Parse >> box |> Some
+        | TypeCode.UInt32 -> UInt32.Parse >> box |> Some
+        | TypeCode.UInt64 -> UInt64.Parse >> box |> Some
+        | TypeCode.String -> box |> Some
+        | _ -> None
+
     let getValueReader (t : Type) = fun () ->
-        let reader =
-            match Type.GetTypeCode(t) with
-            | TypeCode.Boolean -> Boolean.Parse >> box |> Some
-            | TypeCode.Byte -> Byte.Parse >> box |> Some
-            | TypeCode.Int16 -> Int16.Parse >> box |> Some
-            | TypeCode.Int32 -> Int32.Parse >> box |> Some
-            | TypeCode.Int64 -> Int64.Parse >> box |> Some
-            | TypeCode.Char -> Char.Parse >> box |> Some
-            | TypeCode.DateTime -> DateTime.Parse >> box |> Some
-            | TypeCode.Decimal -> Decimal.Parse >> box |> Some
-            | TypeCode.Double -> Double.Parse >> box |> Some
-            | TypeCode.SByte -> SByte.Parse >> box |> Some
-            | TypeCode.Single -> Single.Parse >> box |> Some
-            | TypeCode.UInt16 -> UInt16.Parse >> box |> Some
-            | TypeCode.UInt32 -> UInt32.Parse >> box |> Some
-            | TypeCode.UInt64 -> UInt64.Parse >> box |> Some
-            | TypeCode.String -> box |> Some
-            | _ -> None
-        match reader with
+        match getValueParser t with
         | Some r -> Some(buildValueReader r)
         | _ -> None
 
@@ -109,7 +118,7 @@ module internal ValueTypeDeserializer =
                 match builder.Attrs.TryGetValue k with
                 | true, prop ->
                     try
-                        prop.Setter.Invoke(inst, v)
+                        prop.Setter.Invoke(inst, prop.Reader v)
                     with ex ->
                         System.Diagnostics.Trace.WriteLine(
                             String.Format("Failed to set attribute '{0}': {1}", k, ex))
@@ -393,8 +402,20 @@ module internal Deserializer =
         | Some attr when notWhite attr.Name -> attr.Name
         | _ -> pi.Name
 
+    /// Try to determine a AttributeReaderInfo record based on
+    /// the specified PropertyInfo
+    let getAttributeReaderInfo (p : PropertyInfo) : AttributeReaderInfo option =
+        let t = p.PropertyType
+        match ValueTypeDeserializer.getValueParser t with
+        | Some reader ->
+            { Info = p;
+              Reader = reader;
+              Setter = ReflectionHelpers.getObjSetter p;
+              Ctor = ReflectionHelpers.getConstructorMethod t } |> Some
+        | None -> None
+
     /// Build the PropertyReaderInfo record based on the given PropertyInfo
-    let rec buildReaderInfo (p : PropertyInfo) = {
+    let rec buildReaderInfo (p : PropertyInfo) : PropertyReaderInfo = {
         Info = p;
         Reader = getReaderFunc p.PropertyType;
         Setter = ReflectionHelpers.getObjSetter p;
@@ -409,11 +430,13 @@ module internal Deserializer =
 
     /// Determine the property and its PropertyReaderInfo in case
     /// XML attributes are supported
-    and determinePropertyWithAttribute (pDict : Dictionary<string, PropertyReaderInfo>, aDict : Dictionary<string, PropertyReaderInfo>) pi =
+    and determinePropertyWithAttribute (pDict : Dictionary<string, PropertyReaderInfo>, aDict : Dictionary<string, AttributeReaderInfo>) pi =
         match getAttribute<SharpXml.Common.XmlAttributeAttribute> pi with
         | Some attr ->
             let name = if notWhite attr.Name then attr.Name else pi.Name
-            aDict.Add(name, buildReaderInfo pi)
+            match getAttributeReaderInfo pi with
+            | Some info -> aDict.Add(name, info)
+            | _ -> ()
         | _ ->
             let name = getPropertyName pi
             pDict.Add(name, buildReaderInfo pi)
@@ -426,7 +449,7 @@ module internal Deserializer =
             ReflectionHelpers.getDeserializableProperties t
             |> Array.fold func
                 (Dictionary<string, PropertyReaderInfo>(StringComparer.OrdinalIgnoreCase),
-                 Dictionary<string, PropertyReaderInfo>(StringComparer.OrdinalIgnoreCase))
+                 Dictionary<string, AttributeReaderInfo>(StringComparer.OrdinalIgnoreCase))
         { Type = t
           Props = props
           Attrs = attrs
