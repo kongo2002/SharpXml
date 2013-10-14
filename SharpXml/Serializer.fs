@@ -50,7 +50,7 @@ type internal PropertyWriterInfo = {
 type internal AttributeWriterInfo = {
     Key : string
     GetFunc : GetterFunc
-    WriteFunc : Lazy<WriterFunc> }
+    ToStr : SerializerFunc }
 
 /// Record containing all property and attribute writer
 /// information used for serialization of a specific type
@@ -104,14 +104,7 @@ module internal SerializerBase =
         info.Attributes
         |> List.choose (fun a ->
             let v = a.GetFunc.Invoke value
-            if v <> null then
-                // TODO: use a type specific writer functions here
-                let str =
-                    match Type.GetTypeCode(v.GetType().NullableUnderlying()) with
-                    | TypeCode.DateTime -> toShortestXsdFormat (unbox v)
-                    | _ -> v.ToString()
-                Some (a.Key, str)
-            else None)
+            if v <> null then Some (a.Key, a.ToStr.Invoke(v)) else None)
 
 /// Module containing the serialization logic
 /// for value types
@@ -290,6 +283,8 @@ module internal ValueTypeSerializer =
             Some write
         | None -> None
 
+/// Various helper functions for XML attribute
+/// serialization
 module internal AttributeSerializer =
 
     open System
@@ -297,15 +292,12 @@ module internal AttributeSerializer =
     open Extensions
     open Utils
 
-    let nullStrFunc (func : obj -> string) =
-        fun (v : obj) -> if v <> null then func v else null
-
     let nullableStrFunc<'a when 'a: (new: unit -> 'a)
                             and 'a :> ValueType
                             and 'a: struct> (func : 'a -> string) =
-        fun (v : obj) ->
+        SerializerFunc(fun (v : obj) ->
             let value : Nullable<'a> = unbox v
-            if value.HasValue then func value.Value else null
+            if value.HasValue then func value.Value else null)
 
     let writeGuid (v : Guid) =
         v.ToString("N")
@@ -313,59 +305,58 @@ module internal AttributeSerializer =
     let writeDateTimeOffset (v : DateTimeOffset) =
         v.ToString("o")
 
-    let writeByte (v : byte) = v.ToString()
-    let writeChar (v : char) = v.ToString()
+    let writeByte    (v : byte)    = v.ToString()
+    let writeChar    (v : char)    = v.ToString()
     let writeDecimal (v : decimal) = v.ToString()
-    let writeFloat (v : float) = v.ToString()
-    let writeInt16 (v : int16) = v.ToString()
-    let writeInt32 (v : int) = v.ToString()
-    let writeInt64 (v : int) = v.ToString()
-    let writeSByte (v : sbyte) = v.ToString()
-    let writeFloat32 (v : single) = v.ToString()
-    let writeUInt16 (v : uint16) = v.ToString()
-    let writeUInt32 (v : uint16) = v.ToString()
-    let writeUInt64 (v : uint64) = v.ToString()
+    let writeFloat   (v : float)   = v.ToString()
+    let writeInt16   (v : int16)   = v.ToString()
+    let writeInt32   (v : int)     = v.ToString()
+    let writeInt64   (v : int)     = v.ToString()
+    let writeSByte   (v : sbyte)   = v.ToString()
+    let writeFloat32 (v : single)  = v.ToString()
+    let writeUInt16  (v : uint16)  = v.ToString()
+    let writeUInt32  (v : uint16)  = v.ToString()
+    let writeUInt64  (v : uint64)  = v.ToString()
 
     let writeEnumNames (t: Type) =
         let under = Enum.GetUnderlyingType(t)
         match Type.GetTypeCode(under) with
-        | TypeCode.Byte -> Some (unbox >> writeByte)
-        | TypeCode.Char -> Some (unbox >> writeChar)
-        | TypeCode.Decimal -> Some (unbox >> writeDecimal)
-        | TypeCode.Double -> Some (unbox >> writeFloat)
-        | TypeCode.Int16 -> Some (unbox >> writeInt16)
-        | TypeCode.Int32 -> Some (unbox >> writeInt32)
-        | TypeCode.Int64 -> Some (unbox >> writeInt64)
-        | TypeCode.SByte -> Some (unbox >> writeSByte)
-        | TypeCode.Single -> Some (unbox >> writeFloat32)
-        | TypeCode.UInt16 -> Some (unbox >> writeUInt16)
-        | TypeCode.UInt32 -> Some (unbox >> writeUInt32)
-        | TypeCode.UInt64 -> Some (unbox >> writeUInt64)
-        | _ -> None
+        | TypeCode.Byte    -> Some <| SerializerFunc(unbox >> writeByte)
+        | TypeCode.Char    -> Some <| SerializerFunc(unbox >> writeChar)
+        | TypeCode.Decimal -> Some <| SerializerFunc(unbox >> writeDecimal)
+        | TypeCode.Double  -> Some <| SerializerFunc(unbox >> writeFloat)
+        | TypeCode.Int16   -> Some <| SerializerFunc(unbox >> writeInt16)
+        | TypeCode.Int32   -> Some <| SerializerFunc(unbox >> writeInt32)
+        | TypeCode.Int64   -> Some <| SerializerFunc(unbox >> writeInt64)
+        | TypeCode.SByte   -> Some <| SerializerFunc(unbox >> writeSByte)
+        | TypeCode.Single  -> Some <| SerializerFunc(unbox >> writeFloat32)
+        | TypeCode.UInt16  -> Some <| SerializerFunc(unbox >> writeUInt16)
+        | TypeCode.UInt32  -> Some <| SerializerFunc(unbox >> writeUInt32)
+        | TypeCode.UInt64  -> Some <| SerializerFunc(unbox >> writeUInt64)
+        | _                -> None
 
     let writeEnum (v : obj) =
         v.ToString()
 
-    let getValueWriter (t: Type) =
+    let getValueWriter (t: Type) : SerializerFunc option =
         if t = typeof<Nullable<DateTime>> then
             Some <| nullableStrFunc toShortestXsdFormat 
         elif t = typeof<Guid> then
-            Some (unbox >> writeGuid)
+            Some <| SerializerFunc(unbox >> writeGuid)
         elif t = typeof<Nullable<Guid>> then
             Some <| nullableStrFunc writeGuid
         elif t = typeof<DateTimeOffset> then
-            Some (unbox >> writeDateTimeOffset)
+            Some <| SerializerFunc(unbox >> writeDateTimeOffset)
         elif t = typeof<Nullable<DateTimeOffset>> then
             Some <| nullableStrFunc writeDateTimeOffset
         elif t.IsEnum || t.UnderlyingSystemType.IsEnum then
             if t.HasAttribute("FlagsAttribute")
             then writeEnumNames t
-            else Some writeEnum
+            else None
         else
             match Type.GetTypeCode(t.NullableUnderlying()) with
-            | TypeCode.DateTime -> Some (unbox >> toShortestXsdFormat)
+            | TypeCode.DateTime -> Some <| SerializerFunc(unbox >> toShortestXsdFormat)
             | _ -> None
-        
 
 /// Serialization logic for list and collection types
 module internal ListSerializer =
@@ -614,9 +605,20 @@ module internal Serializer =
     and determineWriterInfo (ps, attrs) (pi : PropertyInfo) =
         match getAttribute<XmlAttributeAttribute> pi with
         | Some attr ->
+            let t = pi.PropertyType
+            let writer =
+                match XmlConfig.Instance.TryGetSerializer t with
+                | Some serializer -> serializer
+                | None ->
+                    match AttributeSerializer.getValueWriter t with
+                    | Some writer -> writer
+                    | None -> SerializerFunc(fun v -> v.ToString())
             let key = if notWhite attr.Name then attr.Name else pi.Name
             let getter = ReflectionHelpers.getObjGetter pi
-            let info = { GetFunc = getter; Key = key; WriteFunc = lazy getWriterFunc pi.PropertyType }
+            let info =
+                { GetFunc = getter;
+                  Key = key;
+                  ToStr = writer }
             ps, info :: attrs 
         | None ->
             let info = buildPropertyWriterInfo pi
