@@ -290,6 +290,83 @@ module internal ValueTypeSerializer =
             Some write
         | None -> None
 
+module internal AttributeSerializer =
+
+    open System
+    
+    open Extensions
+    open Utils
+
+    let nullStrFunc (func : obj -> string) =
+        fun (v : obj) -> if v <> null then func v else null
+
+    let nullableStrFunc<'a when 'a: (new: unit -> 'a)
+                            and 'a :> ValueType
+                            and 'a: struct> (func : 'a -> string) =
+        fun (v : obj) ->
+            let value : Nullable<'a> = unbox v
+            if value.HasValue then func value.Value else null
+
+    let writeGuid (v : Guid) =
+        v.ToString("N")
+
+    let writeDateTimeOffset (v : DateTimeOffset) =
+        v.ToString("o")
+
+    let writeByte (v : byte) = v.ToString()
+    let writeChar (v : char) = v.ToString()
+    let writeDecimal (v : decimal) = v.ToString()
+    let writeFloat (v : float) = v.ToString()
+    let writeInt16 (v : int16) = v.ToString()
+    let writeInt32 (v : int) = v.ToString()
+    let writeInt64 (v : int) = v.ToString()
+    let writeSByte (v : sbyte) = v.ToString()
+    let writeFloat32 (v : single) = v.ToString()
+    let writeUInt16 (v : uint16) = v.ToString()
+    let writeUInt32 (v : uint16) = v.ToString()
+    let writeUInt64 (v : uint64) = v.ToString()
+
+    let writeEnumNames (t: Type) =
+        let under = Enum.GetUnderlyingType(t)
+        match Type.GetTypeCode(under) with
+        | TypeCode.Byte -> Some (unbox >> writeByte)
+        | TypeCode.Char -> Some (unbox >> writeChar)
+        | TypeCode.Decimal -> Some (unbox >> writeDecimal)
+        | TypeCode.Double -> Some (unbox >> writeFloat)
+        | TypeCode.Int16 -> Some (unbox >> writeInt16)
+        | TypeCode.Int32 -> Some (unbox >> writeInt32)
+        | TypeCode.Int64 -> Some (unbox >> writeInt64)
+        | TypeCode.SByte -> Some (unbox >> writeSByte)
+        | TypeCode.Single -> Some (unbox >> writeFloat32)
+        | TypeCode.UInt16 -> Some (unbox >> writeUInt16)
+        | TypeCode.UInt32 -> Some (unbox >> writeUInt32)
+        | TypeCode.UInt64 -> Some (unbox >> writeUInt64)
+        | _ -> None
+
+    let writeEnum (v : obj) =
+        v.ToString()
+
+    let getValueWriter (t: Type) =
+        if t = typeof<Nullable<DateTime>> then
+            Some <| nullableStrFunc toShortestXsdFormat 
+        elif t = typeof<Guid> then
+            Some (unbox >> writeGuid)
+        elif t = typeof<Nullable<Guid>> then
+            Some <| nullableStrFunc writeGuid
+        elif t = typeof<DateTimeOffset> then
+            Some (unbox >> writeDateTimeOffset)
+        elif t = typeof<Nullable<DateTimeOffset>> then
+            Some <| nullableStrFunc writeDateTimeOffset
+        elif t.IsEnum || t.UnderlyingSystemType.IsEnum then
+            if t.HasAttribute("FlagsAttribute")
+            then writeEnumNames t
+            else Some writeEnum
+        else
+            match Type.GetTypeCode(t.NullableUnderlying()) with
+            | TypeCode.DateTime -> Some (unbox >> toShortestXsdFormat)
+            | _ -> None
+        
+
 /// Serialization logic for list and collection types
 module internal ListSerializer =
 
