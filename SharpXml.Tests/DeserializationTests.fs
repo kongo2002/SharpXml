@@ -390,3 +390,11 @@ module DeserializationTests =
         result.V2.Attr |> should equal "listattr"
         result.V2.[0] |> should equal 1
         result.V2.[1] |> should equal 2
+
+    [<Test>]
+    let ``Can deserialize GUIDs``() =
+        let input = "<genericClass><v1>10</v1><v2>313d9a94-4c7e-46d3-b0ba-70d163969e5b</v2></genericClass>"
+        let result = deserialize<GenericClass<Guid>> input
+        result.V1 |> should equal 10
+        result.V2 |> should equal (Guid.Parse("313d9a94-4c7e-46d3-b0ba-70d163969e5b"))
+
