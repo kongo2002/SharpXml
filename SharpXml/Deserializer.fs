@@ -33,7 +33,7 @@ type internal PropertyReaderInfo = {
 /// for XML attribute properties
 type internal AttributeReaderInfo = {
     Info : System.Reflection.PropertyInfo
-    Reader : string -> obj
+    Reader : DeserializerFunc
     Setter : SetterFunc
     Ctor : EmptyConstructor }
 
@@ -85,22 +85,22 @@ module internal ValueTypeDeserializer =
 
     let getValueParser t =
         match Type.GetTypeCode(t) with
-        | TypeCode.Boolean -> Boolean.Parse >> box |> Some
-        | TypeCode.Byte -> Byte.Parse >> box |> Some
-        | TypeCode.Int16 -> Int16.Parse >> box |> Some
-        | TypeCode.Int32 -> Int32.Parse >> box |> Some
-        | TypeCode.Int64 -> Int64.Parse >> box |> Some
-        | TypeCode.Char -> Char.Parse >> box |> Some
+        | TypeCode.Boolean  -> Boolean.Parse  >> box |> Some
+        | TypeCode.Byte     -> Byte.Parse     >> box |> Some
+        | TypeCode.Int16    -> Int16.Parse    >> box |> Some
+        | TypeCode.Int32    -> Int32.Parse    >> box |> Some
+        | TypeCode.Int64    -> Int64.Parse    >> box |> Some
+        | TypeCode.Char     -> Char.Parse     >> box |> Some
         | TypeCode.DateTime -> DateTime.Parse >> box |> Some
-        | TypeCode.Decimal -> Decimal.Parse >> box |> Some
-        | TypeCode.Double -> Double.Parse >> box |> Some
-        | TypeCode.SByte -> SByte.Parse >> box |> Some
-        | TypeCode.Single -> Single.Parse >> box |> Some
-        | TypeCode.UInt16 -> UInt16.Parse >> box |> Some
-        | TypeCode.UInt32 -> UInt32.Parse >> box |> Some
-        | TypeCode.UInt64 -> UInt64.Parse >> box |> Some
-        | TypeCode.String -> box |> Some
-        | _ -> None
+        | TypeCode.Decimal  -> Decimal.Parse  >> box |> Some
+        | TypeCode.Double   -> Double.Parse   >> box |> Some
+        | TypeCode.SByte    -> SByte.Parse    >> box |> Some
+        | TypeCode.Single   -> Single.Parse   >> box |> Some
+        | TypeCode.UInt16   -> UInt16.Parse   >> box |> Some
+        | TypeCode.UInt32   -> UInt32.Parse   >> box |> Some
+        | TypeCode.UInt64   -> UInt64.Parse   >> box |> Some
+        | TypeCode.String   -> box |> Some
+        | _                 -> None
 
     let getValueReader (t : Type) = fun () ->
         match getValueParser t with
@@ -118,7 +118,7 @@ module internal ValueTypeDeserializer =
                 match builder.Attrs.TryGetValue k with
                 | true, prop ->
                     try
-                        prop.Setter.Invoke(inst, prop.Reader v)
+                        prop.Setter.Invoke(inst, prop.Reader.Invoke(v))
                     with ex ->
                         System.Diagnostics.Trace.WriteLine(
                             String.Format("Failed to set attribute '{0}': {1}", k, ex))
@@ -406,10 +406,17 @@ module internal Deserializer =
     /// the specified PropertyInfo
     let getAttributeReaderInfo (p : PropertyInfo) : AttributeReaderInfo option =
         let t = p.PropertyType
-        match ValueTypeDeserializer.getValueParser t with
-        | Some reader ->
+        let reader =
+            match XmlConfig.Instance.TryGetDeserializer t with
+            | Some deserializer -> Some deserializer
+            | None ->
+                match ValueTypeDeserializer.getValueParser t with
+                | Some parser -> Some <| DeserializerFunc(parser)
+                | None -> None
+        match reader with
+        | Some r ->
             { Info = p;
-              Reader = reader;
+              Reader = r;
               Setter = ReflectionHelpers.getObjSetter p;
               Ctor = ReflectionHelpers.getConstructorMethod t } |> Some
         | None ->
