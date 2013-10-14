@@ -412,7 +412,7 @@ module Types =
             with get() = attr
             and set v = attr <- v
 
-    [<XmlNamespace("foo=bar")>]
+    [<XmlNamespace("foo=\"bar\"")>]
     type StaticAttributeClass() =
         
         let mutable value = Unchecked.defaultof<int>
@@ -421,7 +421,7 @@ module Types =
             with get() = value
             and set v = value <- v
 
-    [<XmlNamespace("bar=foo")>]
+    [<XmlNamespace("bar=\"foo\"")>]
     type AttributeClass2() =
         let mutable value = Unchecked.defaultof<int>
         let mutable attr = Unchecked.defaultof<string>
