@@ -77,6 +77,7 @@ and `System.Collections.Specialized`:
 * IEnumerable&lt;T&gt;
 * IList
 * HashSet&lt;T&gt;
+* Nullable&lt;T&gt;
 * ReadOnlyCollection&lt;T&gt;
 * Queue&lt;T&gt;
 * Stack&lt;T&gt;
@@ -115,6 +116,9 @@ behavior. A few options to modify *SharpXml's* output exist anyways:
 
 - `XmlConfig.ThrowOnError`: Whether to throw an exception on deserialization
   errors or silently ignore errors (default: `false`)
+
+- `XmlConfig.UseAttributes`: Activates deserialization and serialization support
+  for XML *attributes* (see below for more information) (default: `false`)
 
 
 ### Custom serialization
@@ -173,6 +177,10 @@ serialization of .NET types using a few properties to choose from:
 - `[XmlElement Namespace="..."]`: Defines a XML namespace attribute for the
   selected type or property (*Note:* this attribute is currently used for
   serialization of root types only)
+
+  **Deprecated**: this property is *deprecated* as of version `1.4.0.0` of
+  *SharpXml*. Please use the `XmlNamespaceAttribute` instead.
+
 
 ## XML format
 
@@ -342,6 +350,9 @@ Using the property `Namespace` of the `XmlElementAttribute` you can set an
 optional namespace string that will be used on serialization of the root element
 of the resulting XML document:
 
+**Deprecated**: this property is *deprecated* as of version `1.4.0.0` of
+*SharpXml*. Please use the `XmlNamespaceAttribute` instead!
+
 ```cs
 [XmlElement(Namespace = "Some.Namespace")]
 public class NamespaceClass
@@ -361,6 +372,40 @@ The class described above will be serialized like the following:
 	<Name>foo</Name>
 </NamespaceClass>
 ```
+
+
+#### Static attribute values
+
+Like mentioned before instead of using the attribute `XmlElementAttribute` to
+set a namespace at the root level you can use `XmlNamespaceAttribute` instead.
+This attribute class is supported since *SharpXml 1.4.0.0*.
+
+You can achieve the same result of above like this:
+
+```cs
+[XmlNamespace("xmlns:\"Some.Namespace\"")]
+public class NamespaceClass
+{
+	public int Id { get; set; }
+	public string Name { get; set; }
+}
+```
+
+Like this you can set multiple static attributes as well:
+
+```cs
+[XmlNamespace("xmlns=\"Some.Namespace\"", "version=\"2.3.4.0\"")]
+public class MultipleNamespaceClass
+{
+	public int Id { get; set; }
+	public string Name { get; set; }
+}
+```
+
+*Note*: These attribute values are static and are used for serialization only.
+There is no actual matching or any validation logic against XML namespaces
+during the deserialization process.
+
 
 ### Struct types
 
@@ -462,9 +507,13 @@ without errors.
 
 - The order of the tags is irrelevant
 
-- Tag attributes are not supported and therefore ignored
+- Tag attributes are ignored by default (since version `1.4.0.0.` XML attribute
+  support can be enabled using `XmlConfig.UseAttributes`)
 
 - XML namespaces are ignored as well
+
+- XML parsing is not completely XML 1.0/1.1 compliant. I.e. `CDATA` sections are
+  not supported yet while comment parsing is just rudimentary implemented.
 
 In order to provide a better view on how fault-tolerant *SharpXml* works I will
 give an example of a *very bad formatted* XML input that will be deserialized
@@ -480,11 +529,129 @@ without any errors:
 This XML above will be successfully deserialized into an instance of `MyClass`.
 
 
+### XML attributes
+
+Since SharpXml version `1.4.0.0` XML attributes are supported as well although
+not enabled by default. In order to use attributes in serialization and
+deserialization you have to enable the setting `XmlConfig.UseAttributes`:
+
+```cs
+// activate XML attribute support
+XmlConfig.Instance.UseAttributes = true;
+```
+
+It is important to initially set this property before you actually use the
+`XmlSerializer`. Since all deserialization and serialization functions and type
+information are cached at the first time for any type you have to make sure the
+setting is set early. In case you have to reset the serializer cache you can
+trigger a refresh manually:
+
+```cs
+// clear both serializers and deserializers
+XmlSerializer.ClearCache();
+
+// basically the same like this:
+//XmlSerializer.ClearSerializers();
+//XmlSerializer.ClearDeserializers();
+
+XmlConfig.Instance.UseAttributes = false;
+```
+
+Moreover attributes have to be marked with the `XmlAttribute` attribute in the
+`SharpXml.Common` namespace:
+
+
+#### XmlAttribute
+
+Use the `XmlAttribute` attribute to mark a specific property to be
+serialized/deserialized as an attribute:
+
+```cs
+public class AttributeClass
+{
+	public string Value { get; set; }
+
+	[XmlAttribute]
+	public int Version { get; set; }
+
+	[XmlAttribute("Key")]
+	public string Name { get; set; }
+}
+
+var test = new AttributeClass
+{
+	Value = "Test",
+	Version = 2,
+	Name = "Attribute Test"
+};
+```
+
+The above example would result in the following XML:
+
+```xml
+<AttributeClass Version="2" Key="Attribute Test">
+	<Value>Test</Value>
+</AttributeClass>
+
+```
+
+The ordering of the XML attributes on serialization can not be manipulated or
+defined by the user.
+
+
+#### XmlAttribute on List&lt;T&gt; types
+
+Additionally it is supported to override the `List<T>` class in order to specify
+attributes on a collection base. This may look like the following:
+
+```cs
+public class AttributeList<T> : List<T>
+{
+	[XmlAttribute]
+	public int Version { get; set; }
+}
+
+public class AttributeTest
+{
+	[XmlAttribute("Attr")]
+	public string Attribute { get; set; }
+
+	public AttributeList<string> Values { get; set; }
+}
+
+var values = new AttributeList<string>
+{
+	"one",
+	"two"
+};
+
+values.Version = 5;
+
+var test = new AttributeTest
+{
+	Attribute = "value",
+	Values = values
+};
+```
+
+Here is the resulting XML output:
+
+```xml
+<AttributeTest Attr="value">
+	<Values Version="5">
+		<Item>one</Item>
+		<Item>two</Item>
+	</Values>
+</AttributeTest>
+```
+
+
 ## Todo
 
 Some random things I am planning to work on in the future:
 
 - Verify full [mono][4] support
+- Add full support for escaped unicode characters
 - Extend documentation/README
 - Make `SharpXml.Common` an optional dependency
 - Investigate into additional performance tweaks
