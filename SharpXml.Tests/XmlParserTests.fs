@@ -42,7 +42,7 @@ module XmlParserTests =
 
     let private eatRoot input =
         let info = ParserInfo input
-        eatRoot info
+        eatRoot info |> ignore
         info.Index
 
     let private eatUnknown input =
@@ -246,3 +246,27 @@ module XmlParserTests =
         name |> should equal "tag"
         tag |> should equal TagType.Open
         attr.Length |> should equal 0
+
+    [<Test>]
+    let skipComments01() =
+        let input = "<!-- c --><some> "
+        let index, value, t = eat input
+        value |> should equal "some"
+        t |> should equal TagType.Open
+        index |> should equal 16
+
+    [<Test>]
+    let skipComments02() =
+        let input = " <!-- -scary-comment- --> </close> "
+        let index, value, t = eat input
+        value |> should equal "close"
+        t |> should equal TagType.Close
+        index |> should equal 34
+
+    [<Test>]
+    let skipComments03() =
+        let input = " <!-- -scary-comment- --> <!-- -scary-comment- --> <close /> "
+        let index, value, t = eat input
+        value |> should equal "close"
+        t |> should equal TagType.Single
+        index |> should equal 60

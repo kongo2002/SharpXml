@@ -46,6 +46,13 @@ module internal XmlParser =
         | StartString = 5
         | InString = 6
 
+    type CommentState =
+        | Start = 0
+        | StartHyphen = 1
+        | InComment = 2
+        | Hyphen = 3
+        | EndHyphen = 4
+
     let whitespaceChars =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
         let max =  Array.max whitespace |> int
@@ -61,6 +68,32 @@ module internal XmlParser =
     let rec skipWhitespace (input : string) index =
         if index >= input.Length || not (isWhitespace input.[index]) then index
         else skipWhitespace input (index + 1)
+
+    let skipComment buffer index length =
+        let mutable state = CommentState.Start
+        let mutable b = buffer
+        let mutable i = index
+        let mutable skip = 0
+        let mutable found = false
+        while i < length && not found do
+            let chr = NativePtr.read b
+            i <- i + 1
+            skip <- skip + 1
+            b <- NativePtr.add b 1
+            match state with
+            | CommentState.Start ->
+                if chr = '-' then state <- CommentState.StartHyphen
+            | CommentState.StartHyphen ->
+                if chr = '-' then state <- CommentState.InComment
+            | CommentState.InComment ->
+                if chr = '-' then state <- CommentState.Hyphen
+            | CommentState.Hyphen ->
+                if chr = '-'
+                then state <- CommentState.EndHyphen
+                else state <- CommentState.InComment
+            | CommentState.EndHyphen ->
+                if chr = '>' then found <- true
+        skip
 
     /// Eat a closing XML tag
     let eatClosingTag (input : ParserInfo) =
@@ -101,9 +134,15 @@ module internal XmlParser =
                     if chr = '/' then
                         close <- true
                         nameStart <- input.Index
+                        state <- ParseState.TagName
+                    elif chr = '!' then
+                        let skip = skipComment buffer input.Index input.Length
+                        input.Index <- input.Index + skip
+                        buffer <- NativePtr.add buffer skip
+                        state <- ParseState.Start
                     else
                         nameStart <- input.Index - 1
-                    state <- ParseState.TagName
+                        state <- ParseState.TagName
             | ParseState.TagName ->
                 if isWhitespace chr then
                     if not close then
