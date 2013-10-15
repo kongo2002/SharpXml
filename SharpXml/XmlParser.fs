@@ -198,9 +198,15 @@ module internal XmlParser =
                     if chr = '/' then
                         close <- true
                         nameStart <- input.Index
+                        state <- ParseState.TagName
+                    elif chr = '!' then
+                        let skip = skipComment buffer input.Index input.Length
+                        input.Index <- input.Index + skip
+                        buffer <- NativePtr.add buffer skip
+                        state <- ParseState.Start
                     else
                         nameStart <- input.Index - 1
-                    state <- ParseState.TagName
+                        state <- ParseState.TagName
             | ParseState.TagName ->
                 if isWhitespace chr then
                     if not close then
@@ -263,6 +269,11 @@ module internal XmlParser =
                     close <- true
                     tag <- TagType.Close
                     state <- ParseState.TagName
+                elif chr = '!' then
+                    let skip = skipComment buffer input.Index input.Length
+                    input.Index <- input.Index + skip
+                    buffer <- NativePtr.add buffer skip
+                    state <- ParseState.Start
                 elif not (isWhitespace chr) then
                     state <- ParseState.TagName
             | ParseState.InString ->

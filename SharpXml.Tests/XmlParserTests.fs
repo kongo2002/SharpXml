@@ -265,8 +265,8 @@ module XmlParserTests =
 
     [<Test>]
     let skipComments03() =
-        let input = " <!-- -scary-comment- --> <!-- -scary-comment- --> <close /> "
+        let input = " <!-- -scary-comment- --> <!-- -scary-comment- --> <single /> "
         let index, value, t = eat input
-        value |> should equal "close"
+        value |> should equal "single"
         t |> should equal TagType.Single
-        index |> should equal 60
+        index |> should equal 61
