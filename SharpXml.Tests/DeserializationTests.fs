@@ -398,3 +398,43 @@ module DeserializationTests =
         result.V1 |> should equal 10
         result.V2 |> should equal (Guid.Parse("313d9a94-4c7e-46d3-b0ba-70d163969e5b"))
 
+    [<Test>]
+    let ``Can deserialize using a TypeResolver function``() =
+        let resolver = TypeResolver(fun _ -> typeof<TestClass>)
+        let input = "<testClass><v1>10</v1><v2>test string</v2></testClass>"
+        let result = XmlSerializer.DeserializeFromString(input, resolver)
+
+        result.GetType() |> should equal typeof<TestClass>
+
+    [<Test>]
+    let ``Deserializer passes a correct XmlInfo instance to the TypeResolver``() =
+        let resolver = TypeResolver(fun info ->
+            info.Name |> should equal "testClass"
+            info.HasAttributes |> should equal false
+            info.Attributes.Count |> should equal 0
+            
+            typeof<TestClass>)
+
+        let input = "<testClass><v1>10</v1><v2>test string</v2></testClass>"
+        let result = XmlSerializer.DeserializeFromString(input, resolver)
+
+        result.GetType() |> should equal typeof<TestClass>
+
+    [<Test>]
+    let ``Deserializer passes a correct XmlInfo instance with attributes to the TypeResolver``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let resolver = TypeResolver(fun info ->
+            info.Name |> should equal "testClass"
+            info.HasAttributes |> should equal true
+            info.Attributes.Count |> should equal 2
+            info.Attributes.[0].Key |> should equal "two"
+            info.Attributes.[0].Value |> should equal "bar"
+            
+            typeof<TestClass>)
+
+        let input = "<testClass one=\"foo\" two=\"bar\"><v1>10</v1><v2>test string</v2></testClass>"
+        let result = XmlSerializer.DeserializeFromString(input, resolver)
+
+        result.GetType() |> should equal typeof<TestClass>
+

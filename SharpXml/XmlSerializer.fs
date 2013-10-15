@@ -30,13 +30,29 @@ type XmlSerializer() =
     /// Header string for XML output
     static let xmlHeader = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
 
+    /// Eat the first XML root node depending on the 'UseAttributes'
+    /// setting either with or without attribute values.
+    static let eatRoot =
+        if XmlConfig.Instance.UseAttributes 
+        then XmlParser.eatRootWithAttributes
+        else XmlParser.eatRoot
+
     /// Deserialization of the input string into the specified target type
     static let deserialize input targetType =
         let reader = Deserializer.getReaderFunc targetType
         let info = XmlParser.ParserInfo input
-        let attr = if XmlConfig.Instance.UseAttributes 
-                   then XmlParser.eatRootWithAttributes info
-                   else XmlParser.eatRoot info
+        let _, attr = eatRoot info
+
+        reader attr info
+
+    /// Deserialization of the input string into the type that
+    /// is determined by the specified TypeResolver
+    static let deserializeByResolver input (resolver : TypeResolver) =
+        let info = XmlParser.ParserInfo input
+        let name, attr = eatRoot info
+        let xmlInfo = XmlInfo(name, attr)
+        let resolved = resolver.Invoke xmlInfo
+        let reader = Deserializer.getReaderFunc resolved
 
         reader attr info
 
@@ -60,13 +76,29 @@ type XmlSerializer() =
         else
             null
 
+    /// Deserialize the input string into the type that
+    /// is determined by the specified TypeResolver
+    static member DeserializeFromString (input, resolver) =
+        if notEmpty input then
+            try
+                deserializeByResolver input resolver
+            with
+            | :? SharpXmlException -> null
+        else
+            null
+
     /// Deserialize the input reader into the specified type
     static member DeserializeFromReader<'T> (reader : TextReader) =
         XmlSerializer.DeserializeFromString<'T>(reader.ReadToEnd())
 
     /// Deserialize the input reader into the specified type
-    static member DeserializeFromReader (reader : TextReader, targetType) =
+    static member DeserializeFromReader (reader : TextReader, targetType : Type) =
         XmlSerializer.DeserializeFromString(reader.ReadToEnd(), targetType)
+
+    /// Deserialize the input reader into the type that
+    /// is determined by the specified TypeResolver
+    static member DeserializeFromReader (reader : TextReader, resolver : TypeResolver) =
+        XmlSerializer.DeserializeFromString(reader.ReadToEnd(), resolver)
 
     /// Deserialize the input stream into the specified type
     static member DeserializeFromStream<'T> (stream : Stream) =
@@ -74,9 +106,15 @@ type XmlSerializer() =
         XmlSerializer.DeserializeFromString<'T>(reader.ReadToEnd())
 
     /// Deserialize the input stream into the specified type
-    static member DeserializeFromStream (stream : Stream, targetType) =
+    static member DeserializeFromStream (stream : Stream, targetType : Type) =
         use reader = new StreamReader(stream, utf8encoding)
         XmlSerializer.DeserializeFromString(reader.ReadToEnd(), targetType)
+
+    /// Deserialize the input stream into the type that
+    /// is determined by the specified TypeResolver
+    static member DeserializeFromStream (stream : Stream, resolver : TypeResolver) =
+        use reader = new StreamReader(stream, utf8encoding)
+        XmlSerializer.DeserializeFromString(reader.ReadToEnd(), resolver)
 
     /// Serialize the given object into a XML string
     static member SerializeToString (element : obj, targetType) =

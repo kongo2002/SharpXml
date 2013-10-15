@@ -276,14 +276,14 @@ module internal XmlParser =
 
     /// Parse the XML root node and the optional <?xml ?> tag
     let eatRoot input =
-        eatRootFunc eatTag input |> ignore
-        []
+        let name, _ = eatRootFunc eatTag input
+        name, []
 
     /// Parse the XML root node and the optional <?xml ?> tag
     /// along with optional attributes on the root node
     let eatRootWithAttributes input =
-        let _, _, attr = eatRootFunc eatTagWithAttributes input
-        attr
+        let name, _, attr = eatRootFunc eatTagWithAttributes input
+        name, attr
 
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index
