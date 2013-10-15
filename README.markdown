@@ -554,7 +554,7 @@ XmlSerializer.ClearCache();
 //XmlSerializer.ClearSerializers();
 //XmlSerializer.ClearDeserializers();
 
-XmlConfig.Instance.UseAttributes = false;
+XmlConfig.Instance.UseAttributes = true;
 ```
 
 Moreover attributes have to be marked with the `XmlAttribute` attribute in the
