@@ -383,7 +383,7 @@ This attribute class is supported since *SharpXml 1.4.0.0*.
 You can achieve the same result of above like this:
 
 ```cs
-[XmlNamespace("xmlns:\"Some.Namespace\"")]
+[XmlNamespace("xmlns=\"Some.Namespace\"")]
 public class NamespaceClass
 {
 	public int Id { get; set; }
