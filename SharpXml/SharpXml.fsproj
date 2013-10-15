@@ -47,6 +47,7 @@
     <Compile Include="XmlConfig.fs" />
     <Compile Include="Deserializer.fs" />
     <Compile Include="Serializer.fs" />
+    <Compile Include="XmlInfo.fs" />
     <Compile Include="XmlSerializer.fs" />
   </ItemGroup>
   <ItemGroup>
