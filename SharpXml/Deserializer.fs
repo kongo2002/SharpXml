@@ -474,12 +474,10 @@ module internal Deserializer =
             let builder = buildTypeBuilderInfo t
             Atom.updateAtomDict propertyCache t builder
 
-    and setSingleTagAttributes (builder : TypeBuilderInfo) (prop : PropertyReaderInfo) attrs inst =
+    and setSingleTagAttributes (prop : PropertyReaderInfo) attrs inst propInst =
         // TODO: get rid of this lookup
         let info = getTypeBuilderInfo prop.Info.PropertyType
-        let instance = prop.Ctor.Invoke()
-        ValueTypeDeserializer.setAttributes info attrs instance
-        prop.Setter.Invoke(inst, instance)
+        ValueTypeDeserializer.setAttributes info attrs propInst
 
     and buildGenericFunction name t =
         let mtd = getGenericListFunction name t
@@ -644,12 +642,13 @@ module internal Deserializer =
                     ValueTypeDeserializer.setAttributes builder attr instance
                     inner()
                 | TagType.Single ->
-                    // the matching property is not initialized yet
-                    // but we maybe have to set one or more of its values
-                    if not attrs.IsEmpty then
-                        match builder.Props.TryGetValue name with
-                        | true, prop -> setSingleTagAttributes builder prop attrs instance
-                        | _ -> ()
+                    match builder.Props.TryGetValue name with
+                    | true, prop ->
+                        let propInstance = prop.Ctor.Invoke()
+                        prop.Setter.Invoke(instance, propInstance)
+                        if not attrs.IsEmpty then
+                            setSingleTagAttributes prop attrs instance propInstance
+                    | _ -> ()
 
                     ValueTypeDeserializer.setAttributes builder attr instance
                     inner()
