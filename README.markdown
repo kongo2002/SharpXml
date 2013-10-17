@@ -529,6 +529,75 @@ without any errors:
 This XML above will be successfully deserialized into an instance of `MyClass`.
 
 
+### Type resolving
+
+In case you do not know at compile time what type you have to deserialize the
+XML data into you can use the specific overload of the `DeserializeFromString`,
+`DeserializeFromReader` or `DeserializeFromStream` method that takes a
+`TypeResolver` parameter. This way you can determine the type based on the tag
+information of the XML root node.
+
+This method may be especially useful in a web service scenario where you can
+deserialize the incoming XML data into the appropriate type and route the DTO
+into the specific handler routine. You could use this method like that:
+
+```cs
+using System;
+using System.Reflection;
+
+using SharpXml;
+
+public interface IHandlerProvider
+{
+	Type DetermineType(XmlInfo info);
+}
+
+public class XmlHandlerProvider : IHandlerProvider
+{
+	public Type DetermineType(XmlInfo info)
+	{
+		// this would be some custom built logic to determine
+		// the specific data type based on the given XML root node
+		// information
+
+		// this is just some dummy logic!
+
+		var assembly = Assembly.GetExecutingAssembly();
+		var type = assembly.GetType(info.Name);
+
+		if (type == null)
+		{
+			var namespace = info.HasAttributes
+				? info.Attributes.Find(a => a.Key == "xmlns")
+				: null;
+
+			if (namespace != null)
+				type = assembly.GetType(namespace.Value);
+		}
+
+		if (type == null)
+		{
+			throw new NotSupportedException(
+				string.Format("There is no handler for type '{0}'", info.Name);
+		}
+
+		return type;
+	}
+}
+
+public void Process(string xmlString)
+{
+	IHandlerProvider provider = new XmlHandlerProvider();
+
+	var data = XmlSerializer.DeserializeFromString(xmlString, provider.DetermineType);
+}
+```
+
+The example above is just a dummy to give you an idea how this functionality
+could be integrated. The `XmlInfo` class contains the root name and a list with
+all of its attribute values (if `UseAttributes` is enabled).
+
+
 ### XML attributes
 
 Since SharpXml version `1.4.0.0` XML attributes are supported as well although
