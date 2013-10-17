@@ -12,7 +12,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+using System;
 using System.Collections.Generic;
+using SharpXml.Common;
 
 namespace SharpXml.Tests.CSharp
 {
@@ -26,5 +28,49 @@ namespace SharpXml.Tests.CSharp
             public int Reference { get; set; }
             public string Message { get; set; }
         }
+
+        public class Enums
+        {
+            [Flags]
+            public enum UIntEnum : uint
+            {
+                Zero,
+                One,
+                Two,
+            }
+
+            [Flags]
+            public enum ULongEnum : ulong
+            {
+                Zero,
+                One,
+                Two,
+            }
+
+            [Flags]
+            public enum ByteEnum : byte
+            {
+                Zero,
+                One,
+                Two,
+            }
+
+            [Flags]
+            public enum SByteEnum : sbyte
+            {
+                Zero,
+                One,
+                Two,
+            }
+
+            [Flags]
+            public enum ShortEnum : short
+            {
+                Zero,
+                One,
+                Two,
+            }
+        }
+
     }
 }

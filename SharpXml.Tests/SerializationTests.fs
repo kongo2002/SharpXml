@@ -21,6 +21,7 @@ module SerializationTests =
     open NUnit.Framework
 
     open SharpXml
+    open SharpXml.Tests.CSharp
     open SharpXml.Tests.TestHelpers
     open SharpXml.Tests.Types
 
@@ -433,4 +434,30 @@ module SerializationTests =
 
         let cls = GenericClass<AttributeList<string>>(V1 = 21, V2 = lst)
         serialize cls |> should equal "<genericClass><v1>21</v1><v2 attr=\"test\"><string>first</string></v2></genericClass>"
+
+    [<Test>]
+    let ``Can serialize flag enums of different base types``() =
+        let test enum =
+            let expected = "<genericClass><v1>10</v1><v2>2</v2></genericClass>"
+            let cls = GenericClass<_>(V1 = 10, V2 = enum)
+            serialize cls |> should equal expected
+
+        test Types.Enums.ByteEnum.Two
+        test Types.Enums.SByteEnum.Two
+        test Types.Enums.ShortEnum.Two
+        test Types.Enums.UIntEnum.Two
+        test Types.Enums.ULongEnum.Two
+
+    [<Test>]
+    let ``Can serialize nullable flag enums of different base types``() =
+        let test enum =
+            let expected = "<genericClass><v1>10</v1><v2>2</v2></genericClass>"
+            let cls = GenericClass<_>(V1 = 10, V2 = Nullable(enum))
+            serialize cls |> should equal expected
+
+        test Types.Enums.ByteEnum.Two
+        test Types.Enums.SByteEnum.Two
+        test Types.Enums.ShortEnum.Two
+        test Types.Enums.UIntEnum.Two
+        test Types.Enums.ULongEnum.Two
 

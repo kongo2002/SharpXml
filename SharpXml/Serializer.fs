@@ -229,10 +229,6 @@ module internal ValueTypeSerializer =
     let writeEnum n writer (value : obj) =
         writeObject n writer value
 
-    let writeEnumNames _ (writer : TextWriter) (value : obj) =
-        let v : int = unbox value
-        writer.Write(v)
-
     let writeType _ writer (value : obj) =
         let v : Type = unbox value
         writeString writer v.AssemblyQualifiedName
@@ -240,6 +236,23 @@ module internal ValueTypeSerializer =
     let writeException _ writer (value : obj) =
         let v : Exception = unbox value
         writeString writer v.Message
+
+    let getEnumValueWriter t =
+        let under = Enum.GetUnderlyingType(t)
+        match Type.GetTypeCode(under) with
+        | TypeCode.Byte    -> Some <| writeByte
+        | TypeCode.Char    -> Some <| writeChar
+        | TypeCode.Decimal -> Some <| writeDecimal
+        | TypeCode.Double  -> Some <| writeFloat
+        | TypeCode.Int16   -> Some <| writeInt16
+        | TypeCode.Int32   -> Some <| writeInt32
+        | TypeCode.Int64   -> Some <| writeInt64
+        | TypeCode.SByte   -> Some <| writeSByte
+        | TypeCode.Single  -> Some <| writeFloat32
+        | TypeCode.UInt16  -> Some <| writeUInt16
+        | TypeCode.UInt32  -> Some <| writeUInt32
+        | TypeCode.UInt64  -> Some <| writeUInt64
+        | _ -> None
 
     /// Get the appropriate writer function for the
     /// specified value type
@@ -256,7 +269,7 @@ module internal ValueTypeSerializer =
             Some writeNullableDateTimeOffset
         elif t.IsEnum || t.UnderlyingSystemType.IsEnum then
             if t.HasAttribute("FlagsAttribute")
-            then Some writeEnumNames
+            then getEnumValueWriter t
             else Some writeEnum
         else
             match Type.GetTypeCode(t.NullableUnderlying()) with
