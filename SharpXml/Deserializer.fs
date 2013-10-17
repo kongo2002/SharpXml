@@ -612,7 +612,13 @@ module internal Deserializer =
                             eatUnknownTilClosing xml |> ignore
                     | _ -> eatUnknownTilClosing xml |> ignore
                     inner()
-                | TagType.Single -> inner()
+                | TagType.Single ->
+                    match builder.Props.TryGetValue name with
+                    | true, prop ->
+                        let propInstance = prop.Ctor.Invoke()
+                        prop.Setter.Invoke(instance, propInstance)
+                    | _ -> ()
+                    inner()
                 | _ -> ()
         inner()
         instance
