@@ -438,3 +438,21 @@ module DeserializationTests =
 
         result.GetType() |> should equal typeof<TestClass>
 
+    [<Test>]
+    let ``Can deserialize empty single tags``() =
+        let input = "<objectPropClass><v1>value</v1><success /></objectPropClass>"
+
+        let result = deserialize<ObjectPropClass> input
+        result.V1 |> should equal "value"
+        result.Success |> shouldBe notNull
+        result.IsSuccess |> should equal true
+
+    [<Test>]
+    let ``Can deserialize not existant empty single tags``() =
+        let input = "<objectPropClass><v1>value</v1></objectPropClass>"
+
+        let result = deserialize<ObjectPropClass> input
+        result.V1 |> should equal "value"
+        result.Success |> should equal null
+        result.IsSuccess |> should equal false
+

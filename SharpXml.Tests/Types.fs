@@ -70,6 +70,22 @@ module Types =
             with get() = _value
             and set(v) = _value <- v
 
+    type ObjectPropClass() =
+
+        let mutable v1 = Unchecked.defaultof<string>
+        let mutable success = null
+
+        member x.V1
+            with get() = v1
+            and set(v) = v1 <- v
+
+        member x.Success
+            with get() = success
+            and set(v) = success <- v
+
+        member x.IsSuccess
+            with get() = x.Success <> null
+
     type TestClass(val1 : int, val2 : string) =
 
         let mutable v1 = val1
