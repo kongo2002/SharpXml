@@ -34,6 +34,7 @@ type XmlConfig private() =
     let mutable emitCamelCaseNames = false
     let mutable writeXmlHeader = false
     let mutable throwOnError = false
+    let mutable throwOnUnknownElements = false
     let mutable useAttributes = false
 
     let serializerCache = ref (Dictionary<Type, SerializerFunc>())
@@ -71,6 +72,12 @@ type XmlConfig private() =
     member x.ThrowOnError
         with get() = throwOnError
         and set(v) = throwOnError <- v
+
+    /// Whether to throw exceptions if an element does not
+    /// exist on deserialization
+    member x.ThrowOnUnknownElements
+        with get() = throwOnUnknownElements
+        and set(v) = throwOnUnknownElements <- v
 
     /// Whether the serialization and deserialization process
     /// should respect and parse XML attributes

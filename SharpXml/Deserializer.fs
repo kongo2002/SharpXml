@@ -14,10 +14,6 @@
 
 namespace SharpXml
 
-/// Application exception thrown during SharpXml
-/// serialization and deserialization
-exception SharpXmlException of string
-
 /// Reader function delegate
 type internal ReaderFunc = (string * string) list -> XmlParser.ParserInfo -> obj
 
@@ -61,6 +57,50 @@ type internal TupleBuilderInfo = {
     Readers : ReaderFunc array
     Ctor : obj[] -> obj
     Fields : int }
+
+module internal Deserialization =
+
+    open System
+
+    /// Throw an exception if a deserializable element
+    /// does not exist in the target type
+    let inline elementNotExist name (t : Type) =
+        if XmlConfig.Instance.ThrowOnUnknownElements then
+            let msg = sprintf "Given XML element '%s' does not exist on type %s" name t.FullName
+            raise <| SharpXmlException msg
+
+    /// Throw an exception if the deserialization/type
+    /// generation failed with an exception
+    let inline deserializeError arg name (t : Type) ex =
+        if XmlConfig.Instance.ThrowOnError then
+            let msg = sprintf "Unable to deserialize %s '%s' of type '%s'" arg name t.FullName
+            raise <| SharpXmlException(msg, ex)
+
+    /// Throw an exception if the deserialization/type
+    /// generation failed on a class property with an exception
+    let inline deserializeErrorProperty name (t : Type) ex =
+        deserializeError "property" name t ex
+
+    /// Throw an exception if the deserialization/type
+    /// generation failed on a record field with an exception
+    let inline deserializeErrorRecord name (t : Type) ex =
+        deserializeError "record field" name t ex
+
+    /// Throw an exception if the deserialization/type
+    /// generation failed on a tuple item with an exception
+    let inline deserializeErrorTuple name (t : Type) ex =
+        deserializeError "tuple item" name t ex
+
+    /// Apply attribute values if necessary
+    let setAttributes (builder : TypeBuilderInfo) attrs inst =
+        if builder.Attrs.Count > 0 then
+            List.iter (fun (k, v) ->
+                match builder.Attrs.TryGetValue k with
+                | true, prop ->
+                    try
+                        prop.Setter.Invoke(inst, prop.Reader.Invoke(v))
+                    with ex -> deserializeError "attribute" k prop.Info.PropertyType ex
+                | _ -> elementNotExist k builder.Type) attrs
 
 module internal ValueTypeDeserializer =
 
@@ -110,19 +150,6 @@ module internal ValueTypeDeserializer =
     /// String reader function
     let stringReader : (string * string) list -> ParserInfo -> obj =
         box |> buildValueReader
-
-    /// Apply attribute values if necessary
-    let setAttributes (builder : TypeBuilderInfo) attrs inst =
-        if builder.Attrs.Count > 0 then
-            List.iter (fun (k, v) ->
-                match builder.Attrs.TryGetValue k with
-                | true, prop ->
-                    try
-                        prop.Setter.Invoke(inst, prop.Reader.Invoke(v))
-                    with ex ->
-                        System.Diagnostics.Trace.WriteLine(
-                            String.Format("Failed to set attribute '{0}': {1}", k, ex))
-                | _ -> ()) attrs
 
 /// Dictionary related deserialization logic
 module internal DictionaryDeserializer =
@@ -216,7 +243,7 @@ module internal ListDeserializer =
                         match elemInfo with
                         | Some i when not attrs.IsEmpty ->
                             let value = i.Ctor.Invoke() :?> 'a
-                            ValueTypeDeserializer.setAttributes i attrs value
+                            Deserialization.setAttributes i attrs value
                             list.Add(value)
                         | _ -> ()
                         inner()
@@ -267,7 +294,7 @@ module internal ListDeserializer =
         let collection = info.Ctor.Invoke() :?> ICollection<'a>
         let list = parseList<'a> elemInfo reader attr xml
         list.ForEach(fun elem -> collection.Add(elem))
-        ValueTypeDeserializer.setAttributes info attr collection
+        Deserialization.setAttributes info attr collection
         collection
 
     /// Reader function for readonly collections
@@ -477,7 +504,7 @@ module internal Deserializer =
     and setSingleTagAttributes (prop : PropertyReaderInfo) attrs inst propInst =
         // TODO: get rid of this lookup
         let info = getTypeBuilderInfo prop.Info.PropertyType
-        ValueTypeDeserializer.setAttributes info attrs propInst
+        Deserialization.setAttributes info attrs propInst
 
     and buildGenericFunction name t =
         let mtd = getGenericListFunction name t
@@ -604,20 +631,18 @@ module internal Deserializer =
                             let reader = prop.Reader
                             prop.Setter.Invoke(instance, reader attr xml)
                         with ex ->
-                            let error = sprintf "Unable to deserialize property '%s' of type '%s'" prop.Info.Name prop.Info.DeclaringType.FullName
-                            if XmlConfig.Instance.ThrowOnError then
-                                raise (SharpXmlException error)
-                            else
-                                Diagnostics.Trace.WriteLine(error)
+                            Deserialization.deserializeErrorProperty name builder.Type ex
                             eatUnknownTilClosing xml |> ignore
-                    | _ -> eatUnknownTilClosing xml |> ignore
+                    | _ ->
+                        Deserialization.elementNotExist name builder.Type
+                        eatUnknownTilClosing xml |> ignore
                     inner()
                 | TagType.Single ->
                     match builder.Props.TryGetValue name with
                     | true, prop ->
                         let propInstance = prop.Ctor.Invoke()
                         prop.Setter.Invoke(instance, propInstance)
-                    | _ -> ()
+                    | _ -> Deserialization.elementNotExist name builder.Type
                     inner()
                 | _ -> ()
         inner()
@@ -637,15 +662,13 @@ module internal Deserializer =
                             let reader = prop.Reader
                             prop.Setter.Invoke(instance, reader attrs xml)
                         with ex ->
-                            let error = sprintf "Unable to deserialize property '%s' of type '%s'" prop.Info.Name prop.Info.DeclaringType.FullName
-                            if XmlConfig.Instance.ThrowOnError then
-                                raise (SharpXmlException error)
-                            else
-                                Diagnostics.Trace.WriteLine(error)
+                            Deserialization.deserializeErrorProperty name builder.Type ex
                             eatUnknownTilClosing xml |> ignore
-                    | _ -> eatUnknownTilClosing xml |> ignore
+                    | _ ->
+                        Deserialization.elementNotExist name builder.Type
+                        eatUnknownTilClosing xml |> ignore
 
-                    ValueTypeDeserializer.setAttributes builder attr instance
+                    Deserialization.setAttributes builder attr instance
                     inner()
                 | TagType.Single ->
                     match builder.Props.TryGetValue name with
@@ -654,9 +677,9 @@ module internal Deserializer =
                         prop.Setter.Invoke(instance, propInstance)
                         if not attrs.IsEmpty then
                             setSingleTagAttributes prop attrs instance propInstance
-                    | _ -> ()
+                    | _ -> Deserialization.elementNotExist name builder.Type
 
-                    ValueTypeDeserializer.setAttributes builder attr instance
+                    Deserialization.setAttributes builder attr instance
                     inner()
                 | _ -> ()
         inner()
@@ -694,12 +717,7 @@ module internal Deserializer =
                     | Some (reader, i) ->
                         try
                             objects.[i] <- reader attr xml
-                        with ex ->
-                            let error = sprintf "Unable to deserialize field of record type '%s'" rb.Type.FullName
-                            if XmlConfig.Instance.ThrowOnError then
-                                raise (SharpXmlException error)
-                            else
-                                Diagnostics.Trace.WriteLine(error)
+                        with ex -> Deserialization.deserializeErrorRecord lower rb.Type ex
                     | _ -> ()
                     inner()
                 | TagType.Single -> inner()
@@ -717,11 +735,8 @@ module internal Deserializer =
                     try
                         objects.[index] <- tb.Readers.[index] attr xml
                     with ex ->
-                        let error = sprintf "Unable to deserialize item %d of tuple type '%s'" (index+1) tb.Type.FullName
-                        if XmlConfig.Instance.ThrowOnError then
-                            raise (SharpXmlException error)
-                        else
-                            Diagnostics.Trace.WriteLine(error)
+                        let name = sprintf "item %d" (index+1)
+                        Deserialization.deserializeErrorTuple name tb.Type ex
                     inner (index+1)
                 | TagType.Single -> inner (index+1)
                 | _ -> ()

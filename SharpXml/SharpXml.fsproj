@@ -41,6 +41,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Utils.fs" />
+    <Compile Include="SharpXmlException.fs" />
     <Compile Include="Extensions.fs" />
     <Compile Include="ReflectionHelpers.fs" />
     <Compile Include="XmlParser.fs" />
