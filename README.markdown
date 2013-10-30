@@ -578,7 +578,7 @@ public class XmlHandlerProvider : IHandlerProvider
 		if (type == null)
 		{
 			throw new NotSupportedException(
-				string.Format("There is no handler for type '{0}'", info.Name);
+				string.Format("There is no handler for type '{0}'", info.Name));
 		}
 
 		return type;
