@@ -98,4 +98,5 @@ module internal Extensions =
             underlying = typeof<decimal>
 
     let matchInterface (interfaceType : Type) (t : Type) =
-        t.IsAssignableFrom(interfaceType) || t.HasInterface(interfaceType)
+        t <> typeof<obj> &&
+            (t.IsAssignableFrom(interfaceType) || t.HasInterface(interfaceType))

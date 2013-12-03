@@ -461,3 +461,10 @@ module SerializationTests =
         test Types.Enums.UIntEnum.Two
         test Types.Enums.ULongEnum.Two
 
+    [<Test>]
+    let ``Can serialize object values``() =
+        let input = GenericClass<_>(V1 = 14, V2 = obj())
+        let result = serialize input
+
+        result |> should equal "<genericClass><v1>14</v1><v2></v2></genericClass>"
+
