@@ -371,14 +371,13 @@ module internal Deserializer =
             let ps = ctor.GetParameters()
             ps.Length = 1 && ps.[0].ParameterType = typeof<string>)
 
-    /// Try to get a reader based on a string value constructor
-    let getStringTypeConstructor (t : Type) = fun () ->
-        match findStringConstructor t with
-        | Some ctor ->
-            fun (v : string) -> ctor.Invoke([| v |])
-            |> ValueTypeDeserializer.buildValueReader
-            |> Some
-        | _ -> None
+    /// String type constructor parser
+    let stringTypeConstructor (ctor : ConstructorInfo) (builderInfo : TypeBuilderInfo) attrs (info: ParserInfo) =
+        let reader = fun (v : string) -> ctor.Invoke([| v |])
+        let valReader = ValueTypeDeserializer.buildValueReader reader
+        let value = valReader attrs info
+        Deserialization.setAttributes builderInfo attrs value
+        value
 
     /// Try to retrieve the specified deserialization function of
     /// SharpXml.ListDeserializer module via reflection
@@ -559,6 +558,14 @@ module internal Deserializer =
         let elemReader = getReaderFunc t
         let etbi = getElemTypeBuilderInfo t
         fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; etbi; attr; xml |])
+
+    /// Try to get a reader based on a string value constructor
+    and getStringTypeConstructor (t : Type) = fun () ->
+        match findStringConstructor t with
+        | Some ctor ->
+            let builder = getTypeBuilderInfo t
+            stringTypeConstructor ctor builder |> Some
+        | _ -> None
 
     /// Try to determine a reader function for array types
     and getArrayReader (t : Type) = fun () ->

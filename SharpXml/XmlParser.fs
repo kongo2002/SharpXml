@@ -290,6 +290,7 @@ module internal XmlParser =
     /// Eat all content until the last closed tag
     let eatUnknownTilClosing (input : ParserInfo) =
         let rec inner level =
+            if input.IsEnd then input.Index else
             let tag, before = eatSomeTag input
             match tag with
             | TagType.Close when level = 0 -> before

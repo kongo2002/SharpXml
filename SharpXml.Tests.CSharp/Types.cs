@@ -72,5 +72,32 @@ namespace SharpXml.Tests.CSharp
             }
         }
 
+        public class AttrListClass
+        {
+            public object Success { get; set; }
+
+            [XmlElement(ItemName = "attr")]
+            public List<AttributeSubClass> AttributeList
+            {
+                get; set;
+            }
+
+            public class AttributeSubClass
+            {
+                [XmlAttribute]
+                public string One { get; set; }
+
+                [XmlAttribute]
+                public string Two { get; set; }
+
+                public string Text { get; set; }
+
+                public AttributeSubClass(string text)
+                {
+                    Text = text;
+                }
+            }
+        }
+
     }
 }

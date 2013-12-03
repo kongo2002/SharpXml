@@ -468,3 +468,13 @@ module SerializationTests =
 
         result |> should equal "<genericClass><v1>14</v1><v2></v2></genericClass>"
 
+    [<Test>]
+    let ``Can serialize complex attribute based classes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let cls = Types.HotelInventoryAdjustRequest(Version = "1.000", EchoToken = "123")
+        cls.Adjustments <- Types.Adjustments(HotelCode = "0815")
+        cls.Adjustments.Add(Types.Adjustment(Start = DateTime(2010, 1, 1), End = DateTime(2011, 1, 1)))
+
+        serialize cls |> should equal "foo"
+

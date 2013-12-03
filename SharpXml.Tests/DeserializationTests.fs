@@ -464,3 +464,16 @@ module DeserializationTests =
         result.Attr |> should equal 23
         result.Value |> should equal 35
 
+    [<Test>]
+    let ``Can deserialize complex attribute list classes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<attributeListClass><success></success><attributeList><attr one=\"1\" two=\"2\">some text</attr></attributeList></attributeListClass>"
+        let result = deserialize<Types.AttrListClass> input
+
+        result.Success |> shouldBe notNull
+        result.AttributeList.Count |> should equal 1
+        result.AttributeList.[0].One |> should equal "1"
+        result.AttributeList.[0].Two |> should equal "2"
+        result.AttributeList.[0].Text |> should equal "some text"
+
