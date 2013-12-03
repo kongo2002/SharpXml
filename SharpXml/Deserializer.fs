@@ -432,7 +432,7 @@ module internal Deserializer =
     /// Try to determine a AttributeReaderInfo record based on
     /// the specified PropertyInfo
     let getAttributeReaderInfo (p : PropertyInfo) : AttributeReaderInfo option =
-        let t = p.PropertyType
+        let t = p.PropertyType.NullableUnderlying()
         let reader =
             match XmlConfig.Instance.TryGetDeserializer t with
             | Some deserializer -> Some deserializer

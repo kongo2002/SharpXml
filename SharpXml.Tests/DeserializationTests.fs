@@ -456,3 +456,11 @@ module DeserializationTests =
         result.Success |> should equal null
         result.IsSuccess |> should equal false
 
+    [<Test>]
+    let ``Can deserialize nullable attribute types``() =
+        let input = "<nullableAttributeClass attr=\"23\"><value>35</value></nullableAttributeClass>"
+
+        let result = deserialize<NullableAttributeClass>(input)
+        result.Attr |> should equal 23
+        result.Value |> should equal 35
+
