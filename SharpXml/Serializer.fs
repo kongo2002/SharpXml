@@ -475,7 +475,7 @@ module internal Serializer =
     let getSpecialWriters (t : Type) = fun () ->
         if t = typeof<Uri> then Some <| injectWriteTag ValueTypeSerializer.writeStringObject
         elif isOrDerived t typeof<Exception> then Some <| injectWriteTag ValueTypeSerializer.writeException
-        elif t.IsInstanceOfType(typeof<Type>) then Some <| injectWriteTag ValueTypeSerializer.writeType
+        elif t <> typeof<obj> && t.IsInstanceOfType(typeof<Type>) then Some <| injectWriteTag ValueTypeSerializer.writeType
         else None
 
     let writeAbstractProperties _ _ _ = ()
