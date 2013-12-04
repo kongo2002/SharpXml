@@ -83,6 +83,7 @@ module internal XmlParser =
             match state with
             | CommentState.Start ->
                 if chr = '-' then state <- CommentState.StartHyphen
+                else skip <- 0; found <- true
             | CommentState.StartHyphen ->
                 if chr = '-' then state <- CommentState.InComment
             | CommentState.InComment ->
@@ -320,6 +321,10 @@ module internal XmlParser =
             | ParseState.Tag ->
                 if chr = '?' then
                     state <- ParseState.TagName
+                elif chr = '!' then
+                    let skip = skipComment buffer input.Index input.Length
+                    input.Index <- input.Index + skip
+                    if skip = 0 then state <- ParseState.TagName
                 elif not (isWhitespace chr) then
                     input.Index <- start
                     found <- true
