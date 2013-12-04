@@ -430,12 +430,16 @@ module Types =
 
     [<XmlNamespace("foo=\"bar\"")>]
     type StaticAttributeClass() =
-        
+
         let mutable value = Unchecked.defaultof<int>
 
         member x.Value
             with get() = value
             and set v = value <- v
+
+    [<XmlNamespace("bar=\"foo\"")>]
+    type InheritedStaticAttributeClass() =
+        inherit StaticAttributeClass()
 
     [<XmlNamespace("bar=\"foo\"")>]
     type AttributeClass2() =

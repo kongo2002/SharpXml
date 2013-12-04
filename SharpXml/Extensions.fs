@@ -45,6 +45,10 @@ module internal Extensions =
         let attr = t.GetCustomAttributes(typeof<'a>, true)
         if attr.Length > 0 then Some (attr.[0] :?> 'a) else None
 
+    let getAttributes<'a>(t : MemberInfo) =
+        t.GetCustomAttributes(typeof<'a>, true)
+        |> Array.map (fun x -> x :?> 'a)
+
     /// Extension methods for System.Reflection.MemberInfo
     type System.Reflection.MemberInfo with
 

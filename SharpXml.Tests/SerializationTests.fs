@@ -398,6 +398,13 @@ module SerializationTests =
         serialize cls |> should equal "<staticAttributeClass foo=\"bar\"><value>24</value></staticAttributeClass>"
 
     [<Test>]
+    let ``Can serialize root elements with inherited static XML attributes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let cls = InheritedStaticAttributeClass(Value = 22)
+        serialize cls |> should equal "<inheritedStaticAttributeClass bar=\"foo\" foo=\"bar\"><value>22</value></inheritedStaticAttributeClass>"
+
+    [<Test>]
     let ``Can serialize classes with XmlAttribute properties``() =
         XmlConfig.Instance.UseAttributes <- true
 

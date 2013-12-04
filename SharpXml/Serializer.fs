@@ -488,19 +488,24 @@ module internal Serializer =
         else
             baseName
 
+    /// Parse all static namespace values that are specified
+    /// via XmlNamespaceAttribute elements
     let getNamespaceAttributes t =
-        match getAttribute<XmlNamespaceAttribute> t with
-        | Some attr ->
-            attr.Attributes
-            |> Array.choose (fun a ->
-                match a.Split('=') with
-                | [|k; v|] when notWhite k ->
-                    let m = namespaceRegex.Match(v)
-                    if m.Success && m.Groups.Count > 1
-                    then Some (k.Trim(), m.Groups.[1].Value)
-                    else None
-                | _ -> None)
-        | _ -> [||]
+        // keep track of duplicates
+        let set = HashSet<string>()
+        getAttributes<XmlNamespaceAttribute> t
+        |> Array.map (fun a -> a.Attributes)
+        |> Array.concat
+        |> Array.choose (fun a ->
+            match a.Split('=') with
+            | [|k; v|] when notWhite k ->
+                let m = namespaceRegex.Match v
+                if m.Success && m.Groups.Count > 1 then
+                    let key = k.Trim()
+                    let unique = set.Add key
+                    if unique then Some (key, m.Groups.[1].Value) else None
+                else None
+            | _ -> None)
 
     /// Build a TypeInfo object based on the given Type
     let buildTypeInfo t =
