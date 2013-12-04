@@ -336,6 +336,15 @@ module DeserializationTests =
         result.Attr |> should equal "test value"
 
     [<Test>]
+    let ``Can deserialize root classes with attributes in single quotes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<attrClass attr='test  value'><value>100</value></attrClass>"
+        let result = deserialize<AttributeClass> input
+        result.Value |> should equal 100
+        result.Attr |> should equal "test  value"
+
+    [<Test>]
     let ``Can deserialize sub classes with attributes``() =
         XmlConfig.Instance.UseAttributes <- true
 

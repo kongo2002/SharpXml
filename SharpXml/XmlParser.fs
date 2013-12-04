@@ -183,6 +183,7 @@ module internal XmlParser =
         let mutable found = false
         let mutable attr = Unchecked.defaultof<string>
         let mutable attributes = []
+        let mutable enclosingType = '"'
 
         // TODO: this function is a copy of 'eatTag'
         // TODO: some refactoring required!
@@ -227,11 +228,12 @@ module internal XmlParser =
                     attr <- String(input.Value, nameStart, (input.Index-nameStart-1))
                     state <- ParseState.StartString
             | ParseState.StartString ->
-                if chr = '"' then
+                if chr = '"' || chr = '\'' then
+                    enclosingType <- chr
                     state <- ParseState.InString
                     nameStart <- input.Index
             | ParseState.InString ->
-                if chr = '"' then
+                if chr = enclosingType then
                     state <- ParseState.InTag
                     attributes <- (attr, (String(input.Value, nameStart, (input.Index-nameStart-1)))) :: attributes
             | _ ->
