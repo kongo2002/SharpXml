@@ -139,6 +139,20 @@ module XmlParserTests =
         index |> should equal 31
 
     [<Test>]
+    let eatContent04() =
+        let input = "<one>foo bar</one><two>ham <![CDATA[</some><crazy></crazy> <?content?>]]>eggs</two>"
+        let index, result = getContent input 23
+        result |> should equal "ham </some><crazy></crazy> <?content?>eggs"
+        index |> should equal (input.IndexOf("</two>"))
+
+    [<Test>]
+    let eatContent05() =
+        let input = "<one></one><two><![CDATA[</some><crazy></crazy> <?content?>]]></two>"
+        let index, result = getContent input 16
+        result |> should equal "</some><crazy></crazy> <?content?>"
+        index |> should equal (input.IndexOf("</two>"))
+
+    [<Test>]
     let eatClosingTag01() =
         let input = "<one>ham eggs</one><two>foo bar</two>"
         let index, _, _ = eatAt input 5

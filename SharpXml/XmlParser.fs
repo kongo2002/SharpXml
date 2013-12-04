@@ -53,6 +53,11 @@ module internal XmlParser =
         | Hyphen = 3
         | EndHyphen = 4
 
+    type CDataState =
+        | Content = 0
+        | FirstBracket = 1
+        | SecondBracket = 2
+
     let whitespaceChars =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
         let max =  Array.max whitespace |> int
@@ -68,6 +73,15 @@ module internal XmlParser =
     let rec skipWhitespace (input : string) index =
         if index >= input.Length || not (isWhitespace input.[index]) then index
         else skipWhitespace input (index + 1)
+
+    let lookAhead (str : string) (input : ParserInfo) =
+        if input.Index + str.Length < input.Length then
+            let rec inner i =
+                if str.Length <= i then true
+                elif input.Value.[input.Index + i] <> str.[i] then false
+                else inner (i+1)
+            inner 0
+        else false
 
     let skipComment buffer index length =
         let mutable state = CommentState.Start
@@ -95,6 +109,30 @@ module internal XmlParser =
             | CommentState.EndHyphen ->
                 if chr = '>' then found <- true
         skip
+
+    let skipCData buffer (input : ParserInfo) =
+        if lookAhead "<![CDATA[" input then
+            let mutable state = CDataState.Content
+            let mutable skip = 0
+            let mutable b = buffer
+            let mutable found = false
+            while not input.IsEnd && not found do
+                let chr = NativePtr.read b
+                input.Index <- input.Index + 1
+                b <- NativePtr.add b 1
+                skip <- skip + 1
+
+                match state with
+                | CDataState.Content ->
+                    if chr = ']' then state <- CDataState.FirstBracket
+                | CDataState.FirstBracket ->
+                    if chr = ']' then state <- CDataState.SecondBracket
+                    else state <- CDataState.Content
+                | CDataState.SecondBracket ->
+                    if chr = '>' then found <- true
+                    else state <- CDataState.Content
+            skip
+        else 0
 
     /// Eat a closing XML tag
     let eatClosingTag (input : ParserInfo) =
@@ -346,23 +384,37 @@ module internal XmlParser =
         let name, _, attr = eatRootFunc eatTagWithAttributes input
         name, attr
 
+    let inline decode (str : string) =
+        str.Replace("&gt;", ">").Replace("&lt;", "<")
+
+    let inline stripCData (str : string) =
+        str.Replace("<![CDATA[", null).Replace("]]>", null)
+
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index
     let eatContent (input : ParserInfo) =
         let start = input.Index
         let mutable found = false
+        let mutable hasCData = false
         let mutable encoded = false
         let mutable buffer = &&input.Value.[input.Index]
         while not found && input.Index < input.Length do
             let chr = NativePtr.read buffer
             if chr = '<' then
-                found <- true
+                let skip = skipCData buffer input
+                if skip > 0 then
+                    buffer <- NativePtr.add buffer skip
+                    hasCData <- true
+                else found <- true
             else
                 if chr = '&' then encoded <- true
                 input.Index <- input.Index + 1
                 buffer <- NativePtr.add buffer 1
         let result = String(input.Value, start, input.Index - start)
-        if encoded then
-            result.Replace("&gt;", ">").Replace("&lt;", "<")
+
+        if hasCData then
+            if encoded then result |> stripCData |> decode
+            else result |> stripCData
         else
-            result
+            if encoded then result |> decode
+            else result
