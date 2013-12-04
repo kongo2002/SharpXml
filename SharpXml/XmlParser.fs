@@ -303,6 +303,7 @@ module internal XmlParser =
     let private eatRootFunc func (input : ParserInfo) =
         let mutable buffer = &&input.Value.[input.Index]
         let mutable state = ParseState.Start
+        let mutable start = input.Index
         let mutable found = false
 
         // eat optional xml doc tag
@@ -313,15 +314,17 @@ module internal XmlParser =
 
             match state with
             | ParseState.Start ->
-                if chr = '<' then state <- ParseState.Tag
+                if chr = '<' then
+                    state <- ParseState.Tag
+                    start <- input.Index - 1
             | ParseState.Tag ->
                 if chr = '?' then
                     state <- ParseState.TagName
                 elif not (isWhitespace chr) then
-                    input.Index <- 0
+                    input.Index <- start
                     found <- true
             | _ ->
-                if chr = '>' then found <- true
+                if chr = '>' then state <- ParseState.Start
 
         func input
 

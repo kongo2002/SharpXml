@@ -171,6 +171,18 @@ module XmlParserTests =
         |> should equal 31
 
     [<Test>]
+    let eatRoot05() =
+        let input = "<?xml version=\"1.0\"?><?process instruction?><root><one>ham eggs</one></ root>"
+        eatRoot input
+        |> should equal (input.IndexOf("<one>"))
+
+    [<Test>]
+    let eatRoot06() =
+        let input = "  <?xml version=\"1.0\"?> <?process instruction ?>  < root><one>ham eggs</one></ root>"
+        eatRoot input
+        |> should equal (input.IndexOf("<one>"))
+
+    [<Test>]
     let eatSomeTag01() =
         eatSome "<foo>" |> should equal TagType.Open
 
