@@ -240,6 +240,7 @@ module internal ValueTypeSerializer =
     let getEnumValueWriter t =
         let under = Enum.GetUnderlyingType(t)
         match Type.GetTypeCode(under) with
+        | TypeCode.Boolean -> Some <| writeBool
         | TypeCode.Byte    -> Some <| writeByte
         | TypeCode.Char    -> Some <| writeChar
         | TypeCode.Decimal -> Some <| writeDecimal
@@ -273,21 +274,21 @@ module internal ValueTypeSerializer =
             else Some writeEnum
         else
             match Type.GetTypeCode(t.NullableUnderlying()) with
-            | TypeCode.Boolean -> Some writeBool
-            | TypeCode.Byte -> Some writeByte
-            | TypeCode.Char -> Some writeChar
+            | TypeCode.Boolean  -> Some writeBool
+            | TypeCode.Byte     -> Some writeByte
+            | TypeCode.Char     -> Some writeChar
             | TypeCode.DateTime -> Some writeDateTime
-            | TypeCode.Decimal -> Some writeDecimal
-            | TypeCode.Double -> Some writeFloat
-            | TypeCode.Int16 -> Some writeInt16
-            | TypeCode.Int32 -> Some writeInt32
-            | TypeCode.Int64 -> Some writeInt64
-            | TypeCode.SByte -> Some writeSByte
-            | TypeCode.Single -> Some writeFloat32
-            | TypeCode.UInt16 -> Some writeUInt16
-            | TypeCode.UInt32 -> Some writeUInt32
-            | TypeCode.UInt64 -> Some writeUInt64
-            | _ -> None
+            | TypeCode.Decimal  -> Some writeDecimal
+            | TypeCode.Double   -> Some writeFloat
+            | TypeCode.Int16    -> Some writeInt16
+            | TypeCode.Int32    -> Some writeInt32
+            | TypeCode.Int64    -> Some writeInt64
+            | TypeCode.SByte    -> Some writeSByte
+            | TypeCode.Single   -> Some writeFloat32
+            | TypeCode.UInt16   -> Some writeUInt16
+            | TypeCode.UInt32   -> Some writeUInt32
+            | TypeCode.UInt64   -> Some writeUInt64
+            | _                 -> None
 
     let getValueTypeWriter (t : Type) =
         match getValueTypeInnerWriter t with
