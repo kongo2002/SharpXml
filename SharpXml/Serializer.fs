@@ -332,9 +332,14 @@ module internal AttributeSerializer =
     let writeUInt32  (v : uint16)  = v.ToString()
     let writeUInt64  (v : uint64)  = v.ToString()
 
-    let writeEnumNames (t: Type) =
-        let under = Enum.GetUnderlyingType(t)
-        match Type.GetTypeCode(under) with
+    let writeBool v =
+        match v with
+        | true  -> "true"
+        | false -> "false"
+
+    let attributeValueWriter (t: Type) =
+        match Type.GetTypeCode(t) with
+        | TypeCode.Boolean -> Some <| SerializerFunc(unbox >> writeBool)
         | TypeCode.Byte    -> Some <| SerializerFunc(unbox >> writeByte)
         | TypeCode.Char    -> Some <| SerializerFunc(unbox >> writeChar)
         | TypeCode.Decimal -> Some <| SerializerFunc(unbox >> writeDecimal)
@@ -347,7 +352,12 @@ module internal AttributeSerializer =
         | TypeCode.UInt16  -> Some <| SerializerFunc(unbox >> writeUInt16)
         | TypeCode.UInt32  -> Some <| SerializerFunc(unbox >> writeUInt32)
         | TypeCode.UInt64  -> Some <| SerializerFunc(unbox >> writeUInt64)
+        | TypeCode.DateTime -> Some <| SerializerFunc(unbox >> toShortestXsdFormat)
         | _                -> None
+
+    let writeEnumNames (t: Type) =
+        let under = Enum.GetUnderlyingType(t)
+        attributeValueWriter under
 
     let writeEnum (v : obj) =
         v.ToString()
@@ -368,9 +378,7 @@ module internal AttributeSerializer =
             then writeEnumNames t
             else None
         else
-            match Type.GetTypeCode(t.NullableUnderlying()) with
-            | TypeCode.DateTime -> Some <| SerializerFunc(unbox >> toShortestXsdFormat)
-            | _ -> None
+            attributeValueWriter (t.NullableUnderlying())
 
 /// Serialization logic for list and collection types
 module internal ListSerializer =
