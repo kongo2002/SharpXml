@@ -97,6 +97,9 @@ module internal SerializerBase =
         w.Write(name);
         w.Write('>');
 
+    let injectWriteTagAttributes (func: WriterFunc) attr =
+        fun (n : NameInfo) w x -> writeTagAttributes n.Name attr n w func x
+
     let injectWriteTag (func : WriterFunc) = 
         fun (n : NameInfo) w x -> writeTag n.Name n w func x
 
@@ -546,31 +549,6 @@ module internal Serializer =
     let getValueTypeWriter (t : Type) = fun () ->
         if t.IsValueType then ValueTypeSerializer.getValueTypeWriter t else None
 
-    /// Try to determine a member function 'ToXml'
-    let getInstanceWriter (t : Type) = fun() ->
-        match t.GetMethod(writerFuncName, instanceFlags, null, Type.EmptyTypes, null) |> Utils.toOption with
-        | Some func ->
-            (fun _ (w : TextWriter) x -> w.Write(func.Invoke(x, null)))
-            |> injectWriteTag
-            |> Some
-        | _ -> None
-
-    /// Try to determine a static function 'ToXml'
-    let getStaticWriter (t : Type) = fun () ->
-        match t.GetMethod(writerFuncName, staticFlags, null, [| t |], null) |> Utils.toOption with
-        | Some func ->
-            (fun _ (w : TextWriter) x -> w.Write(func.Invoke(null, [| x |])))
-            |> injectWriteTag
-            |> Some
-        | _ -> None
-
-    /// Try to get a custom serializer function
-    let getCustomWriter (t : Type) = fun () ->
-        match XmlConfig.Instance.TryGetSerializer t with
-        | Some func ->
-            Some <| injectWriteTag (fun _ w x -> w.Write(func.Invoke(x)))
-        | _ -> None
-
     /// Return a default NameInfo instance for the specified name
     let getDefaultNameInfo name = {
         Name = name
@@ -612,6 +590,46 @@ module internal Serializer =
           GetFunc = ReflectionHelpers.getObjGetter propInfo
           WriteFunc = lazy getWriterFunc propInfo.PropertyType
           Default = ReflectionHelpers.getDefaultValue propInfo.PropertyType }
+
+    and getInjectWriter (t : Type) writer =
+        let writerInfo = getTypeWriterInfo t
+        let writeAttrInject ni w x =
+            let attr = extractAttributeValues writerInfo x
+            injectWriteTagAttributes writer attr ni w x
+        writeAttrInject
+
+    /// Try to determine a member function 'ToXml'
+    and getInstanceWriter (t : Type) = fun() ->
+        match t.GetMethod(writerFuncName, instanceFlags, null, Type.EmptyTypes, null) |> Utils.toOption with
+        | Some func ->
+            let writer = (fun _ (w : TextWriter) x -> w.Write(func.Invoke(x, null)))
+            if not XmlConfig.Instance.UseAttributes then
+                injectWriteTag writer
+            else getInjectWriter t writer
+            |> Some
+        | _ -> None
+
+    /// Try to determine a static function 'ToXml'
+    and getStaticWriter (t : Type) = fun () ->
+        match t.GetMethod(writerFuncName, staticFlags, null, [| t |], null) |> Utils.toOption with
+        | Some func ->
+            let writer = (fun _ (w : TextWriter) x -> w.Write(func.Invoke(null, [| x |])))
+            if not XmlConfig.Instance.UseAttributes then
+                injectWriteTag writer
+            else getInjectWriter t writer
+            |> Some
+        | _ -> None
+
+    /// Try to get a custom serializer function
+    and getCustomWriter (t : Type) = fun () ->
+        match XmlConfig.Instance.TryGetSerializer t with
+        | Some func ->
+            let writer = (fun _ (w : TextWriter) x -> w.Write(func.Invoke(x)))
+            if not XmlConfig.Instance.UseAttributes then
+                injectWriteTag writer
+            else getInjectWriter t writer
+            |> Some
+        | _ -> None
 
     /// Try to determine a enumerable serialization function
     and getEnumerableWriter (t : Type) = fun () ->

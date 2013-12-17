@@ -292,6 +292,12 @@ module Types =
 
         let mutable x = Unchecked.defaultof<int>
         let mutable y = Unchecked.defaultof<int>
+        let mutable attr = Unchecked.defaultof<string>
+
+        [<XmlAttribute("attr")>]
+        member this.Attr
+            with get() = attr
+            and set v = attr <- v
 
         member this.X
             with get() = x
