@@ -428,6 +428,16 @@ module internal Deserializer =
         | Some attr when notWhite attr.Name -> attr.Name
         | _ -> pi.Name
 
+    /// Determine attribute reader function
+    let getAttributeReader (t : Type) =
+        if t.IsEnum then
+            let parse x = Enum.Parse(t, x)
+            Some (DeserializerFunc(parse))
+        else
+            match ValueTypeDeserializer.getValueParser t with
+            | Some reader -> Some (DeserializerFunc(reader))
+            | _ -> None
+
     /// Try to determine a AttributeReaderInfo record based on
     /// the specified PropertyInfo
     let getAttributeReaderInfo (p : PropertyInfo) : AttributeReaderInfo option =
@@ -435,10 +445,7 @@ module internal Deserializer =
         let reader =
             match XmlConfig.Instance.TryGetDeserializer t with
             | Some deserializer -> Some deserializer
-            | None ->
-                match ValueTypeDeserializer.getValueParser t with
-                | Some parser -> Some <| DeserializerFunc(parser)
-                | None -> None
+            | None -> getAttributeReader t
         match reader with
         | Some r ->
             { Info = p;
@@ -688,7 +695,7 @@ module internal Deserializer =
 
                     Deserialization.setAttributes builder attr instance
                     inner()
-                | _ -> ()
+                | _ -> Deserialization.setAttributes builder attr instance
         inner()
         instance
 

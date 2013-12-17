@@ -479,6 +479,14 @@ module Types =
             with get() = attr
             and set(v) = attr <- v
 
+    type AttrEnumClass() =
+        let mutable attr = TestEnum.Undefined
+
+        [<XmlAttribute("attr")>]
+        member x.Attr
+            with get() = attr
+            and set(v) = attr <- v
+
     type NullableAttributeClass() =
         let mutable value = Unchecked.defaultof<int>
         let mutable attr = Unchecked.defaultof<Nullable<int>>

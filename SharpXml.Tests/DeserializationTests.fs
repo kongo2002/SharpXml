@@ -474,6 +474,15 @@ module DeserializationTests =
         result.Value |> should equal 35
 
     [<Test>]
+    let ``Can deserialize string attributes into enum values``() =
+        XmlConfig.Instance.UseAttributes <- true
+        let input = "<genericClass><v1>100</v1><v2 attr=\"Bar\"></v2></genericClass>"
+
+        let result = deserialize<GenericClass<AttrEnumClass>>(input)
+        result.V1 |> should equal 100
+        result.V2.Attr |> should equal TestEnum.Bar
+
+    [<Test>]
     let ``Can deserialize complex attribute list classes``() =
         XmlConfig.Instance.UseAttributes <- true
 
