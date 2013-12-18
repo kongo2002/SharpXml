@@ -684,12 +684,13 @@ module internal Serializer =
                     let ps, attrs =
                         properties
                         |> Array.fold determineWriterInfo ([], [])
-                    { Properties = List.sortBy order ps; Attributes = List.rev attrs }
+                    { Properties = ps |> List.rev |> List.sortBy order; Attributes = List.rev attrs }
                 else
                     let ps =
                         properties
                         |> Array.map buildPropertyWriterInfo
                         |> List.ofArray
+                        |> List.rev
                         // sort by order descending
                         |> List.sortBy order
                     { Properties = ps; Attributes = [] }
