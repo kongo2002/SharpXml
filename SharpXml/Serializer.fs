@@ -43,7 +43,8 @@ type internal PropertyWriterInfo = {
     Name : NameInfo
     GetFunc : GetterFunc
     WriteFunc : Lazy<WriterFunc>
-    Default : obj }
+    Default : obj
+    Order : int }
 
 /// Record type containing the serialization information
 /// for a specific XML attribute registered on a type
@@ -578,18 +579,20 @@ module internal Serializer =
             let key = get attr.KeyName keyName
             let value = get attr.ValueName valueName
             let name = get attr.Name name
-            { Name = name; Item = item; Key = key; Value = value }
-        | _ -> { Name = name; Item = itemName; Key = keyName; Value = valueName }
+            { Name = name; Item = item; Key = key; Value = value }, attr.Order
+        | _ -> { Name = name; Item = itemName; Key = keyName; Value = valueName }, 0
 
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
     let rec buildPropertyWriterInfo (propInfo : PropertyInfo) =
+        let nameInfo, order = getNameInfo propInfo
         { Info = propInfo
           OriginalName = propInfo.Name
-          Name = getNameInfo propInfo
+          Name = nameInfo
           GetFunc = ReflectionHelpers.getObjGetter propInfo
           WriteFunc = lazy getWriterFunc propInfo.PropertyType
-          Default = ReflectionHelpers.getDefaultValue propInfo.PropertyType }
+          Default = ReflectionHelpers.getDefaultValue propInfo.PropertyType
+          Order = order }
 
     and getInjectWriter (t : Type) writer =
         let writerInfo = getTypeWriterInfo t

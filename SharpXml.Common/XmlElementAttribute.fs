@@ -27,6 +27,7 @@ type XmlElementAttribute(name : string) =
     let mutable keyName = Unchecked.defaultof<string>
     let mutable valueName = Unchecked.defaultof<string>
     let mutable ns = Unchecked.defaultof<string>
+    let mutable order = 0
 
     new() = XmlElementAttribute(null)
 
@@ -49,6 +50,11 @@ type XmlElementAttribute(name : string) =
     member x.ValueName
         with get() = valueName
         and set(v) = valueName <- v
+
+    /// Optional order number (default 0) - will be used on serialization
+    member x.Order
+        with get() = order
+        and set(v) = order <- v
 
     /// Optional namespace to use on serialization
     [<Obsolete("Use 'XmlNamespaceAttribute' instead")>]
