@@ -346,6 +346,42 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
+    type OrderClass01() =
+        let mutable v1 = Unchecked.defaultof<int>
+        let mutable v2 = Unchecked.defaultof<string>
+
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
+    type OrderClass02() =
+        let mutable v1 = Unchecked.defaultof<int>
+        let mutable v2 = Unchecked.defaultof<string>
+
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        [<XmlElementAttribute(Order = 1)>]
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
+    type OrderClass03() =
+        let mutable v1 = Unchecked.defaultof<int>
+        let mutable v2 = Unchecked.defaultof<string>
+
+        [<XmlElementAttribute(Order = 1)>]
+        member x.V1
+            with get() = v1
+            and set v = v1 <- v
+        [<XmlElementAttribute(Order = 4)>]
+        member x.V2
+            with get() = v2
+            and set v = v2 <- v
+
     type FSharpListClass() =
 
         let mutable v1 = Unchecked.defaultof<int>

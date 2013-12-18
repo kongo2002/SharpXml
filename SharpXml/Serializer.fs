@@ -580,7 +580,7 @@ module internal Serializer =
             let value = get attr.ValueName valueName
             let name = get attr.Name name
             { Name = name; Item = item; Key = key; Value = value }, attr.Order
-        | _ -> { Name = name; Item = itemName; Key = keyName; Value = valueName }, 0
+        | _ -> { Name = name; Item = itemName; Key = keyName; Value = valueName }, Int32.MaxValue
 
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
@@ -678,17 +678,20 @@ module internal Serializer =
         | true, props -> props
         | _ ->
             let properties = ReflectionHelpers.getSerializableProperties t
+            let order = fun x -> x.Order
             let info =
                 if XmlConfig.Instance.UseAttributes then
                     let ps, attrs =
                         properties
                         |> Array.fold determineWriterInfo ([], [])
-                    { Properties = List.rev ps; Attributes = List.rev attrs }
+                    { Properties = List.sortBy order ps; Attributes = List.rev attrs }
                 else
                     let ps =
                         properties
                         |> Array.map buildPropertyWriterInfo
                         |> List.ofArray
+                        // sort by order descending
+                        |> List.sortBy order
                     { Properties = ps; Attributes = [] }
             Atom.updateAtomDict propertyCache t info
 

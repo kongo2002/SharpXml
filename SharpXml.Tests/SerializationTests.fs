@@ -482,6 +482,16 @@ module SerializationTests =
         result |> should equal "<genericClass><v1>14</v1><v2></v2></genericClass>"
 
     [<Test>]
+    let ``Can serialize classes with properties by sort order``() =
+        let input1 = OrderClass01(V1 = 1, V2 = "foo")
+        let input2 = OrderClass02(V1 = 1, V2 = "foo")
+        let input3 = OrderClass03(V1 = 1, V2 = "foo")
+
+        serialize input1 |> should equal "<orderClass01><v1>1</v1><v2>foo</v2></orderClass01>"
+        serialize input2 |> should equal "<orderClass02><v2>foo</v2><v1>1</v1></orderClass02>"
+        serialize input3 |> should equal "<orderClass03><v1>1</v1><v2>foo</v2></orderClass03>"
+
+    [<Test>]
     let ``Can serialize complex attribute based classes``() =
         XmlConfig.Instance.UseAttributes <- true
 
