@@ -303,7 +303,7 @@ module SerializationTests =
         list.Add("foo") |> ignore
         list.Add("bar") |> ignore
         let cls = ArrayListClass(V1 = 200, V2 = list)
-        serialize cls |> should equal "<arrayListClass><v1>200</v1><v2><item>foo</item><item>bar</item></v2></arrayListClass>"
+        serialize cls |> should equal "<arrayListClass><v2><item>foo</item><item>bar</item></v2><v1>200</v1></arrayListClass>"
 
     [<Test>]
     let ``Can serialize untyped collections containing different types``() =
@@ -311,7 +311,7 @@ module SerializationTests =
         list.Add("foo") |> ignore
         list.Add(42) |> ignore
         let cls = ArrayListClass(V1 = 200, V2 = list)
-        serialize cls |> should equal "<arrayListClass><v1>200</v1><v2><item>foo</item><item>42</item></v2></arrayListClass>"
+        serialize cls |> should equal "<arrayListClass><v2><item>foo</item><item>42</item></v2><v1>200</v1></arrayListClass>"
 
     [<Test>]
     let ``Can serialize classes attributed with XmlElementAttribute``() =
@@ -384,7 +384,7 @@ module SerializationTests =
         XmlConfig.Instance.UseAttributes <- false
 
         let cls = NamespaceClass(542, "foo")
-        serialize cls |> should equal "<namespaceClass xmlns=\"SharpXml.Types\"><v1>542</v1><v2>foo</v2></namespaceClass>"
+        serialize cls |> should equal "<namespaceClass xmlns=\"SharpXml.Types\"><v2>foo</v2><v1>542</v1></namespaceClass>"
 
     [<Test>]
     let ``Can serialize classes with tuples``() =
@@ -490,14 +490,3 @@ module SerializationTests =
         serialize input1 |> should equal "<orderClass01><v1>1</v1><v2>foo</v2></orderClass01>"
         serialize input2 |> should equal "<orderClass02><v2>foo</v2><v1>1</v1></orderClass02>"
         serialize input3 |> should equal "<orderClass03><v1>1</v1><v2>foo</v2></orderClass03>"
-
-    [<Test>]
-    let ``Can serialize complex attribute based classes``() =
-        XmlConfig.Instance.UseAttributes <- true
-
-        let cls = Types.HotelInventoryAdjustRequest(Version = "1.000", EchoToken = "123")
-        cls.Adjustments <- Types.Adjustments(HotelCode = "0815")
-        cls.Adjustments.Add(Types.Adjustment(Start = DateTime(2010, 1, 1), End = DateTime(2011, 1, 1)))
-
-        serialize cls |> should equal "foo"
-
