@@ -123,6 +123,9 @@ module internal ValueTypeSerializer =
     open Extensions
     open Utils
 
+    let private valueA    = int 'A'
+    let private valueZero = int '0'
+
     let inline writeString (writer : TextWriter) (content : string) =
         let len = content.Length
         if len > 0 then
@@ -133,7 +136,40 @@ module internal ValueTypeSerializer =
                 match char with
                 | '<' -> writer.Write("&lt;")
                 | '>' -> writer.Write("&gt;")
-                | _ -> writer.Write(char)
+                | _   -> writer.Write(char)
+                curr <- curr + 1
+                if curr < len then char <- NativePtr.read &&chars.[curr]
+
+    let inline writeUnicode (value : int) =
+        let mutable i = 0
+        let mutable v = value
+        let arr = [| '&'; '#'; 'x'; '0'; '0'; '0'; '0'; ';' |]
+        while i < 4 do
+            let num = v % 16
+            let current = 
+                if num < 10 then char (num + valueZero)
+                else char (valueA + (num - 10))
+            arr.[6-i] <- current
+            v <- v >>> 4
+            i <- i + 1
+        arr
+
+    let inline writeStringUnicode (writer : TextWriter) (content : string) =
+        let len = content.Length
+        if len > 0 then
+            let chars = content.ToCharArray()
+            let mutable curr = 0
+            let mutable char = NativePtr.read &&chars.[0]
+            while curr < len do
+                let intVal = int char
+                match char with
+                | '<' -> writer.Write("&lt;")
+                | '>' -> writer.Write("&gt;")
+                | '&' -> writer.Write("&amp;")
+                | _ when intVal <= 126 -> writer.Write(char)
+                | _ ->
+                    let unicode = writeUnicode intVal
+                    writer.Write(unicode)
                 curr <- curr + 1
                 if curr < len then char <- NativePtr.read &&chars.[curr]
 
@@ -142,7 +178,10 @@ module internal ValueTypeSerializer =
 
     let writeStringObject _ writer (value : obj) =
         let v : string = unbox value
-        writeString writer v
+        if XmlConfig.Instance.EncodeSpecialChars then
+            writeStringUnicode writer v
+        else
+            writeString writer v
 
     let writeObject _ (writer : TextWriter) (value : obj) =
         writer.Write(value)
@@ -235,7 +274,10 @@ module internal ValueTypeSerializer =
 
     let writeType _ writer (value : obj) =
         let v : Type = unbox value
-        writeString writer v.AssemblyQualifiedName
+        if XmlConfig.Instance.EncodeSpecialChars then
+            writeStringUnicode writer v.AssemblyQualifiedName
+        else
+            writeString writer v.AssemblyQualifiedName
 
     let writeException _ writer (value : obj) =
         let v : Exception = unbox value

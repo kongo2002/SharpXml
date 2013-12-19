@@ -36,6 +36,7 @@ type XmlConfig private() =
     let mutable throwOnError = false
     let mutable throwOnUnknownElements = false
     let mutable useAttributes = false
+    let mutable encodeSpecialChars = false
 
     let serializerCache = ref (Dictionary<Type, SerializerFunc>())
     let deserializerCache = ref (Dictionary<Type, DeserializerFunc>())
@@ -84,6 +85,12 @@ type XmlConfig private() =
     member x.UseAttributes
         with get() = useAttributes
         and set(v) = useAttributes <- v
+
+    /// Whether to convert special characters into XML
+    /// encoded entities
+    member x.EncodeSpecialChars
+        with get() = encodeSpecialChars
+        and set(v) = encodeSpecialChars <- v
 
     /// Register a serializer delegate for the specified type
     member x.RegisterSerializer<'T> (func : SerializerFunc) =

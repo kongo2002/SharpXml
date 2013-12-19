@@ -490,3 +490,10 @@ module SerializationTests =
         serialize input1 |> should equal "<orderClass01><v1>1</v1><v2>foo</v2></orderClass01>"
         serialize input2 |> should equal "<orderClass02><v2>foo</v2><v1>1</v1></orderClass02>"
         serialize input3 |> should equal "<orderClass03><v1>1</v1><v2>foo</v2></orderClass03>"
+
+    [<Test>]
+    let ``Can serialize unicode characters as encoded entities``() =
+        XmlConfig.Instance.EncodeSpecialChars <- true
+
+        serialize "foo bar" |> should equal "<string>foo bar</string>"
+        serialize "übermäßig" |> should equal "<string>&#x00FC;berm&#x00E4;&#x00DF;ig</string>"
