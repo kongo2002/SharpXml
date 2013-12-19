@@ -241,10 +241,11 @@ module internal ListDeserializer =
                         // in that case we have to instantiate a new item
                         // and try to set its attribute properties
                         match elemInfo with
-                        | Some i when not attrs.IsEmpty ->
+                        | Some i ->
                             let value = i.Ctor.Invoke() :?> 'a
-                            Deserialization.setAttributes i attrs value
                             list.Add(value)
+                            if not attrs.IsEmpty then
+                                Deserialization.setAttributes i attrs value
                         | _ -> ()
                         inner()
                     | _ -> ()
@@ -314,14 +315,26 @@ module internal ListDeserializer =
     let linkedListReader<'a> info (reader : ReaderFunc) attr xml =
         LinkedList<'a>(parseList<'a> info reader attr xml)
 
+    /// Convenience function to build a TypeBuilderInfo with
+    /// type information and an empty constructor only
+    let emptyTypeBuilder (t : Type) (ctor : EmptyConstructor) =
+        { Type = t
+          Props = Dictionary<string, PropertyReaderInfo>()
+          Attrs = Dictionary<string, AttributeReaderInfo>()
+          Ctor = ctor }
+
     /// Specialized reader function for string arrays
     let stringArrayReader attr xml =
-        listReader<string> None ValueTypeDeserializer.stringReader attr xml |> List.toArray |> box
+        let ctor = EmptyConstructor(fun () -> box String.Empty)
+        let info = Some <| emptyTypeBuilder typeof<string> ctor
+        listReader<string> info ValueTypeDeserializer.stringReader attr xml |> List.toArray |> box
 
     /// Specialized reader function for integer arrays
     let intArrayReader attr xml =
+        let ctor = EmptyConstructor(fun () -> box 0)
+        let info = Some <| emptyTypeBuilder typeof<int> ctor
         let intReader = Int32.Parse >> box |> ValueTypeDeserializer.buildValueReader
-        listReader<int> None intReader attr xml |> List.toArray |> box
+        listReader<int> info intReader attr xml |> List.toArray |> box
 
     /// Specialized reader function for byte arrays
     let byteArrayReader attr xml =
@@ -515,8 +528,8 @@ module internal Deserializer =
     and buildGenericFunction name t =
         let mtd = getGenericListFunction name t
         let elemReader = getReaderFunc t
-        let etbi = getElemTypeBuilderInfo t
-        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| etbi; elemReader; attr; xml |])
+        let tbi = Some <| getTypeBuilderInfo t
+        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| tbi; elemReader; attr; xml |])
 
     /// Get a reader function for generic F# lists
     and getTypedFsListReader =
@@ -546,25 +559,20 @@ module internal Deserializer =
     and getLinkedListReader =
         buildGenericFunction "linkedListReader"
 
-    and getElemTypeBuilderInfo t =
-        if XmlConfig.Instance.UseAttributes
-        then Some <| getTypeBuilderInfo t
-        else None
-
     /// Get a reader function for generic collections
     and getGenericCollectionReader (listType : Type) (t : Type) =
         let mtd = getGenericListFunction "genericCollectionReader" t
         let elemReader = getReaderFunc t
         let ctor = getTypeBuilderInfo listType
-        let etbi = getElemTypeBuilderInfo t
-        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; etbi; attr; xml |])
+        let tbi = Some <| getTypeBuilderInfo t
+        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; tbi; attr; xml |])
 
     /// Get a reader function for generic readonly collections
     and getGenericROReader ctor (listType : Type) (t : Type) =
         let mtd = getGenericListFunction "genericROReader" t
         let elemReader = getReaderFunc t
-        let etbi = getElemTypeBuilderInfo t
-        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; etbi; attr; xml |])
+        let tbi = Some <| getTypeBuilderInfo t
+        fun attr (xml : ParserInfo) -> mtd.Invoke(null, [| elemReader; ctor; tbi; attr; xml |])
 
     /// Try to get a reader based on a string value constructor
     and getStringTypeConstructor (t : Type) = fun () ->
@@ -654,8 +662,11 @@ module internal Deserializer =
                 | TagType.Single ->
                     match builder.Props.TryGetValue name with
                     | true, prop ->
-                        let propInstance = prop.Ctor.Invoke()
-                        prop.Setter.Invoke(instance, propInstance)
+                        try
+                            let propInstance = prop.Ctor.Invoke()
+                            prop.Setter.Invoke(instance, propInstance)
+                        with ex ->
+                            System.Diagnostics.Debug.WriteLine("empty ctor failed")
                     | _ -> Deserialization.elementNotExist name builder.Type
                     inner()
                 | _ -> ()
@@ -687,10 +698,13 @@ module internal Deserializer =
                 | TagType.Single ->
                     match builder.Props.TryGetValue name with
                     | true, prop ->
-                        let propInstance = prop.Ctor.Invoke()
-                        prop.Setter.Invoke(instance, propInstance)
-                        if not attrs.IsEmpty then
-                            setSingleTagAttributes prop attrs instance propInstance
+                        try
+                            let propInstance = prop.Ctor.Invoke()
+                            prop.Setter.Invoke(instance, propInstance)
+                            if not attrs.IsEmpty then
+                                setSingleTagAttributes prop attrs instance propInstance
+                        with ex ->
+                            System.Diagnostics.Debug.WriteLine("empty ctor failed")
                     | _ -> Deserialization.elementNotExist name builder.Type
 
                     Deserialization.setAttributes builder attr instance

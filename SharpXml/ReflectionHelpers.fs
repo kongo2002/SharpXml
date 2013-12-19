@@ -90,8 +90,12 @@ module internal ReflectionHelpers =
 
             dm.CreateDelegate(typeof<EmptyConstructor>) :?> EmptyConstructor
         else
-            // this one is for types that do not have an empty constructor
-            EmptyConstructor(fun () -> FormatterServices.GetUninitializedObject(t))
+            let func =
+                // special case 'string': no default constructor
+                if t = typeof<string> then fun () -> box String.Empty
+                // this one is for types that do not have an empty constructor
+                else fun () -> FormatterServices.GetUninitializedObject(t)
+            EmptyConstructor(func)
 
     let constructorCache = ref (Dictionary<Type, EmptyConstructor>())
 

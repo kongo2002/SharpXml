@@ -52,8 +52,8 @@ module DeserializationTests =
     [<Test>]
     let ``Can deserialize string arrays with empty elements``() =
         let out = deserialize<TestClass3> "<testClass><v1><item /><item>foo</item><item/></v1><v2>42</v2></testClass>"
-        out.V1.Length |> should equal 1
-        out.V1 |> should equal [| "foo" |]
+        out.V1.Length |> should equal 3
+        out.V1 |> should equal [| ""; "foo"; "" |]
         out.V2 |> should equal 42
 
     [<Test>]
@@ -495,3 +495,11 @@ module DeserializationTests =
         result.AttributeList.[0].Two |> should equal "2"
         result.AttributeList.[0].Text |> should equal "some text"
 
+    [<Test>]
+    let ``Can deserialize string arrays with multiple empty elements``() =
+        let input = "<genericClass><v2><string /><string /></v2><v1>352</v1></genericClass>"
+        let result = deserialize<GenericClass<string[]>>(input)
+
+        result.V1 |> should equal 352
+        result.V2.Length |> should equal 2
+        result.V2 |> should equal [| ""; "" |]
