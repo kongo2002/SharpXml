@@ -20,6 +20,7 @@ namespace SharpXml
 module internal XmlParser =
 
     open System
+    open System.Globalization
     open System.Collections.Generic
     open Microsoft.FSharp.NativeInterop
 
@@ -62,6 +63,20 @@ module internal XmlParser =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
         let max =  Array.max whitespace |> int
         Array.init (max+1) (fun c -> Array.exists ((=) (char c)) whitespace)
+
+    let entities =
+        let xmlEntities = [
+            ("gt", ">");
+            ("lt", "<");
+            ("amp", "&") ]
+        xmlEntities
+        |> List.fold (fun (d : Dictionary<string, string>) (k, v) -> d.Add(k, v); d)
+            (new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
+
+    let tryFindEntity key =
+        match entities.TryGetValue key with
+        | true, value -> Some value
+        | _           -> None
 
     let parseRawString (input : string) =
         box input
@@ -389,6 +404,70 @@ module internal XmlParser =
 
     let inline stripCData (str : string) =
         str.Replace("<![CDATA[", null).Replace("]]>", null)
+
+    let indexOfEndEntity buffer (index : int) (length : int) =
+        let mutable found = false
+        let mutable i = index
+        let mutable buf = buffer
+        while not found && i < length do
+            buf <- NativePtr.add buf 1
+            let chr = NativePtr.read buf
+            if chr = '&' || chr = ';' then found <- true
+            else i <- i + 1
+        if found then i else 0
+
+    let decodeEntity (input : ParserInfo) =
+        let start = input.Index
+        let mutable found = false
+        let mutable hasCData = false
+        let mutable encoded = false
+        let mutable i = input.Index
+        let mutable buffer = &&input.Value.[input.Index]
+        let sb = System.Text.StringBuilder()
+
+        while not found && i < input.Length do
+            let chr = NativePtr.read buffer
+
+            // possible start of entity
+            if chr = '&' && i + 1 < input.Length then
+
+                // find next ';' or '&'
+                let nextEnd = indexOfEndEntity buffer (i+1) input.Length
+                if nextEnd > 0 && input.Value.[nextEnd] = ';' then
+                    let entity = new String(input.Value, i+1, nextEnd - i - 1)
+
+                    // entity is a unicode encoding
+                    if entity.Length > 1 && entity.[0] = '#' then
+                        let parsed = ref 0us
+                        let invariant = System.Globalization.NumberFormatInfo.InvariantInfo
+                        match entity.[1] with
+                        | 'x'
+                        | 'X' -> UInt16.TryParse(entity.Substring(2), NumberStyles.AllowHexSpecifier, invariant, parsed) |> ignore
+                        | _   -> UInt16.TryParse(entity.Substring(1), NumberStyles.Integer, invariant, parsed) |> ignore
+
+                        if !parsed > 0us then
+                            sb.Append(char !parsed) |> ignore
+
+                            buffer <- NativePtr.add buffer (nextEnd - i)
+                            i <- nextEnd
+                    // entity could be an xml/html entity
+                    else
+                        buffer <- NativePtr.add buffer (nextEnd - i)
+                        i <- nextEnd
+
+                        match tryFindEntity entity with
+                        | Some e -> sb.Append(e) |> ignore
+                        | _      -> sb.Append('&') |> ignore
+                                    sb.Append(entity) |> ignore
+                                    sb.Append(';') |> ignore
+                else sb.Append(chr) |> ignore
+            else sb.Append(chr) |> ignore
+
+            buffer <- NativePtr.add buffer 1
+            i <- i + 1
+
+        sb.ToString()
+
 
     /// Eat the content of a XML tag and return the
     /// string value as well as the end index

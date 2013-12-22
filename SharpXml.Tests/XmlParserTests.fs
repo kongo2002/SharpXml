@@ -60,6 +60,10 @@ module XmlParserTests =
         let info = ParserInfo input
         eatTagWithAttributes info
 
+    let private eatUnicode input =
+        let info = ParserInfo input
+        decodeEntity info
+
     [<Test>]
     let eatTag01() =
         let input = " foo <testTag rest/> <hamEggs/>"
@@ -314,3 +318,45 @@ module XmlParserTests =
         value |> should equal "single"
         t |> should equal TagType.Single
         index |> should equal 61
+
+    [<Test>]
+    let encodeUnicode01() =
+        let input = "no special character at all"
+
+        eatUnicode input |>  should equal input
+
+    [<Test>]
+    let encodeUnicode02() =
+        let input = "fob &#x26; bar"
+
+        eatUnicode input |>  should equal "fob & bar"
+
+    [<Test>]
+    let encodeUnicode03() =
+        let input = "foo &#x0026; bar"
+
+        eatUnicode input |>  should equal "foo & bar"
+
+    [<Test>]
+    let encodeUnicode04() =
+        let input = "foo &#38; bar"
+
+        eatUnicode input |>  should equal "foo & bar"
+
+    [<Test>]
+    let encodeUnicode05() =
+        let input = "foo && bar"
+
+        eatUnicode input |>  should equal "foo && bar"
+
+    [<Test>]
+    let encodeUnicode06() =
+        let input = "foo &;& bar"
+
+        eatUnicode input |>  should equal "foo &;& bar"
+
+    [<Test>]
+    let encodeUnicode07() =
+        let input = "foo &&amp;& bar"
+
+        eatUnicode input |>  should equal "foo &&& bar"
