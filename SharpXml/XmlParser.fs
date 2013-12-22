@@ -64,7 +64,9 @@ module internal XmlParser =
         let xmlEntities = [
             ("gt", ">");
             ("lt", "<");
-            ("amp", "&") ]
+            ("amp", "&");
+            ("apos", "'");
+            ("quot", "\"") ]
         xmlEntities
         |> List.fold (fun (d : Dictionary<string, string>) (k, v) -> d.Add(k, v); d)
             (new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
