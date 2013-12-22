@@ -53,16 +53,16 @@ module XmlParserTests =
     let private getContent input at =
         let info = ParserInfo input
         info.Index <- at
-        let content = eatContent info
+        let content = eatText info
         info.Index, content
 
     let private getAttr input =
         let info = ParserInfo input
         eatTagWithAttributes info
 
-    let private eatUnicode input =
+    let private eatText input =
         let info = ParserInfo input
-        decodeEntity info
+        eatText info
 
     [<Test>]
     let eatTag01() =
@@ -323,40 +323,59 @@ module XmlParserTests =
     let encodeUnicode01() =
         let input = "no special character at all"
 
-        eatUnicode input |>  should equal input
+        eatText input |>  should equal input
 
     [<Test>]
     let encodeUnicode02() =
         let input = "fob &#x26; bar"
 
-        eatUnicode input |>  should equal "fob & bar"
+        eatText input |>  should equal "fob & bar"
 
     [<Test>]
     let encodeUnicode03() =
         let input = "foo &#x0026; bar"
 
-        eatUnicode input |>  should equal "foo & bar"
+        eatText input |>  should equal "foo & bar"
 
     [<Test>]
     let encodeUnicode04() =
         let input = "foo &#38; bar"
 
-        eatUnicode input |>  should equal "foo & bar"
+        eatText input |>  should equal "foo & bar"
 
     [<Test>]
     let encodeUnicode05() =
         let input = "foo && bar"
 
-        eatUnicode input |>  should equal "foo && bar"
+        eatText input |>  should equal "foo && bar"
 
     [<Test>]
     let encodeUnicode06() =
         let input = "foo &;& bar"
 
-        eatUnicode input |>  should equal "foo &;& bar"
+        eatText input |>  should equal "foo &;& bar"
 
     [<Test>]
     let encodeUnicode07() =
         let input = "foo &&amp;& bar"
 
-        eatUnicode input |>  should equal "foo &&& bar"
+        eatText input |>  should equal "foo &&& bar"
+
+    [<Test>]
+    let eatCDATA01() =
+        let input = "foo <![CDATA[<some><thing>]]> bar"
+
+        eatText input |>  should equal "foo <some><thing> bar"
+
+    [<Test>]
+    let eatCDATA02() =
+        let input = "<![CDATA[<some><thing>]]>"
+
+        eatText input |>  should equal "<some><thing>"
+
+    [<Test>]
+    let eatCDATA03() =
+        let input = "foo <![CDATA[<some>]] ><thing>]]> bar"
+
+        eatText input |>  should equal "foo <some>]] ><thing> bar"
+

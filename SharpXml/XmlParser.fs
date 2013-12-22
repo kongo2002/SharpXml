@@ -20,8 +20,9 @@ namespace SharpXml
 module internal XmlParser =
 
     open System
-    open System.Globalization
     open System.Collections.Generic
+    open System.Globalization
+    open System.Text
     open Microsoft.FSharp.NativeInterop
 
     type ParserInfo(value : string) =
@@ -54,11 +55,6 @@ module internal XmlParser =
         | Hyphen = 3
         | EndHyphen = 4
 
-    type CDataState =
-        | Content = 0
-        | FirstBracket = 1
-        | SecondBracket = 2
-
     let whitespaceChars =
         let whitespace = [| ' '; '\t'; '\r'; '\n' |]
         let max =  Array.max whitespace |> int
@@ -90,7 +86,7 @@ module internal XmlParser =
         else skipWhitespace input (index + 1)
 
     let lookAhead (str : string) (input : ParserInfo) =
-        if input.Index + str.Length < input.Length then
+        if input.Index + str.Length <= input.Length then
             let rec inner i =
                 if str.Length <= i then true
                 elif input.Value.[input.Index + i] <> str.[i] then false
@@ -125,27 +121,26 @@ module internal XmlParser =
                 if chr = '>' then found <- true
         skip
 
-    let skipCData buffer (input : ParserInfo) =
+    let skipCData buffer (input : ParserInfo) (sb : StringBuilder)=
         if lookAhead "<![CDATA[" input then
-            let mutable state = CDataState.Content
-            let mutable skip = 0
-            let mutable b = buffer
             let mutable found = false
+            let mutable skip = 8
+            let mutable b = NativePtr.add buffer 8
+            input.Index <- input.Index + 8
             while not input.IsEnd && not found do
-                let chr = NativePtr.read b
-                input.Index <- input.Index + 1
                 b <- NativePtr.add b 1
+                input.Index <- input.Index + 1
                 skip <- skip + 1
+                let chr = NativePtr.read b
 
-                match state with
-                | CDataState.Content ->
-                    if chr = ']' then state <- CDataState.FirstBracket
-                | CDataState.FirstBracket ->
-                    if chr = ']' then state <- CDataState.SecondBracket
-                    else state <- CDataState.Content
-                | CDataState.SecondBracket ->
-                    if chr = '>' then found <- true
-                    else state <- CDataState.Content
+                // possible end of CDATA
+                if chr = ']' then
+                    if lookAhead "]]>" input then
+                        skip <- skip + 2
+                        input.Index <- input.Index + 2
+                        found <- true
+                    else sb.Append(chr) |> ignore
+                else sb.Append(chr) |> ignore
             skip
         else 0
 
@@ -416,30 +411,39 @@ module internal XmlParser =
             else i <- i + 1
         if found then i else 0
 
-    let decodeEntity (input : ParserInfo) =
-        let start = input.Index
+    /// Eat the inner content of a XML tag and return the string value
+    let eatText (input : ParserInfo) =
         let mutable found = false
-        let mutable hasCData = false
-        let mutable encoded = false
-        let mutable i = input.Index
         let mutable buffer = &&input.Value.[input.Index]
-        let sb = System.Text.StringBuilder()
+        let sb = StringBuilder()
 
-        while not found && i < input.Length do
+        while not found && input.Index < input.Length do
             let chr = NativePtr.read buffer
 
-            // possible start of entity
-            if chr = '&' && i + 1 < input.Length then
+            // end of the inner text of start of CDATA
+            if chr = '<' then
+                // look for a CDATA entity
+                if input.Index + 1 < input.Length && input.Value.[input.Index+1] = '!' then
+                    let skip = skipCData buffer input sb
+
+                    // this is a CDATA element -> skip the number of characters returned
+                    if skip > 0 then
+                        buffer <- NativePtr.add buffer skip
+                // end of the inner text
+                else found <- true
+
+            // possible start of special entity
+            elif chr = '&' && input.Index + 1 < input.Length then
 
                 // find next ';' or '&'
-                let nextEnd = indexOfEndEntity buffer (i+1) input.Length
+                let nextEnd = indexOfEndEntity buffer (input.Index+1) input.Length
                 if nextEnd > 0 && input.Value.[nextEnd] = ';' then
-                    let entity = new String(input.Value, i+1, nextEnd - i - 1)
+                    let entity = new String(input.Value, input.Index+1, nextEnd - input.Index - 1)
 
                     // entity is a unicode encoding
                     if entity.Length > 1 && entity.[0] = '#' then
                         let parsed = ref 0us
-                        let invariant = System.Globalization.NumberFormatInfo.InvariantInfo
+                        let invariant = NumberFormatInfo.InvariantInfo
                         match entity.[1] with
                         | 'x'
                         | 'X' -> UInt16.TryParse(entity.Substring(2), NumberStyles.AllowHexSpecifier, invariant, parsed) |> ignore
@@ -448,12 +452,12 @@ module internal XmlParser =
                         if !parsed > 0us then
                             sb.Append(char !parsed) |> ignore
 
-                            buffer <- NativePtr.add buffer (nextEnd - i)
-                            i <- nextEnd
+                            buffer <- NativePtr.add buffer (nextEnd - input.Index)
+                            input.Index <- nextEnd
                     // entity could be an xml/html entity
                     else
-                        buffer <- NativePtr.add buffer (nextEnd - i)
-                        i <- nextEnd
+                        buffer <- NativePtr.add buffer (nextEnd - input.Index)
+                        input.Index <- nextEnd
 
                         match tryFindEntity entity with
                         | Some e -> sb.Append(e) |> ignore
@@ -463,37 +467,8 @@ module internal XmlParser =
                 else sb.Append(chr) |> ignore
             else sb.Append(chr) |> ignore
 
-            buffer <- NativePtr.add buffer 1
-            i <- i + 1
+            if not found then
+                buffer <- NativePtr.add buffer 1
+                input.Index <- input.Index + 1
 
         sb.ToString()
-
-
-    /// Eat the content of a XML tag and return the
-    /// string value as well as the end index
-    let eatContent (input : ParserInfo) =
-        let start = input.Index
-        let mutable found = false
-        let mutable hasCData = false
-        let mutable encoded = false
-        let mutable buffer = &&input.Value.[input.Index]
-        while not found && input.Index < input.Length do
-            let chr = NativePtr.read buffer
-            if chr = '<' then
-                let skip = skipCData buffer input
-                if skip > 0 then
-                    buffer <- NativePtr.add buffer skip
-                    hasCData <- true
-                else found <- true
-            else
-                if chr = '&' then encoded <- true
-                input.Index <- input.Index + 1
-                buffer <- NativePtr.add buffer 1
-        let result = String(input.Value, start, input.Index - start)
-
-        if hasCData then
-            if encoded then result |> stripCData |> decode
-            else result |> stripCData
-        else
-            if encoded then result |> decode
-            else result

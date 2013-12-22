@@ -116,7 +116,7 @@ module internal ValueTypeDeserializer =
     open SharpXml.XmlParser
 
     let inline buildValueReader reader = fun attr info ->
-        let str = eatContent info
+        let str = eatText info
         if not info.IsEnd then
             let value = reader str
             eatClosingTag info
