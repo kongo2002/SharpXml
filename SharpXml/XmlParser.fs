@@ -167,6 +167,7 @@ module internal XmlParser =
     let eatTag (input : ParserInfo) =
         let mutable name = Unchecked.defaultof<string>
         let mutable nameStart = 0
+        let mutable enclosingType = '"'
         let mutable tag = TagType.Single
         let mutable buffer = &&input.Value.[input.Index]
         let mutable close = false
@@ -209,12 +210,13 @@ module internal XmlParser =
                     tag <- if close then TagType.Close else TagType.Open
                     found <- true
             | ParseState.InString ->
-                if chr = '"' then
+                if chr = enclosingType then
                     state <- ParseState.InTag
             | _ ->
                 if chr = '>' then
                     found <- true
-                elif chr = '"' then
+                elif chr = '"' || chr = '\'' then
+                    enclosingType <- chr
                     state <- ParseState.InString
                 elif chr = '/' then
                     tag <- TagType.Single
