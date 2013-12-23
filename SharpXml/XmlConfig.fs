@@ -1,6 +1,5 @@
 ﻿//  Copyright 2012-2013 Gregor Uhlenheuer
 //
-//
 //  Licensed under the Apache License, Version 2.0 (the "License");
 //  you may not use this file except in compliance with the License.
 //  You may obtain a copy of the License at
@@ -29,11 +28,11 @@ type DeserializerFunc = delegate of string -> obj
 /// Type of the serialization logic that should be
 /// used when writing special characters
 type UnicodeSerializationType =
-    /// Write the special characters in the output stream as it is
+    /// Serialize the special character in the output stream as it is
     | Unencoded      = 0
-    /// Write the hexadecimal representation of the character value
+    /// Serialize the hexadecimal representation of the character value
     | HexEncoded     = 1
-    /// Write the decimal representation of the character value
+    /// Serialize the decimal representation of the character value
     | DecimalEncoded = 2
 
 /// Singleton configuration class containing all

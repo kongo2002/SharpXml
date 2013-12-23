@@ -56,13 +56,6 @@ type XmlElementAttribute(name : string) =
         with get() = order
         and set(v) = order <- v
 
-    /// Optional namespace to use on serialization
-    [<Obsolete("Use 'XmlNamespaceAttribute' instead")>]
-    member x.Namespace
-        with get() = ns
-        and set(v) = ns <- v
-
-
 /// Attribute to mark properties that should be associated
 /// with XML attributes
 [<AttributeUsage(AttributeTargets.Property)>]
@@ -76,10 +69,15 @@ type XmlAttributeAttribute(name: string) =
         with get() = name
 
 /// Attribute that allows to specify a number of static
-/// XML attributes that should be used on serialization
+/// XML attributes (i.e. namespace definitions) that should be used on serialization
 [<AttributeUsage(AttributeTargets.Class, Inherited = true, AllowMultiple = true)>]
-type XmlNamespaceAttribute([<ParamArray>] attributes: string array) =
+type XmlNamespaceAttribute(name: string, value: string) =
     inherit Attribute()
 
-    member x.Attributes
-        with get() = attributes
+    /// Name of the namespace or static attribute
+    member x.Name
+        with get() = name
+
+    /// Value of the namespace or static attribute
+    member x.Value
+        with get() = value

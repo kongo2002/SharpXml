@@ -23,7 +23,6 @@ type internal TypeInfo = {
     Type : System.Type
     OriginalName : string
     ClsName : string
-    Namespace : string option
     Attributes : (string * string) array }
 
 type internal NameInfo = {
@@ -565,18 +564,14 @@ module internal Serializer =
         // keep track of duplicates
         let set = HashSet<string>()
         getAttributes<XmlNamespaceAttribute> t
-        |> Array.map (fun a -> a.Attributes)
-        |> Array.concat
         |> Array.choose (fun a ->
-            match a.Split('=') with
-            | [|k; v|] when notWhite k ->
-                let m = namespaceRegex.Match v
-                if m.Success && m.Groups.Count > 1 then
-                    let key = k.Trim()
-                    let unique = set.Add key
-                    if unique then Some (key, m.Groups.[1].Value) else None
+            let name = a.Name
+            let value = a.Value
+            if notWhite name && notWhite value then
+                let key = name.Trim()
+                if set.Add(key) then Some(key, value)
                 else None
-            | _ -> None)
+            else None)
 
     /// Build a TypeInfo object based on the given Type
     let buildTypeInfo t =
@@ -585,13 +580,11 @@ module internal Serializer =
             { Type = t
               OriginalName = t.Name
               ClsName = if notWhite attr.Name then attr.Name else getTypeName t
-              Namespace = if notWhite attr.Namespace then Some attr.Namespace else None
               Attributes = getNamespaceAttributes t }
         | None ->
             { Type = t
               OriginalName = t.Name
               ClsName = getTypeName t
-              Namespace = None
               Attributes = getNamespaceAttributes t }
 
     /// Get the TypeInfo object associated with the given Type
@@ -794,11 +787,7 @@ module internal Serializer =
                 if XmlConfig.Instance.UseAttributes then
                     Some (writeClassWithAttributes typeInfo writerInfo)
                 else
-                    let func =
-                        match typeInfo.Namespace with
-                        | Some ns -> writeTagNamespace ns
-                        | None    -> writeTag
-                    Some (writeClass func writerInfo)
+                    Some (writeClass writeTag writerInfo)
         else None
 
     /// Try to determine a writer function for a dictionary

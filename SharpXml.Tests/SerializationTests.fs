@@ -380,13 +380,6 @@ module SerializationTests =
         XmlConfig.Instance.IncludeNullValues <- false
 
     [<Test>]
-    let ``Can serialize root type with namespace``() =
-        XmlConfig.Instance.UseAttributes <- false
-
-        let cls = NamespaceClass(542, "foo")
-        serialize cls |> should equal "<namespaceClass xmlns=\"SharpXml.Types\"><v2>foo</v2><v1>542</v1></namespaceClass>"
-
-    [<Test>]
     let ``Can serialize classes with tuples``() =
         let cls = TupleClass(V1 = 23, V2 = Tuple<string, int>("foobar", 204))
         serialize cls |> should equal "<tupleClass><v1>23</v1><v2><item1>foobar</item1><item2>204</item2></v2></tupleClass>"

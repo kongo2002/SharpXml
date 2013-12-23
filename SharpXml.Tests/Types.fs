@@ -98,19 +98,6 @@ module Types =
             with get() = v2
             and set v = v2 <- v
 
-    [<XmlElement(Namespace = "SharpXml.Types")>]
-    type NamespaceClass(val1 : int, val2 : string) =
-
-        let mutable v1 = val1
-        let mutable v2 = val2
-
-        member x.V1
-            with get() = v1
-            and set v = v1 <- v
-        member x.V2
-            with get() = v2
-            and set v = v2 <- v
-
     type SimpleClass() =
 
         let mutable v1 = Unchecked.defaultof<string>
@@ -470,7 +457,7 @@ module Types =
             with get() = attr
             and set v = attr <- v
 
-    [<XmlNamespace("foo=\"bar\"")>]
+    [<XmlNamespace("foo", "bar")>]
     type StaticAttributeClass() =
 
         let mutable value = Unchecked.defaultof<int>
@@ -479,11 +466,11 @@ module Types =
             with get() = value
             and set v = value <- v
 
-    [<XmlNamespace("bar=\"foo\"")>]
+    [<XmlNamespace("bar", "foo")>]
     type InheritedStaticAttributeClass() =
         inherit StaticAttributeClass()
 
-    [<XmlNamespace("bar=\"foo\"")>]
+    [<XmlNamespace("bar", "foo")>]
     type AttributeClass2() =
         let mutable value = Unchecked.defaultof<int>
         let mutable attr = Unchecked.defaultof<string>
