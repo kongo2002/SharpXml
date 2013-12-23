@@ -493,7 +493,7 @@ module SerializationTests =
 
     [<Test>]
     let ``Can serialize unicode characters as encoded entities``() =
-        XmlConfig.Instance.EncodeSpecialChars <- true
+        XmlConfig.Instance.SpecialCharEncoding <- UnicodeSerializationType.HexEncoded
 
         serialize "foo bar" |> should equal "<string>foo bar</string>"
         serialize "übermäßig" |> should equal "<string>&#x00FC;berm&#x00E4;&#x00DF;ig</string>"

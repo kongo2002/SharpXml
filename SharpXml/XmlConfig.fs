@@ -1,5 +1,6 @@
 ﻿//  Copyright 2012-2013 Gregor Uhlenheuer
 //
+//
 //  Licensed under the Apache License, Version 2.0 (the "License");
 //  you may not use this file except in compliance with the License.
 //  You may obtain a copy of the License at
@@ -25,6 +26,16 @@ type SerializerFunc = delegate of obj -> string
 /// specific deserialization logic
 type DeserializerFunc = delegate of string -> obj
 
+/// Type of the serialization logic that should be
+/// used when writing special characters
+type UnicodeSerializationType =
+    /// Write the special characters in the output stream as it is
+    | Unencoded      = 0
+    /// Write the hexadecimal representation of the character value
+    | HexEncoded     = 1
+    /// Write the decimal representation of the character value
+    | DecimalEncoded = 2
+
 /// Singleton configuration class containing all
 /// preferences of the XmlSerializer
 type XmlConfig private() =
@@ -36,7 +47,7 @@ type XmlConfig private() =
     let mutable throwOnError = false
     let mutable throwOnUnknownElements = false
     let mutable useAttributes = false
-    let mutable encodeSpecialChars = false
+    let mutable specialCharEncoding = UnicodeSerializationType.Unencoded
 
     let serializerCache = ref (Dictionary<Type, SerializerFunc>())
     let deserializerCache = ref (Dictionary<Type, DeserializerFunc>())
@@ -88,9 +99,9 @@ type XmlConfig private() =
 
     /// Whether to convert special characters into XML
     /// encoded entities
-    member x.EncodeSpecialChars
-        with get() = encodeSpecialChars
-        and set(v) = encodeSpecialChars <- v
+    member x.SpecialCharEncoding
+        with get() = specialCharEncoding
+        and set(v) = specialCharEncoding <- v
 
     /// Register a serializer delegate for the specified type
     member x.RegisterSerializer<'T> (func : SerializerFunc) =

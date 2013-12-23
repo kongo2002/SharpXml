@@ -101,7 +101,7 @@ module internal SerializerBase =
     let injectWriteTagAttributes (func: WriterFunc) attr =
         fun (n : NameInfo) w x -> writeTagAttributes n.Name attr n w func x
 
-    let injectWriteTag (func : WriterFunc) = 
+    let injectWriteTag (func : WriterFunc) =
         fun (n : NameInfo) w x -> writeTag n.Name n w func x
 
     let extractAttributeValues (info: TypeWriterInfo) (value : obj) =
@@ -126,62 +126,81 @@ module internal ValueTypeSerializer =
     let private valueA    = int 'A'
     let private valueZero = int '0'
 
+    /// Write the specified string value into the TextWriter instance
+    /// while encoding some few special characters (i.e. &lt; and &gt;)
     let inline writeString (writer : TextWriter) (content : string) =
         let len = content.Length
         if len > 0 then
             let chars = content.ToCharArray()
-            let mutable curr = 0
-            let mutable char = NativePtr.read &&chars.[0]
-            while curr < len do
-                match char with
+            let mutable i = 0
+            let mutable buffer = &&chars.[0]
+            while i < len do
+                let chr = NativePtr.read buffer
+                buffer <- NativePtr.add buffer 1
+                match chr with
                 | '<' -> writer.Write("&lt;")
                 | '>' -> writer.Write("&gt;")
-                | _   -> writer.Write(char)
-                curr <- curr + 1
-                if curr < len then char <- NativePtr.read &&chars.[curr]
+                | _   -> writer.Write(chr)
+                i <- i + 1
 
-    let inline writeUnicode (value : int) =
+    /// Write the specified character value as a hexadecimal encoded
+    /// XML entity into the given TextWriter
+    let inline writeUnicodeHex (writer : TextWriter) (value : int) =
         let mutable i = 0
         let mutable v = value
         let arr = [| '&'; '#'; 'x'; '0'; '0'; '0'; '0'; ';' |]
         while i < 4 do
             let num = v % 16
-            let current = 
+            let current =
                 if num < 10 then char (num + valueZero)
                 else char (valueA + (num - 10))
             arr.[6-i] <- current
             v <- v >>> 4
             i <- i + 1
-        arr
 
-    let inline writeStringUnicode (writer : TextWriter) (content : string) =
+        writer.Write(arr)
+
+    /// Write the specified character value as a decimal encoded
+    /// XML entity into the given TextWriter
+    let inline writeUnicode (writer : TextWriter) (value : int) =
+        writer.Write("&#")
+        writer.Write(value)
+        writer.Write(';')
+
+    let inline writeStringUnicode unicodeWriter (writer : TextWriter) (content : string) =
         let len = content.Length
         if len > 0 then
             let chars = content.ToCharArray()
             let mutable curr = 0
-            let mutable char = NativePtr.read &&chars.[0]
+            let mutable buffer = &&chars.[0]
             while curr < len do
-                let intVal = int char
-                match char with
+                let chr = NativePtr.read buffer
+                let intVal = int chr
+                buffer <- NativePtr.add buffer 1
+                match chr with
                 | '<' -> writer.Write("&lt;")
                 | '>' -> writer.Write("&gt;")
                 | '&' -> writer.Write("&amp;")
-                | _ when intVal <= 126 -> writer.Write(char)
-                | _ ->
-                    let unicode = writeUnicode intVal
-                    writer.Write(unicode)
+                | '\'' -> writer.Write("&#x27;")
+                | '"' -> writer.Write("&#x22;")
+                | _ when intVal <= 126 -> writer.Write(chr)
+                | _ -> unicodeWriter writer intVal
                 curr <- curr + 1
-                if curr < len then char <- NativePtr.read &&chars.[curr]
 
     let inline nullableWriter n writer value func =
         if value <> null then func n writer value
 
+    let getInnerTextWriter writer value =
+        let func =
+            match XmlConfig.Instance.SpecialCharEncoding with
+            | UnicodeSerializationType.HexEncoded     -> writeStringUnicode writeUnicodeHex
+            | UnicodeSerializationType.DecimalEncoded -> writeStringUnicode writeUnicode
+            | _                                       -> writeString
+        func writer value
+
     let writeStringObject _ writer (value : obj) =
         let v : string = unbox value
-        if XmlConfig.Instance.EncodeSpecialChars then
-            writeStringUnicode writer v
-        else
-            writeString writer v
+        getInnerTextWriter writer v
 
     let writeObject _ (writer : TextWriter) (value : obj) =
         writer.Write(value)
@@ -274,10 +293,7 @@ module internal ValueTypeSerializer =
 
     let writeType _ writer (value : obj) =
         let v : Type = unbox value
-        if XmlConfig.Instance.EncodeSpecialChars then
-            writeStringUnicode writer v.AssemblyQualifiedName
-        else
-            writeString writer v.AssemblyQualifiedName
+        getInnerTextWriter writer v.AssemblyQualifiedName
 
     let writeException _ writer (value : obj) =
         let v : Exception = unbox value
@@ -348,7 +364,7 @@ module internal ValueTypeSerializer =
 module internal AttributeSerializer =
 
     open System
-    
+
     open Extensions
     open Utils
 
@@ -410,7 +426,7 @@ module internal AttributeSerializer =
 
     let getValueWriter (t: Type) : SerializerFunc option =
         if t = typeof<Nullable<DateTime>> then
-            Some <| nullableStrFunc toShortestXsdFormat 
+            Some <| nullableStrFunc toShortestXsdFormat
         elif t = typeof<Guid> then
             Some <| SerializerFunc(unbox >> writeGuid)
         elif t = typeof<Nullable<Guid>> then
@@ -709,7 +725,7 @@ module internal Serializer =
                 { GetFunc = getter;
                   Key = key;
                   ToStr = writer }
-            ps, info :: attrs 
+            ps, info :: attrs
         | None ->
             let info = buildPropertyWriterInfo pi
             info :: ps, attrs
@@ -726,12 +742,18 @@ module internal Serializer =
                     let ps, attrs =
                         properties
                         |> Array.fold determineWriterInfo ([], [])
-                    { Properties = ps |> List.rev |> List.sortBy order; Attributes = List.rev attrs }
+                    let ps' =
+                        ps
+                        |> List.rev
+                        |> List.sortBy order
+                    { Properties = ps'; Attributes = List.rev attrs }
                 else
                     let ps =
                         properties
                         |> Array.map buildPropertyWriterInfo
                         |> List.ofArray
+                        // revert first in order to keep the 'natural' order
+                        // of the property that are defined on the type
                         |> List.rev
                         // sort by order descending
                         |> List.sortBy order
@@ -809,7 +831,7 @@ module internal Serializer =
             if (!valueWriter).IsNone then valueWriter := Some <| getWriterFunc (dictVal.GetType())
             match !keyWriter, !valueWriter with
             | Some kv, Some vw ->
-                let inner _ _ _= 
+                let inner _ _ _=
                     kv { name with Name = name.Key } writer key
                     vw { name with Name = name.Value } writer dictVal
                 writeTag name.Item name writer inner key
