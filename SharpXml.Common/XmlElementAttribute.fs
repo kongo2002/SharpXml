@@ -68,6 +68,12 @@ type XmlAttributeAttribute(name: string) =
     member x.Name
         with get() = name
 
+/// Attribute to mark public properties that should be ignored
+/// on (de)serialization
+[<AttributeUsage(AttributeTargets.Property)>]
+type XmlIgnoreAttribute() =
+    inherit Attribute()
+
 /// Attribute that allows to specify a number of static
 /// XML attributes (i.e. namespace definitions) that should be used on serialization
 [<AttributeUsage(AttributeTargets.Class, Inherited = true, AllowMultiple = true)>]

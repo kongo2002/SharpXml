@@ -62,6 +62,7 @@ module internal ReflectionHelpers =
             |> Array.filter (fun p ->
                 p.GetGetMethod() <> null &&
                 p.GetIndexParameters().Length = 0 &&
+                not (hasAttributeType p typeof<SharpXml.Common.XmlIgnoreAttribute>) &&
                 not (hasAttribute p "IgnoreDataMemberAttribute"))
 
     let hasValidSetter (p : PropertyInfo) =
@@ -76,6 +77,7 @@ module internal ReflectionHelpers =
             getPublicProperties t
             |> Array.filter (fun p ->
                 hasValidSetter p &&
+                not (hasAttributeType p typeof<SharpXml.Common.XmlIgnoreAttribute>) &&
                 not (hasAttribute p "IgnoreDataMemberAttribute"))
 
     let getEmptyConstructor (t : Type) =
