@@ -516,6 +516,20 @@ module Types =
             with get() = attr
             and set(v) = attr <- v
 
+    type XmlIgnoreClass(value : string) =
+        let mutable attr = Unchecked.defaultof<string>
+
+        [<XmlAttribute("attr")>]
+        member x.Attr
+            with get() = attr
+            and set(v) = attr <- v
+
+        [<XmlIgnore>]
+        member x.Value
+            with get() = value
+
+        member x.ToXml() = value
+
     type NullableAttributeClass() =
         let mutable value = Unchecked.defaultof<int>
         let mutable attr = Unchecked.defaultof<Nullable<int>>

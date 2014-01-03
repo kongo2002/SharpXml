@@ -485,6 +485,13 @@ module SerializationTests =
         serialize input3 |> should equal "<orderClass03><v1>1</v1><v2>foo</v2></orderClass03>"
 
     [<Test>]
+    let ``Can serialize classes with XmlIgnoreAttribute properties``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = XmlIgnoreClass("foo", Attr = "bar")
+        serialize input |> should equal "<xmlIgnoreClass attr=\"bar\">foo</xmlIgnoreClass>"
+
+    [<Test>]
     let ``Can serialize unicode characters as encoded entities``() =
         XmlConfig.Instance.SpecialCharEncoding <- UnicodeSerializationType.HexEncoded
 

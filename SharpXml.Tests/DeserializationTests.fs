@@ -496,6 +496,26 @@ module DeserializationTests =
         result.AttributeList.[0].Text |> should equal "some text"
 
     [<Test>]
+    let ``Can deserialize attribute classes with XmlIgnoreAttribute properties``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<xmlIgnoreClass attr=\"foo\">bar</xmlIgnoreClass>"
+        let result = deserialize<XmlIgnoreClass> input
+
+        result.Attr |> should equal "foo"
+        result.Value |> should equal "bar"
+
+    [<Test>]
+    let ``Can deserialize attribute classes with XmlIgnoreAttribute properties and ignore matching values``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<xmlIgnoreClass attr=\"foo\"><value>bar</value></xmlIgnoreClass>"
+        let result = deserialize<XmlIgnoreClass> input
+
+        result.Attr |> should equal "foo"
+        result.Value |> should equal String.Empty
+
+    [<Test>]
     let ``Can deserialize string arrays with multiple empty elements``() =
         let input = "<genericClass><v2><string /><string /></v2><v1>352</v1></genericClass>"
         let result = deserialize<GenericClass<string[]>>(input)
