@@ -523,3 +523,44 @@ module DeserializationTests =
         result.V1 |> should equal 352
         result.V2.Length |> should equal 2
         result.V2 |> should equal [| ""; "" |]
+
+    [<Test>]
+    let ``Can correctly deserialize while leaving non-existing properties null``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<genericClass><v1>105</v1></genericClass>"
+        let result = deserialize<GenericClass<string>> input
+
+        result.V1 |> should equal 105
+        result.V2 |> shouldBe Null
+
+    [<Test>]
+    let ``Can correctly deserialize while leaving non-existing classes null``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<genericClass><v1>105</v1></genericClass>"
+        let result = deserialize<GenericClass<GenericClass<string>>> input
+
+        result.V1 |> should equal 105
+        result.V2 |> shouldBe Null
+
+    [<Test>]
+    let ``Can correctly deserialize while leaving empty classes empty``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<genericClass><v1>105</v1><v2></v2></genericClass>"
+        let result = deserialize<GenericClass<GenericClass<string>>> input
+
+        result.V1 |> should equal 105
+        result.V2 |> shouldBe notNull
+
+
+    [<Test>]
+    let ``Can correctly deserialize while leaving empty single-tag classes empty``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let input = "<genericClass><v1>105</v1><v2 /></genericClass>"
+        let result = deserialize<GenericClass<GenericClass<string>>> input
+
+        result.V1 |> should equal 105
+        result.V2 |> shouldBe notNull
