@@ -60,7 +60,8 @@ type XmlSerializer() =
     static member DeserializeFromString<'T> input =
         if notEmpty input then
             try
-                deserialize input typeof<'T> :?> 'T
+                let chars = input.ToCharArray()
+                deserialize chars typeof<'T> :?> 'T
             with
             | :? SharpXmlException -> Unchecked.defaultof<'T>
         else
@@ -70,7 +71,8 @@ type XmlSerializer() =
     static member DeserializeFromString (input, targetType) =
         if notEmpty input then
             try
-                deserialize input targetType
+                let chars = input.ToCharArray()
+                deserialize chars targetType
             with
             | :? SharpXmlException -> null
         else
@@ -81,7 +83,8 @@ type XmlSerializer() =
     static member DeserializeFromString (input, resolver) =
         if notEmpty input then
             try
-                deserializeByResolver input resolver
+                let chars = input.ToCharArray()
+                deserializeByResolver chars resolver
             with
             | :? SharpXmlException -> null
         else

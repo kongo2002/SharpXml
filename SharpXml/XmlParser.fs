@@ -25,12 +25,12 @@ module internal XmlParser =
     open System.Text
     open Microsoft.FSharp.NativeInterop
 
-    type ParserInfo(value : string) =
+    type ParserInfo(value : char[]) =
         [<DefaultValue>]
         val mutable Index : int
         [<DefaultValue>]
         val mutable Depth : int
-        member x.Value = value.ToCharArray()
+        member x.Value = value
         member x.Length = value.Length
         member x.IsEnd with get() = x.Index >= x.Length
 

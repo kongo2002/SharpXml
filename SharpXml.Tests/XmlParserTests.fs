@@ -25,43 +25,43 @@ module XmlParserTests =
     open SharpXml.Tests.TestHelpers
     open SharpXml.XmlParser
 
-    let private eat input =
-        let info = ParserInfo input
+    let private eat (input : string) =
+        let info = ParserInfo(input.ToCharArray())
         let name, tag = eatTag info
         info.Index, name, tag
 
-    let private eatAt input at =
-        let info = ParserInfo input
+    let private eatAt (input : string) at =
+        let info = ParserInfo(input.ToCharArray())
         info.Index <- at
         let name, tag = eatTag info
         info.Index, name, tag
 
-    let private eatSome input =
-        let info = ParserInfo input
+    let private eatSome (input : string) =
+        let info = ParserInfo(input.ToCharArray())
         eatSomeTag info |> fst
 
-    let private eatRoot input =
-        let info = ParserInfo input
+    let private eatRoot (input : string) =
+        let info = ParserInfo(input.ToCharArray())
         eatRoot info |> ignore
         info.Index
 
-    let private eatUnknown input =
-        let info = ParserInfo input
+    let private eatUnknown (input : string) =
+        let info = ParserInfo(input.ToCharArray())
         eatUnknownTilClosing info |> ignore
         info
 
-    let private getContent input at =
-        let info = ParserInfo input
+    let private getContent (input : string) at =
+        let info = ParserInfo(input.ToCharArray())
         info.Index <- at
         let content = eatText info
         info.Index, content
 
-    let private getAttr input =
-        let info = ParserInfo input
+    let private getAttr(input : string) =
+        let info = ParserInfo(input.ToCharArray())
         eatTagWithAttributes info
 
-    let private eatText input =
-        let info = ParserInfo input
+    let private eatText (input : string) =
+        let info = ParserInfo(input.ToCharArray())
         eatText info
 
     [<Test>]
