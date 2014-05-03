@@ -1,4 +1,4 @@
-﻿//  Copyright 2012-2013 Gregor Uhlenheuer
+﻿//  Copyright 2012-2014 Gregor Uhlenheuer
 //
 //  Licensed under the Apache License, Version 2.0 (the "License");
 //  you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ open System.Runtime.InteropServices
 [<assembly:AssemblyConfiguration("")>]
 [<assembly:AssemblyCompany("Gregor Uhlenheuer")>]
 [<assembly:AssemblyProduct("SharpXml.Common")>]
-[<assembly:AssemblyCopyright("Copyright © 2012-2013 Gregor Uhlenheuer")>]
+[<assembly:AssemblyCopyright("Copyright © 2012-2014 Gregor Uhlenheuer")>]
 [<assembly:AssemblyTrademark("")>]
 [<assembly:AssemblyCulture("")>]
 
