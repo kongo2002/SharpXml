@@ -35,6 +35,12 @@ module Types =
         | Ham = 1
         | Eggs = 2
 
+    type TestUnion1 =
+        | One
+        | Two of int
+        | Three of string * int
+        | Four of string list
+
     type CustomList<'T> =
         inherit List<'T>
 

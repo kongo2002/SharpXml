@@ -58,6 +58,12 @@ type internal TupleBuilderInfo = {
     Ctor : obj[] -> obj
     Fields : int }
 
+/// Record type containing the deserialization information
+/// for discriminated unions
+type internal UnionBuilderInfo = {
+    Type : System.Type
+    Readers : Map<string, ReaderFunc[] * (obj[] -> obj)> }
+
 module internal Deserialization =
 
     open System
@@ -239,7 +245,7 @@ module internal ListDeserializer =
                 let tag, attrs = getListTag info
                 if not info.IsEnd then
                     match tag with
-                    | TagType.Open -> 
+                    | TagType.Open ->
                         let value = elemParser attrs info :?> 'a
                         list.Add(value)
                         inner()
@@ -797,6 +803,43 @@ module internal Deserializer =
             |> Some
         else None
 
+    and readUnion (ui : UnionBuilderInfo) attr (xml : ParserInfo) =
+        if not xml.IsEnd then
+            let name, tag = eatTag xml
+            match tag with
+            | TagType.Open ->
+                let lower = name.ToLowerInvariant()
+                match ui.Readers.TryFind lower with
+                | Some (readers, ctor) ->
+                    let parts = Array.zeroCreate<obj> readers.Length
+                    readers
+                    |> Array.iteri (fun i reader -> parts.[i] <- reader attr xml)
+                    ctor parts
+                | None -> null
+            | _ -> null
+        else null
+
+    and getUnionBuilderInfo (t : Type) =
+        let mapCase (info : UnionCaseInfo) =
+            let name = info.Name.ToLowerInvariant()
+            let ctor = FSharpValue.PreComputeUnionConstructor info
+            let readers =
+                info.GetFields()
+                |> Array.map (fun pi -> getReaderFunc pi.PropertyType)
+            name, (readers, ctor)
+        let getUnionReaders =
+            FSharpType.GetUnionCases t
+            |> Array.map mapCase
+            |> Map.ofArray
+        { Type = t; Readers = getUnionReaders }
+
+    and getFsUnionReader (t : Type) = fun() ->
+        if FSharpType.IsUnion t then
+            getUnionBuilderInfo t
+            |> readUnion
+            |> Some
+        else None
+
     /// Determine the ReaderFunc delegate for the given Type
     and determineReader (objType : Type) =
         let t = objType.NullableUnderlying()
@@ -811,6 +854,7 @@ module internal Deserializer =
             let! parseXmlReader = getStaticParseMethod t
             let! recordReader = getFsRecordReader t
             let! tupleReader = getFsTupleReader t
+            let! unionReader = getFsUnionReader t
             let! classReader = getClassReader t
             classReader }
         reader

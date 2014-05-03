@@ -421,7 +421,7 @@ module DeserializationTests =
             info.Name |> should equal "testClass"
             info.HasAttributes |> should equal false
             info.Attributes.Count |> should equal 0
-            
+
             typeof<TestClass>)
 
         let input = "<testClass><v1>10</v1><v2>test string</v2></testClass>"
@@ -439,7 +439,7 @@ module DeserializationTests =
             info.Attributes.Count |> should equal 2
             info.Attributes.[0].Key |> should equal "two"
             info.Attributes.[0].Value |> should equal "bar"
-            
+
             typeof<TestClass>)
 
         let input = "<testClass one=\"foo\" two=\"bar\"><v1>10</v1><v2>test string</v2></testClass>"
@@ -564,3 +564,19 @@ module DeserializationTests =
 
         result.V1 |> should equal 105
         result.V2 |> shouldBe notNull
+
+    [<Test>]
+    let ``Can correctly deserialize discriminated unions #1``() =
+        let input = "<genericClass><v1>100</v1><v2><one></one></v2></genericClass>"
+        let result = deserialize<GenericClass<TestUnion1>> input
+
+        result.V1 |> should equal 100
+        result.V2 |> should equal TestUnion1.One
+
+    [<Test>]
+    let ``Can correctly deserialize discriminated unions #2``() =
+        let input = "<genericClass><v1>100</v1><v2><two>239</two></v2></genericClass>"
+        let result = deserialize<GenericClass<TestUnion1>> input
+
+        result.V1 |> should equal 100
+        result.V2 |> should equal (TestUnion1.Two 239)
