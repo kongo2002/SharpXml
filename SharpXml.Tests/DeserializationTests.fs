@@ -607,7 +607,7 @@ module DeserializationTests =
 
     [<Test>]
     let ``Can correctly deserialize lists of different discriminated unions``() =
-        let input = "<genericClass><v1>100</v1><v2><item><one></one></item><item><four><item>one</item><item>two</item></four></item><item><one></one></item></v2></genericClass>"
+        let input = "<genericClass><v1>100</v1><v2><item><one /></item><item><four><item>one</item><item>two</item></four></item><item><one></one></item></v2></genericClass>"
         let result = deserialize<GenericClass<TestUnion1 list>> input
 
         result.V1 |> should equal 100
