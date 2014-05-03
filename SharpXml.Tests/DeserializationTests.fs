@@ -315,6 +315,22 @@ module DeserializationTests =
         out.V2 |> snd |> should equal 40
 
     [<Test>]
+    let ``Can deserialize lists of F# tuples``() =
+        let input = "<list><item><a>foo</a><b>40</b></item><item><a>bar</a><b>50</b></item></list>"
+        let out = deserialize<List<string * int>> input
+
+        out.Count |> should equal 2
+
+        let first = out.[0]
+        let second = out.[1]
+
+        first |> fst |> should equal "foo"
+        first |> snd |> should equal 40
+
+        second |> fst |> should equal "bar"
+        second |> snd |> should equal 50
+
+    [<Test>]
     let ``Can correctly skip unknown elements``() =
         let testString = @"<items><item><recipient>unknown</recipient><message>foobar</message><reference>2414059</reference></item></items>"
         let out = deserialize<List<Types.UnknownPropertyClass>> testString

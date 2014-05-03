@@ -780,6 +780,7 @@ module internal Deserializer =
                 | TagType.Single -> inner (index+1)
                 | _ -> ()
         inner 0
+        eatClosingTag xml
         tb.Ctor objects
 
     and getFsRecordReader (t : Type) = fun() ->
