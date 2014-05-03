@@ -284,6 +284,23 @@ module DeserializationTests =
         out.Foo |> shouldBe Null
 
     [<Test>]
+    let ``Can deserialize lists of F# records``() =
+        let out = deserialize<List<LargerRecord>> "<list><item><largerRecord><value>842</value><id>foobar</id></largerRecord></item><item><largerRecord><value>1</value><id>bar</id></largerRecord></item></list>"
+
+        out.Count |> should equal 2
+
+        let first = out.[0]
+        let second = out.[1]
+
+        first.Value |> should equal 842
+        first.Id |> should equal "foobar"
+        first.Bar |> shouldBe Null
+        first.Foo |> shouldBe Null
+
+        second.Value |> should equal 1
+        second.Id |> should equal "bar"
+
+    [<Test>]
     let ``Can deserialize classes with tuples``() =
         let out = deserialize<TupleClass> "<tupleClass><v1>53</v1><v2><item1>something</item1><item2>40</item2></v2></tupleClass>"
         out.V1 |> should equal 53

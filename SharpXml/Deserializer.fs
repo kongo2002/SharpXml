@@ -761,6 +761,7 @@ module internal Deserializer =
                 | TagType.Single -> inner()
                 | _ -> ()
         inner()
+        eatClosingTag xml
         rb.Ctor objects
 
     and readTuple (tb : TupleBuilderInfo) attr (xml : ParserInfo) =

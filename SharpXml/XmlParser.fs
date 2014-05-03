@@ -148,19 +148,20 @@ module internal XmlParser =
 
     /// Eat a closing XML tag
     let eatClosingTag (input : ParserInfo) =
-        let mutable buffer = &&input.Value.[input.Index]
-        let mutable state = ParseState.Start
-        let mutable found = false
+        if not input.IsEnd then
+            let mutable buffer = &&input.Value.[input.Index]
+            let mutable state = ParseState.Start
+            let mutable found = false
 
-        while input.Index < input.Length && not found do
-            let chr = NativePtr.read buffer
-            input.Index <- input.Index + 1
-            buffer <- NativePtr.add buffer 1
-            match state with
-            | ParseState.Start ->
-                if chr = '<' then state <- ParseState.Tag
-            | _ ->
-                if chr = '>' then found <- true
+            while input.Index < input.Length && not found do
+                let chr = NativePtr.read buffer
+                input.Index <- input.Index + 1
+                buffer <- NativePtr.add buffer 1
+                match state with
+                | ParseState.Start ->
+                    if chr = '<' then state <- ParseState.Tag
+                | _ ->
+                    if chr = '>' then found <- true
 
     /// Eat a XML tag and return its name and
     /// type being one of Open, Close or Single
