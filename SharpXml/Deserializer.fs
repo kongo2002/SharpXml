@@ -810,10 +810,29 @@ module internal Deserializer =
             | TagType.Open ->
                 let lower = name.ToLowerInvariant()
                 match ui.Readers.TryFind lower with
-                | Some (readers, ctor) ->
-                    let parts = Array.zeroCreate<obj> readers.Length
-                    readers
-                    |> Array.iteri (fun i reader -> parts.[i] <- reader attr xml)
+                | Some (rs, ctor) ->
+                    let parts = Array.zeroCreate<obj> rs.Length
+                    let inline inject i reader = parts.[i] <- reader attr xml
+                    match rs with
+                    | [||] ->
+                        // this is a constructor without any arguments
+                        // so we can initialize the type with an empty array
+                        ()
+                    | [| reader |] ->
+                        // this is a single argument constructor
+                        // so we don't have to search for 'tuple-like' xml structure
+                        inject 0 reader
+                    | readers ->
+                        // union cases with multi-argument constructors
+                        // are serialized in a 'tuple-like' xml structure
+                        let parseTupleLike i reader =
+                            if not xml.IsEnd then
+                                let tag, _ = eatSomeTag xml
+                                match tag with
+                                | TagType.Open -> inject i reader
+                                | _ -> ()
+                        readers
+                        |> Array.iteri parseTupleLike
                     ctor parts
                 | None -> null
             | _ -> null
