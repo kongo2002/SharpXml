@@ -806,9 +806,9 @@ module internal Deserializer =
     and readUnion (ui : UnionBuilderInfo) attr (xml : ParserInfo) =
         if not xml.IsEnd then
             let name, tag = eatTag xml
+            let lower = name.ToLowerInvariant()
             match tag with
             | TagType.Open ->
-                let lower = name.ToLowerInvariant()
                 match ui.Readers.TryFind lower with
                 | Some (rs, ctor) ->
                     let parts = Array.zeroCreate<obj> rs.Length
@@ -834,7 +834,13 @@ module internal Deserializer =
                         readers
                         |> Array.iteri parseTupleLike
                     ctor parts
+                // there is no union case with the current name
                 | None -> null
+            // single xml tags may be 0-argument constructor union cases only
+            | TagType.Single ->
+                match ui.Readers.TryFind lower with
+                | Some ([||], ctor) -> ctor [||]
+                | _ -> null
             | _ -> null
         else null
 

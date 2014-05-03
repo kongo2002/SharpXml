@@ -575,6 +575,14 @@ module DeserializationTests =
 
     [<Test>]
     let ``Can correctly deserialize discriminated unions #2``() =
+        let input = "<genericClass><v1>100</v1><v2><one/></v2></genericClass>"
+        let result = deserialize<GenericClass<TestUnion1>> input
+
+        result.V1 |> should equal 100
+        result.V2 |> should equal TestUnion1.One
+
+    [<Test>]
+    let ``Can correctly deserialize discriminated unions #3``() =
         let input = "<genericClass><v1>100</v1><v2><two>239</two></v2></genericClass>"
         let result = deserialize<GenericClass<TestUnion1>> input
 
@@ -582,7 +590,7 @@ module DeserializationTests =
         result.V2 |> should equal (TestUnion1.Two 239)
 
     [<Test>]
-    let ``Can correctly deserialize discriminated unions #3``() =
+    let ``Can correctly deserialize discriminated unions #4``() =
         let input = "<genericClass><v1>100</v1><v2><three><item1>first</item1><item2>2</item2></three></v2></genericClass>"
         let result = deserialize<GenericClass<TestUnion1>> input
 
@@ -590,7 +598,7 @@ module DeserializationTests =
         result.V2 |> should equal (TestUnion1.Three ("first", 2))
 
     [<Test>]
-    let ``Can correctly deserialize discriminated unions #4``() =
+    let ``Can correctly deserialize discriminated unions #5``() =
         let input = "<genericClass><v1>100</v1><v2><four><item>1</item><item>2</item></four></v2></genericClass>"
         let result = deserialize<GenericClass<TestUnion1>> input
 
