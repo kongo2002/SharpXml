@@ -604,3 +604,11 @@ module DeserializationTests =
 
         result.V1 |> should equal 100
         result.V2 |> should equal (TestUnion1.Four ["1"; "2"])
+
+    [<Test>]
+    let ``Can correctly deserialize lists of different discriminated unions``() =
+        let input = "<genericClass><v1>100</v1><v2><item><one></one></item><item><four><item>one</item><item>two</item></four></item><item><one></one></item></v2></genericClass>"
+        let result = deserialize<GenericClass<TestUnion1 list>> input
+
+        result.V1 |> should equal 100
+        result.V2 |> should equal [ TestUnion1.One; TestUnion1.Four ["one"; "two"]; TestUnion1.One ]

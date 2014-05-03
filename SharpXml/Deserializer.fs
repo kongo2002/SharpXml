@@ -817,7 +817,7 @@ module internal Deserializer =
                     | [||] ->
                         // this is a constructor without any arguments
                         // so we can initialize the type with an empty array
-                        ()
+                        eatClosingTag xml
                     | [| reader |] ->
                         // this is a single argument constructor
                         // so we don't have to search for 'tuple-like' xml structure
@@ -833,11 +833,16 @@ module internal Deserializer =
                                 | _ -> ()
                         readers
                         |> Array.iteri parseTupleLike
+                    // we have to eat the enclosing close tag
+                    eatClosingTag xml
                     ctor parts
                 // there is no union case with the current name
-                | None -> null
+                | None ->
+                    eatClosingTag xml
+                    null
             // single xml tags may be 0-argument constructor union cases only
             | TagType.Single ->
+                eatClosingTag xml
                 match ui.Readers.TryFind lower with
                 | Some ([||], ctor) -> ctor [||]
                 | _ -> null
