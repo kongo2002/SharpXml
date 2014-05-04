@@ -645,3 +645,19 @@ module DeserializationTests =
 
         result.V1 |> should equal 100
         result.V2 |> should equal [ TestUnion1.One; TestUnion1.Four ["one"; "two"]; TestUnion1.One ]
+
+    [<Test>]
+    let ``Can deserialize lists of discriminated unions with unknown cases #1``() =
+        let input = "<genericClass><v1>100</v1><v2><item><five /></item><item><four><item>one</item><item>two</item></four></item><item><one></one></item></v2></genericClass>"
+        let result = deserialize<GenericClass<TestUnion1 list>> input
+
+        result.V1 |> should equal 100
+        result.V2 |> should equal [ TestUnion1.Four ["one"; "two"]; TestUnion1.One ]
+
+    [<Test>]
+    let ``Can deserialize lists of discriminated unions with unknown cases #2``() =
+        let input = "<genericClass><v1>100</v1><v2><item><five></five></item><item><four><item>one</item><item>two</item></four></item><item><one></one></item></v2></genericClass>"
+        let result = deserialize<GenericClass<TestUnion1 list>> input
+
+        result.V1 |> should equal 100
+        result.V2 |> should equal [ TestUnion1.Four ["one"; "two"]; TestUnion1.One ]

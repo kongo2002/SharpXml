@@ -246,8 +246,11 @@ module internal ListDeserializer =
                 if not info.IsEnd then
                     match tag with
                     | TagType.Open ->
-                        let value = elemParser attrs info :?> 'a
-                        list.Add(value)
+                        let value = elemParser attrs info
+                        // add only non-null values into the target list
+                        // putting 'null' into lists does not make much sense anyway
+                        if value <> null then
+                            list.Add(value :?> 'a)
                         inner()
                     | TagType.Single ->
                         try
@@ -840,6 +843,9 @@ module internal Deserializer =
                     ctor parts
                 // there is no union case with the current name
                 | None ->
+                    // first we have to skip the closing tag of the unknown union case
+                    eatClosingTag xml
+                    // then we have to skip the enclosing tag of the value itself
                     eatClosingTag xml
                     null
             // single xml tags may be 0-argument constructor union cases only
