@@ -735,6 +735,7 @@ module internal Deserializer =
             |> Some
         else None
 
+    /// Build a RecordBuilderInfo for the specified F# record type
     and getRecordBuilderInfo (t : Type) : RecordBuilderInfo =
         let fields = FSharpType.GetRecordFields t
         let readers =
@@ -745,6 +746,7 @@ module internal Deserializer =
             |> Map.ofArray
         { Type = t; Readers = readers; Ctor = FSharpValue.PreComputeRecordConstructor t; Fields = fields.Length }
 
+    /// Reader function for F# record types
     and readRecord (rb : RecordBuilderInfo) attr (xml : ParserInfo) =
         let objects = Array.zeroCreate<obj> rb.Fields
         let rec inner() =
@@ -767,6 +769,7 @@ module internal Deserializer =
         eatClosingTag xml
         rb.Ctor objects
 
+    /// Reader function for F# tuple types
     and readTuple (tb : TupleBuilderInfo) attr (xml : ParserInfo) =
         let objects = Array.zeroCreate<obj> tb.Fields
         let rec inner index  =
@@ -786,6 +789,7 @@ module internal Deserializer =
         eatClosingTag xml
         tb.Ctor objects
 
+    /// Try to determine a reader function for F# record types
     and getFsRecordReader (t : Type) = fun() ->
         if FSharpType.IsRecord t then
             getRecordBuilderInfo t
@@ -793,6 +797,7 @@ module internal Deserializer =
             |> Some
         else None
 
+    /// Build a TupleBuilderInfo for the specified F# tuple type
     and getTupleBuilderInfo (t : Type) : TupleBuilderInfo =
         let items = FSharpType.GetTupleElements t
         let readers =
@@ -801,6 +806,7 @@ module internal Deserializer =
         let ctor = FSharpValue.PreComputeTupleConstructor t
         { Type = t; Readers = readers; Fields = items.Length; Ctor = ctor }
 
+    /// Try to determine a reader function for F# tuple types
     and getFsTupleReader (t : Type) = fun() ->
         if FSharpType.IsTuple t then
             getTupleBuilderInfo t
@@ -808,7 +814,11 @@ module internal Deserializer =
             |> Some
         else None
 
+    /// Reader function for F# discriminated union types
     and readUnion (ui : UnionBuilderInfo) attr (xml : ParserInfo) =
+        // TODO: instead of returning null on failure or
+        // unknown union cases we could return a default value
+        // (i.e. the union case with tag 0) instead
         if not xml.IsEnd then
             let name, tag = eatTag xml
             let lower = name.ToLowerInvariant()
@@ -857,6 +867,7 @@ module internal Deserializer =
             | _ -> null
         else null
 
+    /// Build a UnionBuilderInfo for the specified union type
     and getUnionBuilderInfo (t : Type) =
         let mapCase (info : UnionCaseInfo) =
             let name = info.Name.ToLowerInvariant()
@@ -871,6 +882,7 @@ module internal Deserializer =
             |> Map.ofArray
         { Type = t; Readers = getUnionReaders }
 
+    /// Try to determine a F# discriminated union reader
     and getFsUnionReader (t : Type) = fun() ->
         if FSharpType.IsUnion t then
             getUnionBuilderInfo t
