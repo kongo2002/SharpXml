@@ -523,6 +523,8 @@ module internal Serializer =
     open System.Reflection
     open System.Text.RegularExpressions
 
+    open Microsoft.FSharp.Reflection
+
     open SharpXml.Attempt
     open SharpXml.Common
     open SharpXml.Extensions
@@ -607,6 +609,12 @@ module internal Serializer =
         Item = "item"
         Key = "key"
         Value = "value" }
+
+    let getUnionNameInfo (info : UnionCaseInfo) =
+        let name =
+            if XmlConfig.Instance.EmitCamelCaseNames then info.Name.ToCamelCase()
+            else info.Name
+        getDefaultNameInfo name
 
     /// Build a NameInfo object for the given PropertyInfo
     let getNameInfo (property : PropertyInfo) =
@@ -826,6 +834,61 @@ module internal Serializer =
                 writeTag name.Item name writer inner key
             | _ -> ())
 
+    and buildUnionWriter (t : Type) =
+        let tagReader = FSharpValue.PreComputeUnionTagReader t
+        let caseInfos = FSharpType.GetUnionCases t
+        let getWriter (uci : UnionCaseInfo) =
+            let tag = uci.Tag
+            let name = getUnionNameInfo uci
+            let reader = FSharpValue.PreComputeUnionReader uci
+            match uci.GetFields() with
+            // empty constructor
+            | [||] ->
+                tag, (fun _ w _ -> writeEmptyTag name.Name w)
+            // single argument constructor
+            | [| f |] ->
+                let prop = f.PropertyType
+                let writer = lazy getWriterFunc prop
+                let func ni w o =
+                    match reader o with
+                    | [| x |] ->
+                        let wr = writer.Force()
+                        wr name w x
+                    | _ -> failwith "union case returns invalid number of arguments"
+                tag, func
+            // multiple argument constructor
+            | fs ->
+                let getFieldWriter (pi : PropertyInfo) =
+                    let name, _ = getNameInfo pi
+                    let prop = pi.PropertyType
+                    name, lazy getWriterFunc prop
+                let writers = fs |> Array.map getFieldWriter
+                let func ni w o =
+                    reader o
+                    |> Array.iteri (fun i obj ->
+                        let n, wr = writers.[i]
+                        let wr' = wr.Force()
+                        wr' n w obj)
+                tag, func
+
+        let writerMap =
+            caseInfos
+            |> Array.map getWriter
+            |> Map.ofArray
+
+        (fun (ni : NameInfo) w obj ->
+            let tag = tagReader obj
+            match writerMap.TryFind tag with
+            | Some writer ->
+                writeTag ni.Name ni w writer obj
+            | None -> failwithf "invalid tag %d of union type %s" tag t.FullName)
+
+    and getFsUnionWriter (t : Type) = fun() ->
+        if FSharpType.IsUnion t then
+            buildUnionWriter t
+            |> Some
+        else None
+
     and getObjectWriter = fun() ->
         Some <| injectWriteTag ValueTypeSerializer.writeObject
 
@@ -842,6 +905,7 @@ module internal Serializer =
             let! enumerableWriter = getEnumerableWriter t
             let! instanceWriter = getInstanceWriter t
             let! staticWriter = getStaticWriter t
+            let! unionWriter = getFsUnionWriter t
             let! classWriter = getClassWriter t
             let! objectWriter = getObjectWriter
             objectWriter }

@@ -246,6 +246,27 @@ module SerializationTests =
         serialize tuple |> should equal "<tuple><item1>406</item1><item2>foo bar test</item2></tuple>"
 
     [<Test>]
+    let ``Can serialize F# discriminated unions #1``() =
+        let union = GenericClass<TestUnion1>(V1 = 10, V2 = TestUnion1.One)
+        let result = serialize union
+
+        result |> should equal "<genericClass><v1>10</v1><v2><one></one></v2></genericClass>"
+
+    [<Test>]
+    let ``Can serialize F# discriminated unions #2``() =
+        let union = GenericClass<TestUnion1>(V1 = 10, V2 = TestUnion1.Two 2)
+        let result = serialize union
+
+        result |> should equal "<genericClass><v1>10</v1><v2><two>2</two></v2></genericClass>"
+
+    [<Test>]
+    let ``Can serialize F# discriminated unions #3``() =
+        let union = GenericClass<TestUnion1>(V1 = 10, V2 = TestUnion1.Three ("three", 3))
+        let result = serialize union
+
+        result |> should equal "<genericClass><v1>10</v1><v2><three><item>three</item><item>3</item></three></v2></genericClass>"
+
+    [<Test>]
     let ``Can serialize newline characters``() =
         let special = "foo\r\nbar"
         let cls = TestClass(305, special)
