@@ -1,6 +1,6 @@
 @echo off
 
-set version=1.4.0.0
+set version=1.5.0.0
 set build=Release
 set properties=Configuration=%build%;Optimize=true;TargetFrameworkVersion=v4.0
 set nugetpath=NuGet\lib\net40
