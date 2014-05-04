@@ -869,7 +869,9 @@ module internal Serializer =
                         let n, wr = writers.[i]
                         let wr' = wr.Force()
                         wr' n w obj)
-                tag, func
+                let writeFunc ni w o =
+                    writeTag name.Name name w func o
+                tag, writeFunc
 
         let writerMap =
             caseInfos
