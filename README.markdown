@@ -96,6 +96,7 @@ Moreover *SharpXml* supports serialization and deserialization of the basic
 * F# records
 * F# and CLR tuples
 * Immutable F# lists
+* Discriminated unions (since `v1.5.0.0`)
 
 
 ### Configuration
@@ -294,6 +295,44 @@ The serialized output by *SharpXml* looks like the following:
 		</Item>
 	</Values>
 </DictClass>
+```
+
+
+### Discriminated unions
+
+Since SharpXml version `1.5.0.0` F\# discriminated unions are supported for
+serialization and deserialization as well.
+
+```fs
+type UnionType =
+	| First
+	| Second of int
+	| Third of string * int
+
+let unions = [
+	UnionType.First;
+	UnionType.Second 20;
+	UnionType.Third ("test", 30)
+	]
+```
+
+The above list of F\# discriminated unions will be serialized like this:
+
+```xml
+<List>
+	<UnionType>
+		<First></First>
+	</UnionType>
+	<UnionType>
+		<Second>20</Second>
+	</UnionType>
+	<UnionType>
+		<Third>
+			<Item1>test</Item1>
+			<Item2>30</Item2>
+		</Third>
+	</UnionType>
+</List>
 ```
 
 **Note**: In all XML examples above indentation is added for convenience only.
