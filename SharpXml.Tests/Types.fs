@@ -522,6 +522,9 @@ module Types =
             with get() = attr
             and set(v) = attr <- v
 
+    type ToXmlClass(value : string) =
+        member x.ToXml() = value
+
     type XmlIgnoreClass(value : string) =
         let mutable attr = Unchecked.defaultof<string>
 

@@ -315,6 +315,11 @@ module SerializationTests =
         serialize cls |> should equal "<customParserClass>200x400</customParserClass>"
 
     [<Test>]
+    let ``Can serialize class with instance method ToXml() (with special characters)``() =
+        let cls = ToXmlClass("foo & bar")
+        serialize cls |> should equal "<toXmlClass>foo &amp; bar</toXmlClass>"
+
+    [<Test>]
     let ``Can serialize class with instance method ToXml() with attributes``() =
         XmlConfig.Instance.UseAttributes <- true
         let cls = CustomParserClass(X = 200, Y = 400, Attr = "test")

@@ -139,6 +139,7 @@ module internal ValueTypeSerializer =
                 match chr with
                 | '<' -> writer.Write("&lt;")
                 | '>' -> writer.Write("&gt;")
+                | '&' -> writer.Write("&amp;")
                 | _   -> writer.Write(chr)
                 i <- i + 1
 
@@ -664,7 +665,9 @@ module internal Serializer =
     and getInstanceWriter (t : Type) = fun() ->
         match t.GetMethod(writerFuncName, instanceFlags, null, Type.EmptyTypes, null) |> Utils.toOption with
         | Some func ->
-            let writer = (fun _ (w : TextWriter) x -> w.Write(func.Invoke(x, null)))
+            let writer = (fun a (w : TextWriter) x ->
+                let obj = func.Invoke(x, null)
+                ValueTypeSerializer.writeStringObject a w obj)
             if not XmlConfig.Instance.UseAttributes then
                 injectWriteTag writer
             else getInjectWriter t writer
@@ -675,7 +678,9 @@ module internal Serializer =
     and getStaticWriter (t : Type) = fun () ->
         match t.GetMethod(writerFuncName, staticFlags, null, [| t |], null) |> Utils.toOption with
         | Some func ->
-            let writer = (fun _ (w : TextWriter) x -> w.Write(func.Invoke(null, [| x |])))
+            let writer = (fun a (w : TextWriter) x -> 
+                let obj = func.Invoke(null, [| x |])
+                ValueTypeSerializer.writeStringObject a w obj)
             if not XmlConfig.Instance.UseAttributes then
                 injectWriteTag writer
             else getInjectWriter t writer
@@ -686,7 +691,9 @@ module internal Serializer =
     and getCustomWriter (t : Type) = fun () ->
         match XmlConfig.Instance.TryGetSerializer t with
         | Some func ->
-            let writer = (fun _ (w : TextWriter) x -> w.Write(func.Invoke(x)))
+            let writer = (fun a (w : TextWriter) x ->
+                let obj = func.Invoke(x) 
+                ValueTypeSerializer.writeStringObject a w obj)
             if not XmlConfig.Instance.UseAttributes then
                 injectWriteTag writer
             else getInjectWriter t writer
