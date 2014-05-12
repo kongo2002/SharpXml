@@ -441,6 +441,13 @@ module DeserializationTests =
         result.V2 |> should equal (Guid.Parse("313d9a94-4c7e-46d3-b0ba-70d163969e5b"))
 
     [<Test>]
+    let ``Can deserialize GUIDs without dashes``() =
+        let input = "<genericClass><v1>10</v1><v2>313d9a944c7e46d3b0ba70d163969e5b</v2></genericClass>"
+        let result = deserialize<GenericClass<Guid>> input
+        result.V1 |> should equal 10
+        result.V2 |> should equal (Guid.Parse("313d9a94-4c7e-46d3-b0ba-70d163969e5b"))
+
+    [<Test>]
     let ``Can deserialize using a TypeResolver function``() =
         let resolver = TypeResolver(fun _ -> typeof<TestClass>)
         let input = "<testClass><v1>10</v1><v2>test string</v2></testClass>"
