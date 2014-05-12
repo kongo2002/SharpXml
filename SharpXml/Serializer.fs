@@ -190,17 +190,13 @@ module internal ValueTypeSerializer =
     let inline nullableWriter n writer value func =
         if value <> null then func n writer value
 
-    let getInnerTextWriter writer value =
-        let func =
-            match XmlConfig.Instance.SpecialCharEncoding with
+    let getInnerTextWriter enc : WriterFunc =
+        let innerWriter =
+            match enc with
             | UnicodeSerializationType.HexEncoded     -> writeStringUnicode writeUnicodeHex
             | UnicodeSerializationType.DecimalEncoded -> writeStringUnicode writeUnicode
             | _                                       -> writeString
-        func writer value
-
-    let writeStringObject _ writer (value : obj) =
-        let v : string = unbox value
-        getInnerTextWriter writer v
+        fun _ w v -> innerWriter w (unbox v)
 
     let writeObject _ (writer : TextWriter) (value : obj) =
         writer.Write(value)
@@ -291,9 +287,10 @@ module internal ValueTypeSerializer =
     let writeEnum n writer (value : obj) =
         writeObject n writer value
 
-    let writeType _ writer (value : obj) =
+    let writeType n writer (value : obj) =
         let v : Type = unbox value
-        getInnerTextWriter writer v.AssemblyQualifiedName
+        let inner = getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
+        inner n writer v.AssemblyQualifiedName
 
     let writeException _ writer (value : obj) =
         let v : Exception = unbox value
@@ -462,8 +459,9 @@ module internal ListSerializer =
     /// Writer function for string arrays
     let writeStrArray name (writer : TextWriter) (value : obj) =
         let array : string [] = unbox value
+        let strWriter = ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
         array
-        |> Array.iter (fun elem -> writeTag name.Item name writer ValueTypeSerializer.writeStringObject elem)
+        |> Array.iter (fun elem -> writeTag name.Item name writer strWriter elem)
 
     /// Writer function for untyped IEnumerables
     let writeEnumerable determineFunc (name : NameInfo) (writer : TextWriter) (value : obj) =
@@ -546,7 +544,10 @@ module internal Serializer =
     /// Try to determine one of a special serialization
     /// function, i.e. Exception, Uri
     let getSpecialWriters (t : Type) = fun () ->
-        if t = typeof<Uri> then Some <| injectWriteTag ValueTypeSerializer.writeStringObject
+        if t = typeof<Uri> then 
+            ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
+            |> injectWriteTag
+            |> Some
         elif isOrDerived t typeof<Exception> then Some <| injectWriteTag ValueTypeSerializer.writeException
         elif t <> typeof<obj> && t.IsInstanceOfType(typeof<Type>) then Some <| injectWriteTag ValueTypeSerializer.writeType
         else None
@@ -598,7 +599,11 @@ module internal Serializer =
 
     /// Try to determine the string writer function
     let getStringWriter (t : Type) = fun () ->
-        if t = typeof<string> then Some <| injectWriteTag ValueTypeSerializer.writeStringObject else None
+        if t = typeof<string> then
+            ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
+            |> injectWriteTag
+            |> Some
+        else None
 
     /// Try to determine a matching value type writer function
     let getValueTypeWriter (t : Type) = fun () ->
@@ -665,9 +670,10 @@ module internal Serializer =
     and getInstanceWriter (t : Type) = fun() ->
         match t.GetMethod(writerFuncName, instanceFlags, null, Type.EmptyTypes, null) |> Utils.toOption with
         | Some func ->
+            let inner = ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
             let writer = (fun a (w : TextWriter) x ->
                 let obj = func.Invoke(x, null)
-                ValueTypeSerializer.writeStringObject a w obj)
+                inner a w obj)
             if not XmlConfig.Instance.UseAttributes then
                 injectWriteTag writer
             else getInjectWriter t writer
@@ -678,9 +684,10 @@ module internal Serializer =
     and getStaticWriter (t : Type) = fun () ->
         match t.GetMethod(writerFuncName, staticFlags, null, [| t |], null) |> Utils.toOption with
         | Some func ->
+            let inner = ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
             let writer = (fun a (w : TextWriter) x -> 
                 let obj = func.Invoke(null, [| x |])
-                ValueTypeSerializer.writeStringObject a w obj)
+                inner a w obj)
             if not XmlConfig.Instance.UseAttributes then
                 injectWriteTag writer
             else getInjectWriter t writer
@@ -691,9 +698,10 @@ module internal Serializer =
     and getCustomWriter (t : Type) = fun () ->
         match XmlConfig.Instance.TryGetSerializer t with
         | Some func ->
+            let inner = ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
             let writer = (fun a (w : TextWriter) x ->
                 let obj = func.Invoke(x) 
-                ValueTypeSerializer.writeStringObject a w obj)
+                inner a w obj)
             if not XmlConfig.Instance.UseAttributes then
                 injectWriteTag writer
             else getInjectWriter t writer
