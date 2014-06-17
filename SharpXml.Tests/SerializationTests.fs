@@ -315,6 +315,11 @@ module SerializationTests =
         serialize cls |> should equal "<customParserClass>200x400</customParserClass>"
 
     [<Test>]
+    let ``Can serialize class with instance method ToXml() that returns null``() =
+        let cls = CustomParserClass(X = 0, Y = 0)
+        serialize cls |> should equal "<customParserClass></customParserClass>"
+
+    [<Test>]
     let ``Can serialize class with instance method ToXml() (with special characters)``() =
         let cls = ToXmlClass("foo & bar")
         serialize cls |> should equal "<toXmlClass>foo &amp; bar</toXmlClass>"

@@ -673,7 +673,7 @@ module internal Serializer =
             let inner = ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
             let writer = (fun a (w : TextWriter) x ->
                 let obj = func.Invoke(x, null)
-                inner a w obj)
+                if obj <> null then inner a w obj)
             if not XmlConfig.Instance.UseAttributes then
                 injectWriteTag writer
             else getInjectWriter t writer
@@ -687,7 +687,7 @@ module internal Serializer =
             let inner = ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
             let writer = (fun a (w : TextWriter) x -> 
                 let obj = func.Invoke(null, [| x |])
-                inner a w obj)
+                if obj <> null then inner a w obj)
             if not XmlConfig.Instance.UseAttributes then
                 injectWriteTag writer
             else getInjectWriter t writer
@@ -701,7 +701,7 @@ module internal Serializer =
             let inner = ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
             let writer = (fun a (w : TextWriter) x ->
                 let obj = func.Invoke(x) 
-                inner a w obj)
+                if obj <> null then inner a w obj)
             if not XmlConfig.Instance.UseAttributes then
                 injectWriteTag writer
             else getInjectWriter t writer

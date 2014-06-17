@@ -299,8 +299,9 @@ module Types =
             with get() = y
             and set v = y <- v
 
-        member x.ToXml() =
-            sprintf "%dx%d" x.X x.Y
+        member this.ToXml() =
+            if x > 0 && y > 0 then sprintf "%dx%d" this.X this.Y
+            else null
 
         static member ParseXml(input : string) =
             match input.Split('x') with
