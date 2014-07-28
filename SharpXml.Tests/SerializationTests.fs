@@ -449,6 +449,13 @@ module SerializationTests =
         serialize cls |> should equal "<attributeClass attr=\"some value\"><value>9</value></attributeClass>"
 
     [<Test>]
+    let ``Can serialize attribute values containing double quotes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let cls = AttributeClass(Value = 13, Attr = "some \"value\"")
+        serialize cls |> should equal "<attributeClass attr=\"some &#x22;value&#x22;\"><value>13</value></attributeClass>"
+
+    [<Test>]
     let ``Can serialize elements with static and dynamic XML attributes``() =
         XmlConfig.Instance.UseAttributes <- true
 
