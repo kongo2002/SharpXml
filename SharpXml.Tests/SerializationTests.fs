@@ -477,6 +477,13 @@ module SerializationTests =
         serialize cls |> should equal "<attributeOnlyClass value=\"15\" attr=\"attribute value\"></attributeOnlyClass>"
 
     [<Test>]
+    let ``Can serialize generic attribute classes``() =
+        XmlConfig.Instance.UseAttributes <- true
+
+        let cls = GenAttributeClass(Value = 2, Attr = 2052L)
+        serialize cls |> should equal "<genAttributeClass attr=\"2052\"><value>2</value></genAttributeClass>"
+
+    [<Test>]
     let ``Can serialize attributed list classes``() =
         XmlConfig.Instance.UseAttributes <- true
 
