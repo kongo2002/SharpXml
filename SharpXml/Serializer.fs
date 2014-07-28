@@ -64,6 +64,8 @@ module internal SerializerBase =
     open System
     open System.IO
 
+    open Microsoft.FSharp.NativeInterop
+
     open Extensions
     open Utils
 
@@ -73,9 +75,24 @@ module internal SerializerBase =
         writeFunc info w value
         w.Write("</"); w.Write(name); w.Write('>')
 
+    /// Write the inner attribute value while escaping double quotes
+    let writeAttributeValue (writer : TextWriter) (value : string) =
+        if value <> null && value.Length > 0 then
+            let len = value.Length
+            let chrs = value.ToCharArray()
+            let mutable i = 0
+            let mutable buffer = &&chrs.[0]
+            while i < len do
+                let chr = NativePtr.read buffer
+                buffer <- NativePtr.add buffer 1
+                match chr with
+                | '"' -> writer.Write("&#x22;")
+                | _   -> writer.Write(chr)
+                i <- i + 1
+
     /// XML tag writer function with an additional namespace attribute
     let writeTagNamespace (ns : string) (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
-        w.Write('<'); w.Write(name); w.Write(" xmlns=\""); w.Write(ns); w.Write("\">")
+        w.Write('<'); w.Write(name); w.Write(" xmlns=\""); writeAttributeValue w ns; w.Write("\">")
         writeFunc info w value
         w.Write("</"); w.Write(name); w.Write('>')
 
@@ -84,7 +101,7 @@ module internal SerializerBase =
         if List.isEmpty attr then writeTag name info w writeFunc value
         else
             w.Write('<'); w.Write(name);
-            attr |> List.iter (fun (k, v) -> w.Write(' '); w.Write(k); w.Write("=\""); w.Write(v); w.Write("\""))
+            attr |> List.iter (fun (k, v) -> w.Write(' '); w.Write(k); w.Write("=\""); writeAttributeValue w v; w.Write("\""))
             w.Write('>');
             writeFunc info w value
             w.Write("</"); w.Write(name); w.Write('>')
@@ -178,11 +195,11 @@ module internal ValueTypeSerializer =
                 let intVal = int chr
                 buffer <- NativePtr.add buffer 1
                 match chr with
-                | '<' -> writer.Write("&lt;")
-                | '>' -> writer.Write("&gt;")
-                | '&' -> writer.Write("&amp;")
+                | '<'  -> writer.Write("&lt;")
+                | '>'  -> writer.Write("&gt;")
+                | '&'  -> writer.Write("&amp;")
                 | '\'' -> writer.Write("&#x27;")
-                | '"' -> writer.Write("&#x22;")
+                | '"'  -> writer.Write("&#x22;")
                 | _ when intVal <= 126 -> writer.Write(chr)
                 | _ -> unicodeWriter writer intVal
                 curr <- curr + 1
@@ -544,7 +561,7 @@ module internal Serializer =
     /// Try to determine one of a special serialization
     /// function, i.e. Exception, Uri
     let getSpecialWriters (t : Type) = fun () ->
-        if t = typeof<Uri> then 
+        if t = typeof<Uri> then
             ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
             |> injectWriteTag
             |> Some
@@ -685,7 +702,7 @@ module internal Serializer =
         match t.GetMethod(writerFuncName, staticFlags, null, [| t |], null) |> Utils.toOption with
         | Some func ->
             let inner = ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
-            let writer = (fun a (w : TextWriter) x -> 
+            let writer = (fun a (w : TextWriter) x ->
                 let obj = func.Invoke(null, [| x |])
                 if obj <> null then inner a w obj)
             if not XmlConfig.Instance.UseAttributes then
@@ -700,7 +717,7 @@ module internal Serializer =
         | Some func ->
             let inner = ValueTypeSerializer.getInnerTextWriter XmlConfig.Instance.SpecialCharEncoding
             let writer = (fun a (w : TextWriter) x ->
-                let obj = func.Invoke(x) 
+                let obj = func.Invoke(x)
                 if obj <> null then inner a w obj)
             if not XmlConfig.Instance.UseAttributes then
                 injectWriteTag writer
