@@ -4,7 +4,7 @@
 *SharpXml* is an independent, dependency-free and fast .NET XML serialization
 library. It is written in F# and is built on .NET 4.0.
 
-[![build status](https://api.travis-ci.org/kongo2002/SharpXml.png)][8]
+[![build status](https://api.travis-ci.org/kongo2002/SharpXml.svg)][8]
 
 The project is inspired by the great .NET JSON serializer
 [ServiceStack.Text][1].
