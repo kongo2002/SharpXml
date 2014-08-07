@@ -58,87 +58,12 @@ type internal TypeWriterInfo = {
     Properties : PropertyWriterInfo list
     Attributes : AttributeWriterInfo list }
 
-/// Internal module of convenience serialization functions
-module internal SerializerBase =
+module internal StringSerializer =
 
     open System
     open System.IO
 
     open Microsoft.FSharp.NativeInterop
-
-    open Extensions
-    open Utils
-
-    /// General purpose XML tags writer function
-    let writeTag (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
-        w.Write('<'); w.Write(name); w.Write('>')
-        writeFunc info w value
-        w.Write("</"); w.Write(name); w.Write('>')
-
-    /// Write the inner attribute value while escaping double quotes
-    let writeAttributeValue (writer : TextWriter) (value : string) =
-        if value <> null && value.Length > 0 then
-            let len = value.Length
-            let chrs = value.ToCharArray()
-            let mutable i = 0
-            let mutable buffer = &&chrs.[0]
-            while i < len do
-                let chr = NativePtr.read buffer
-                buffer <- NativePtr.add buffer 1
-                match chr with
-                | '"' -> writer.Write("&#x22;")
-                | '&' -> writer.Write("&amp;")
-                | _   -> writer.Write(chr)
-                i <- i + 1
-
-    /// XML tag writer function with an additional namespace attribute
-    let writeTagNamespace (ns : string) (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
-        w.Write('<'); w.Write(name); w.Write(" xmlns=\""); writeAttributeValue w ns; w.Write("\">")
-        writeFunc info w value
-        w.Write("</"); w.Write(name); w.Write('>')
-
-    /// XML tag writer function with additional attributes
-    let writeTagAttributes (name : string) (attr : (string * string) list) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
-        if List.isEmpty attr then writeTag name info w writeFunc value
-        else
-            w.Write('<'); w.Write(name);
-            attr |> List.iter (fun (k, v) -> w.Write(' '); w.Write(k); w.Write("=\""); writeAttributeValue w v; w.Write("\""))
-            w.Write('>');
-            writeFunc info w value
-            w.Write("</"); w.Write(name); w.Write('>')
-
-    /// Empty tag writer function
-    let writeEmptyTag (name : string) (w : TextWriter) =
-        w.Write('<')
-        w.Write(name);
-        w.Write("></");
-        w.Write(name);
-        w.Write('>');
-
-    let injectWriteTagAttributes (func: WriterFunc) attr =
-        fun (n : NameInfo) w x -> writeTagAttributes n.Name attr n w func x
-
-    let injectWriteTag (func : WriterFunc) =
-        fun (n : NameInfo) w x -> writeTag n.Name n w func x
-
-    let extractAttributeValues (info: TypeWriterInfo) (value : obj) =
-        info.Attributes
-        |> List.choose (fun a ->
-            let v = a.GetFunc.Invoke value
-            if v <> null then Some (a.Key, a.ToStr.Invoke(v)) else None)
-
-/// Module containing the serialization logic
-/// for value types
-module internal ValueTypeSerializer =
-
-    open System
-    open System.Globalization
-    open System.IO
-
-    open Microsoft.FSharp.NativeInterop
-
-    open Extensions
-    open Utils
 
     let private valueA    = int 'A'
     let private valueZero = int '0'
@@ -204,6 +129,78 @@ module internal ValueTypeSerializer =
                 | _ when intVal <= 126 -> writer.Write(chr)
                 | _ -> unicodeWriter writer intVal
                 curr <- curr + 1
+
+/// Internal module of convenience serialization functions
+module internal SerializerBase =
+
+    open System
+    open System.IO
+
+    open Microsoft.FSharp.NativeInterop
+
+    open Extensions
+    open Utils
+
+    /// General purpose XML tags writer function
+    let writeTag (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
+        w.Write('<'); w.Write(name); w.Write('>')
+        writeFunc info w value
+        w.Write("</"); w.Write(name); w.Write('>')
+
+    /// Write the inner attribute value while escaping double quotes
+    let inline writeAttributeValue writer (v : string) =
+        if v <> null && v.Length > 0 then
+            StringSerializer.writeStringUnicode StringSerializer.writeUnicode writer v
+
+    /// XML tag writer function with an additional namespace attribute
+    let writeTagNamespace (ns : string) (name : string) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
+        w.Write('<'); w.Write(name); w.Write(" xmlns=\""); writeAttributeValue w ns; w.Write("\">")
+        writeFunc info w value
+        w.Write("</"); w.Write(name); w.Write('>')
+
+    /// XML tag writer function with additional attributes
+    let writeTagAttributes (name : string) (attr : (string * string) list) (info : NameInfo) (w : TextWriter) writeFunc (value : obj) =
+        if List.isEmpty attr then writeTag name info w writeFunc value
+        else
+            w.Write('<'); w.Write(name);
+            attr |> List.iter (fun (k, v) -> w.Write(' '); w.Write(k); w.Write("=\""); writeAttributeValue w v; w.Write("\""))
+            w.Write('>');
+            writeFunc info w value
+            w.Write("</"); w.Write(name); w.Write('>')
+
+    /// Empty tag writer function
+    let writeEmptyTag (name : string) (w : TextWriter) =
+        w.Write('<')
+        w.Write(name);
+        w.Write("></");
+        w.Write(name);
+        w.Write('>');
+
+    let injectWriteTagAttributes (func: WriterFunc) attr =
+        fun (n : NameInfo) w x -> writeTagAttributes n.Name attr n w func x
+
+    let injectWriteTag (func : WriterFunc) =
+        fun (n : NameInfo) w x -> writeTag n.Name n w func x
+
+    let extractAttributeValues (info: TypeWriterInfo) (value : obj) =
+        info.Attributes
+        |> List.choose (fun a ->
+            let v = a.GetFunc.Invoke value
+            if v <> null then Some (a.Key, a.ToStr.Invoke(v)) else None)
+
+/// Module containing the serialization logic
+/// for value types
+module internal ValueTypeSerializer =
+
+    open System
+    open System.Globalization
+    open System.IO
+
+    open Microsoft.FSharp.NativeInterop
+
+    open Extensions
+    open StringSerializer
+    open Utils
 
     let inline nullableWriter n writer value func =
         if value <> null then func n writer value
