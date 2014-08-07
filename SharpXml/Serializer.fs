@@ -87,6 +87,7 @@ module internal SerializerBase =
                 buffer <- NativePtr.add buffer 1
                 match chr with
                 | '"' -> writer.Write("&#x22;")
+                | '&' -> writer.Write("&amp;")
                 | _   -> writer.Write(chr)
                 i <- i + 1
 
