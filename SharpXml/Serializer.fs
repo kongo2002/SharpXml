@@ -126,7 +126,7 @@ module internal StringSerializer =
                 | '&'  -> writer.Write("&amp;")
                 | '\'' -> writer.Write("&#x27;")
                 | '"'  -> writer.Write("&#x22;")
-                | _ when intVal <= 126 -> writer.Write(chr)
+                | _ when intVal >= 32 && intVal <= 126 -> writer.Write(chr)
                 | _ -> unicodeWriter writer intVal
                 curr <- curr + 1
 

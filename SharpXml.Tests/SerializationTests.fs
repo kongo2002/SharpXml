@@ -563,3 +563,4 @@ module SerializationTests =
 
         serialize "foo bar" |> should equal "<string>foo bar</string>"
         serialize "übermäßig" |> should equal "<string>&#x00FC;berm&#x00E4;&#x00DF;ig</string>"
+        serialize "control.chars" |> should equal "<string>control&#x0003;&#x0003;.chars</string>"
