@@ -546,6 +546,20 @@ module SerializationTests =
         serialize cls |> should equal expected
 
     [<Test>]
+    let ``Can serialize enums in attributes``() =
+        XmlConfig.Instance.UseAttributes <- true
+        let expected = "<genAttributeClass attr=\"Foo\"><value>352</value></genAttributeClass>"
+        let cls = GenAttributeClass<_>(Value = 352, Attr = TestEnum.Foo)
+        serialize cls |> should equal expected
+
+    [<Test>]
+    let ``Can serialize flags enums in attributes``() =
+        XmlConfig.Instance.UseAttributes <- true
+        let expected = "<genAttributeClass attr=\"2\"><value>352</value></genAttributeClass>"
+        let cls = GenAttributeClass<_>(Value = 352, Attr = FlagsEnum.Eggs)
+        serialize cls |> should equal expected
+
+    [<Test>]
     let ``Can serialize nullable enums with values in attributes``() =
         XmlConfig.Instance.UseAttributes <- true
         let expected = "<genAttributeClass attr=\"Foo\"><value>352</value></genAttributeClass>"
