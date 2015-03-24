@@ -331,6 +331,15 @@ module internal ValueTypeSerializer =
         | TypeCode.UInt64  -> Some <| writeUInt64
         | _ -> None
 
+    let nullableEnumWriter (t : Type) =
+        let writer =
+            if t.HasAttribute("FlagsAttribute")
+            then getEnumValueWriter t
+            else Some writeEnum
+        match writer with
+        | Some innerWriter -> Some <| fun n w v -> nullableWriter n w v innerWriter
+        | None -> None
+
     /// Get the appropriate writer function for the
     /// specified value type
     let getValueTypeInnerWriter (t : Type) =
@@ -349,22 +358,26 @@ module internal ValueTypeSerializer =
             then getEnumValueWriter t
             else Some writeEnum
         else
-            match Type.GetTypeCode(t.NullableUnderlying()) with
-            | TypeCode.Boolean  -> Some writeBool
-            | TypeCode.Byte     -> Some writeByte
-            | TypeCode.Char     -> Some writeChar
-            | TypeCode.DateTime -> Some writeDateTime
-            | TypeCode.Decimal  -> Some writeDecimal
-            | TypeCode.Double   -> Some writeFloat
-            | TypeCode.Int16    -> Some writeInt16
-            | TypeCode.Int32    -> Some writeInt32
-            | TypeCode.Int64    -> Some writeInt64
-            | TypeCode.SByte    -> Some writeSByte
-            | TypeCode.Single   -> Some writeFloat32
-            | TypeCode.UInt16   -> Some writeUInt16
-            | TypeCode.UInt32   -> Some writeUInt32
-            | TypeCode.UInt64   -> Some writeUInt64
-            | _                 -> None
+            let nullable = t.NullableUnderlying()
+            if nullable.IsEnum || t.UnderlyingSystemType.IsEnum
+            then nullableEnumWriter nullable
+            else
+                match Type.GetTypeCode(nullable) with
+                | TypeCode.Boolean  -> Some writeBool
+                | TypeCode.Byte     -> Some writeByte
+                | TypeCode.Char     -> Some writeChar
+                | TypeCode.DateTime -> Some writeDateTime
+                | TypeCode.Decimal  -> Some writeDecimal
+                | TypeCode.Double   -> Some writeFloat
+                | TypeCode.Int16    -> Some writeInt16
+                | TypeCode.Int32    -> Some writeInt32
+                | TypeCode.Int64    -> Some writeInt64
+                | TypeCode.SByte    -> Some writeSByte
+                | TypeCode.Single   -> Some writeFloat32
+                | TypeCode.UInt16   -> Some writeUInt16
+                | TypeCode.UInt32   -> Some writeUInt32
+                | TypeCode.UInt64   -> Some writeUInt64
+                | _                 -> None
 
     let getValueTypeWriter (t : Type) =
         match getValueTypeInnerWriter t with
@@ -438,6 +451,11 @@ module internal AttributeSerializer =
     let writeEnum (v : obj) =
         v.ToString()
 
+    let nullableEnum (t : Type) =
+        if t.HasAttribute("FlagsAttribute")
+        then attributeValueWriter t
+        else Some <| SerializerFunc(writeEnum)
+
     let getValueWriter (t: Type) : SerializerFunc option =
         if t = typeof<Nullable<DateTime>> then
             Some <| nullableStrFunc toShortestXsdFormat
@@ -454,7 +472,10 @@ module internal AttributeSerializer =
             then writeEnumNames t
             else None
         else
-            attributeValueWriter (t.NullableUnderlying())
+            let nullable = t.NullableUnderlying()
+            if nullable.IsEnum || nullable.UnderlyingSystemType.IsEnum
+            then nullableEnum nullable
+            else attributeValueWriter nullable
 
 /// Serialization logic for list and collection types
 module internal ListSerializer =

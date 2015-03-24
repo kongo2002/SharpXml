@@ -393,9 +393,11 @@ module Types =
         let mutable v1 = Unchecked.defaultof<int>
         let mutable v2 = Unchecked.defaultof<'T>
 
+        [<XmlElement(Order = 1)>]
         member x.V1
             with get() = v1
             and set v = v1 <- v
+        [<XmlElement(Order = 2)>]
         member x.V2
             with get() = v2
             and set v = v2 <- v

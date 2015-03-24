@@ -534,6 +534,31 @@ module SerializationTests =
         test Types.Enums.ULongEnum.Two
 
     [<Test>]
+    let ``Can serialize nullable enums with values``() =
+        let expected = "<genericClass><v1>352</v1><v2>Foo</v2></genericClass>"
+        let cls = GenericClass<_>(V1 = 352, V2 = Nullable(TestEnum.Foo))
+        serialize cls |> should equal expected
+
+    [<Test>]
+    let ``Can serialize nullable enums without values``() =
+        let expected = "<genericClass><v1>352</v1></genericClass>"
+        let cls = GenericClass<_>(V1 = 352, V2 = Nullable<TestEnum>())
+        serialize cls |> should equal expected
+
+    [<Test>]
+    let ``Can serialize nullable enums with values in attributes``() =
+        XmlConfig.Instance.UseAttributes <- true
+        let expected = "<genAttributeClass attr=\"Foo\"><value>352</value></genAttributeClass>"
+        let cls = GenAttributeClass<_>(Value = 352, Attr = Nullable(TestEnum.Foo))
+        serialize cls |> should equal expected
+
+    [<Test>]
+    let ``Can serialize nullable enums without values in attributes``() =
+        let expected = "<genAttributeClass><value>352</value></genAttributeClass>"
+        let cls = GenAttributeClass<_>(Value = 352, Attr = Nullable<TestEnum>())
+        serialize cls |> should equal expected
+
+    [<Test>]
     let ``Can serialize object values``() =
         let input = GenericClass<_>(V1 = 14, V2 = obj())
         let result = serialize input
