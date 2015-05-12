@@ -32,14 +32,24 @@ on github:
 - <https://github.com/kongo2002/SharpXml/downloads/>
 
 
-### Source files
+### Building from source
 
 Alternatively you can clone the *git repository* and compile the project by
 yourself:
 
 	git clone git://github.com/kongo2002/SharpXml.git
-	cd SharpXml\SharpXml
+	cd SharpXml
 	msbuild
+
+
+#### Linux
+
+Using mono under linux you just have to replace `msbuild` with `xbuild` to build
+the project:
+
+	git clone git://github.com/kongo2002/SharpXml.git
+	cd SharpXml
+	xbuild
 
 
 ## Lean API
