@@ -52,6 +52,14 @@ the project:
 	xbuild
 
 
+#### Release build
+
+You may pass build configuration options to `msbuild`/`xbuild` in order to
+compile a *release* build:
+
+	xbuild /p:Configuration=Release;Optimize=true
+
+
 ## Lean API
 
 The API tries to appear small and descriptive at the same time:
