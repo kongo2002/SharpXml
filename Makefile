@@ -12,6 +12,8 @@ endif
 
 all: SharpXml/bin/$(BUILD)/SharpXml.dll
 
+rebuild: clean all
+
 SharpXml/bin/$(BUILD)/SharpXml.dll: $(SRCS)
 	@cd SharpXml && xbuild /p:Configuration=$(BUILD)
 
