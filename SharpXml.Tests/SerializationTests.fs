@@ -14,11 +14,13 @@
 
 namespace SharpXml.Tests
 
+open NUnit.Framework
+
+[<TestFixture>]
 module SerializationTests =
 
     open System
     open System.Collections.Generic
-    open NUnit.Framework
 
     open SharpXml
     open SharpXml.Tests.CSharp
@@ -33,6 +35,7 @@ module SerializationTests =
         // different settings that affect the behavior of
         // cached serialization functions
         XmlConfig.Instance.ClearSerializers()
+        XmlSerializer.ClearSerializerCache()
 
     let serialize<'a> (element : 'a) =
         XmlSerializer.SerializeToString<'a>(element)
@@ -238,7 +241,7 @@ module SerializationTests =
     [<Test>]
     let ``Can serialize F# record types``() =
         let record : TestRecord = { Value = 99; Name = "ham & eggs" }
-        serialize record |> should equal "<testRecord><value>99</value><name>ham & eggs</name></testRecord>"
+        serialize record |> should equal "<testRecord><name>ham &amp; eggs</name><value>99</value></testRecord>"
 
     [<Test>]
     let ``Can serialize F# tuples``() =
@@ -264,14 +267,14 @@ module SerializationTests =
         let union = GenericClass<TestUnion1>(V1 = 10, V2 = TestUnion1.Three ("three", 3))
         let result = serialize union
 
-        result |> should equal "<genericClass><v1>10</v1><v2><three><item>three</item><item>3</item></three></v2></genericClass>"
+        result |> should equal "<genericClass><v1>10</v1><v2><three><item1>three</item1><item2>3</item2></three></v2></genericClass>"
 
     [<Test>]
     let ``Can serialize lists of F# discriminated unions``() =
         let union = GenericClass<TestUnion1 list>(V1 = 10, V2 = [TestUnion1.One; TestUnion1.Three ("three", 3); TestUnion1.One])
         let result = serialize union
 
-        result |> should equal "<genericClass><v2><testUnion1><one></one></testUnion1><testUnion1><item1>three</item1><item2>3</item2></testUnion1><testUnion1><one></one></testUnion1></v2><v1>10</v1></genericClass>"
+        result |> should equal "<genericClass><v1>10</v1><v2><testUnion1><one></one></testUnion1><testUnion1><three><item1>three</item1><item2>3</item2></three></testUnion1><testUnion1><one></one></testUnion1></v2></genericClass>"
 
     [<Test>]
     let ``Can serialize newline characters``() =
@@ -302,7 +305,7 @@ module SerializationTests =
     [<Test>]
     let ``Can serialize arrays of classes``() =
         let cls = GenericClass<Guest[]>(V1 = 984, V2 = [| Guest(1); Guest(2, FirstName = "foo", LastName = "bar") |])
-        serialize cls |> should equal "<genericClass><v1>984</v1><v2><guest><id>1</id></guest><guest><firstName>foo</firstName><lastName>bar</lastName><id>2</id></guest></v2></genericClass>"
+        serialize cls |> should equal "<genericClass><v1>984</v1><v2><guest><id>1</id></guest><guest><firstName>foo</firstName><id>2</id><lastName>bar</lastName></guest></v2></genericClass>"
 
     [<Test>]
     let ``Can serialize IEnumerables``() =
@@ -341,7 +344,7 @@ module SerializationTests =
         list.Add("foo") |> ignore
         list.Add("bar") |> ignore
         let cls = ArrayListClass(V1 = 200, V2 = list)
-        serialize cls |> should equal "<arrayListClass><v2><item>foo</item><item>bar</item></v2><v1>200</v1></arrayListClass>"
+        serialize cls |> should equal "<arrayListClass><v1>200</v1><v2><item>foo</item><item>bar</item></v2></arrayListClass>"
 
     [<Test>]
     let ``Can serialize untyped collections containing different types``() =
@@ -349,7 +352,7 @@ module SerializationTests =
         list.Add("foo") |> ignore
         list.Add(42) |> ignore
         let cls = ArrayListClass(V1 = 200, V2 = list)
-        serialize cls |> should equal "<arrayListClass><v2><item>foo</item><item>42</item></v2><v1>200</v1></arrayListClass>"
+        serialize cls |> should equal "<arrayListClass><v1>200</v1><v2><item>foo</item><item>42</item></v2></arrayListClass>"
 
     [<Test>]
     let ``Can serialize classes attributed with XmlElementAttribute``() =
@@ -374,13 +377,13 @@ module SerializationTests =
     let ``Can serialize class member names correctly``() =
         let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
         let cls = Booking("testBooking", list)
-        serialize cls |> should equal "<booking><name>testBooking</name><guests><guest><firstName>foo</firstName><lastName>bar</lastName><id>10</id></guest><guest><firstName>ham</firstName><lastName>eggs</lastName><id>20</id></guest></guests></booking>"
+        serialize cls |> should equal "<booking><guests><guest><firstName>foo</firstName><id>10</id><lastName>bar</lastName></guest><guest><firstName>ham</firstName><id>20</id><lastName>eggs</lastName></guest></guests><name>testBooking</name></booking>"
 
     [<Test>]
     let ``Can serialize array names correctly``() =
         let array = [| Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") |]
         let cls = GenericClass<Guest[]>(V1 = 200, V2 = array)
-        serialize cls |> should equal "<genericClass><v1>200</v1><v2><guest><firstName>foo</firstName><lastName>bar</lastName><id>10</id></guest><guest><firstName>ham</firstName><lastName>eggs</lastName><id>20</id></guest></v2></genericClass>"
+        serialize cls |> should equal "<genericClass><v1>200</v1><v2><guest><firstName>foo</firstName><id>10</id><lastName>bar</lastName></guest><guest><firstName>ham</firstName><id>20</id><lastName>eggs</lastName></guest></v2></genericClass>"
 
     [<Test>]
     let ``Can serialize decimals with custom serializer``() =
@@ -407,14 +410,18 @@ module SerializationTests =
     [<Test>]
     let ``Can serialize empty values``() =
         XmlConfig.Instance.IncludeNullValues <- false
+
         let cls = ListClass(V1 = null, V2 = 992)
         let guests = List<Guest>([ Guest(94) ])
         let booking = Booking("booking", guests)
         serialize cls |> should equal "<listClass><v2>992</v2></listClass>"
-        serialize booking |> should equal "<booking><name>booking</name><guests><guest><id>94</id></guest></guests></booking>"
+        serialize booking |> should equal "<booking><guests><guest><id>94</id></guest></guests><name>booking</name></booking>"
+
         XmlConfig.Instance.IncludeNullValues <- true
+
         serialize cls |> should equal "<listClass><v1></v1><v2>992</v2></listClass>"
-        serialize booking |> should equal "<booking><name>booking</name><guests><guest><firstName></firstName><lastName></lastName><id>94</id></guest></guests></booking>"
+        serialize booking |> should equal "<booking><guests><guest><firstName></firstName><id>94</id><lastName></lastName></guest></guests><name>booking</name></booking>"
+
         XmlConfig.Instance.IncludeNullValues <- false
 
     [<Test>]

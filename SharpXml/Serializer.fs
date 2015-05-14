@@ -683,7 +683,7 @@ module internal Serializer =
             let value = get attr.ValueName valueName
             let name = get attr.Name name
             { Name = name; Item = item; Key = key; Value = value }, attr.Order
-        | _ -> { Name = name; Item = itemName; Key = keyName; Value = valueName }, Int32.MaxValue
+        | _ -> { Name = name; Item = itemName; Key = keyName; Value = valueName }, 0
 
     /// Build a PropertyWriterInfo object based on the
     /// specified PropertyInfo
@@ -790,7 +790,13 @@ module internal Serializer =
         | true, props -> props
         | _ ->
             let properties = ReflectionHelpers.getSerializableProperties t
-            let order = fun x -> x.Order
+            let orderFunc (one: PropertyWriterInfo) (two: PropertyWriterInfo) =
+                if one.Order <= 0 then
+                    if two.Order <= 0 then
+                        String.Compare(one.Name.Name, two.Name.Name)
+                    else 1
+                elif two.Order <= 0 then -1
+                else one.Order - two.Order
             let info =
                 if XmlConfig.Instance.UseAttributes then
                     let ps, attrs =
@@ -798,19 +804,15 @@ module internal Serializer =
                         |> Array.fold determineWriterInfo ([], [])
                     let ps' =
                         ps
-                        |> List.rev
-                        |> List.sortBy order
+                        |> List.sortWith orderFunc
                     { Properties = ps'; Attributes = List.rev attrs }
                 else
                     let ps =
                         properties
                         |> Array.map buildPropertyWriterInfo
                         |> List.ofArray
-                        // revert first in order to keep the 'natural' order
-                        // of the property that are defined on the type
-                        |> List.rev
                         // sort by order descending
-                        |> List.sortBy order
+                        |> List.sortWith orderFunc
                     { Properties = ps; Attributes = [] }
             Atom.updateAtomDict propertyCache t info
 
@@ -988,3 +990,5 @@ module internal Serializer =
     /// Clear the serializer cache
     let clearCache() =
         Atom.clearAtomDict serializerCache
+        Atom.clearAtomDict propertyCache
+        Atom.clearAtomDict typeInfoCache

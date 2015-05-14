@@ -27,7 +27,7 @@ type XmlElementAttribute(name : string) =
     let mutable keyName = Unchecked.defaultof<string>
     let mutable valueName = Unchecked.defaultof<string>
     let mutable ns = Unchecked.defaultof<string>
-    let mutable order = Int32.MaxValue
+    let mutable order = 0
 
     new() = XmlElementAttribute(null)
 

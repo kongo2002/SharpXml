@@ -887,7 +887,7 @@ module internal Deserializer =
             | true, caseInfo -> name, caseInfo
             | _ ->
                   let case = lazy buildCaseInfo info
-                  caseInfos.Add(name, case)  
+                  caseInfos.Add(name, case)
                   name, case
         let getUnionReaders =
             FSharpType.GetUnionCases t
@@ -940,3 +940,4 @@ module internal Deserializer =
     /// Clear the deserializer cache
     let clearCache() =
         Atom.clearAtomDict readerCache
+        Atom.clearAtomDict propertyCache

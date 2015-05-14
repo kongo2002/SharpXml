@@ -32,10 +32,10 @@ type XmlSerializer() =
 
     /// Eat the first XML root node depending on the 'UseAttributes'
     /// setting either with or without attribute values.
-    static let eatRoot =
+    static let eatRoot info =
         if XmlConfig.Instance.UseAttributes 
-        then XmlParser.eatRootWithAttributes
-        else XmlParser.eatRoot
+        then XmlParser.eatRootWithAttributes info
+        else XmlParser.eatRoot info
 
     /// Deserialization of the input string into the specified target type
     static let deserialize input targetType =

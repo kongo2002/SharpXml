@@ -14,6 +14,9 @@
 
 namespace SharpXml.Tests
 
+open NUnit.Framework
+
+[<TestFixture>]
 module DeserializationTests =
 
     open System
@@ -22,7 +25,6 @@ module DeserializationTests =
     open System.Collections.ObjectModel
     open System.Collections.Specialized
     open System.Diagnostics
-    open NUnit.Framework
 
     open SharpXml
     open SharpXml.Tests.TestHelpers
@@ -34,7 +36,11 @@ module DeserializationTests =
 
     [<SetUp>]
     let init() =
+        // this is important if some unit tests use
+        // different settings that affect the behavior of
+        // cached deserialization functions
         XmlConfig.Instance.ClearDeserializers()
+        XmlSerializer.ClearDeserializerCache()
 
     [<Test>]
     let ``Can deserialize a simple class``() =
@@ -236,6 +242,8 @@ module DeserializationTests =
 
     [<Test>]
     let ``Can deserialize string attributes with special chars``() =
+        XmlConfig.Instance.UseAttributes <- true
+
         let out = deserialize<TestClass> "<testClass><v1 attr=\"http://url.com\">42</v1><v2>bar</v2></testClass>"
         out.V1 |> should equal 42
         out.V2 |> should equal "bar"
@@ -507,6 +515,8 @@ module DeserializationTests =
 
     [<Test>]
     let ``Can deserialize nullable attribute types``() =
+        XmlConfig.Instance.UseAttributes <- true
+
         let input = "<nullableAttributeClass attr=\"23\"><value>35</value></nullableAttributeClass>"
 
         let result = deserialize<NullableAttributeClass>(input)
@@ -516,6 +526,7 @@ module DeserializationTests =
     [<Test>]
     let ``Can deserialize string attributes into enum values``() =
         XmlConfig.Instance.UseAttributes <- true
+
         let input = "<genericClass><v1>100</v1><v2 attr=\"Bar\"></v2></genericClass>"
 
         let result = deserialize<GenericClass<AttrEnumClass>>(input)
