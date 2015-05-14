@@ -604,3 +604,9 @@ module SerializationTests =
         serialize "übermäßig" |> should equal "<string>&#x00FC;berm&#x00E4;&#x00DF;ig</string>"
         serialize "control.chars" |> should equal "<string>control.chars</string>"
         serialize "foobar" |> should equal "<string>foobar</string>"
+
+    [<Test>]
+    let ``Can serialize recursive discriminated unions``() =
+        let union = Entry ( Empty, Entry (Empty, Empty))
+
+        serialize union |> should equal "<recurUnion><entry><item1><empty></empty></item1><item2><entry><item1><empty></empty></item1><item2><empty></empty></item2></entry></item2></entry></recurUnion>"

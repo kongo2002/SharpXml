@@ -62,7 +62,7 @@ type internal TupleBuilderInfo = {
 /// for discriminated unions
 type internal UnionBuilderInfo = {
     Type : System.Type
-    Readers : Map<string, ReaderFunc[] * (obj[] -> obj)> }
+    Readers : Map<string, Lazy<ReaderFunc[] * (obj[] -> obj)>> }
 
 module internal Deserialization =
 
@@ -825,7 +825,8 @@ module internal Deserializer =
             match tag with
             | TagType.Open ->
                 match ui.Readers.TryFind lower with
-                | Some (rs, ctor) ->
+                | Some caseInfo ->
+                    let rs, ctor = caseInfo.Force()
                     let parts = Array.zeroCreate<obj> rs.Length
                     let inline inject i reader = parts.[i] <- reader attr xml
                     match rs with
@@ -862,23 +863,35 @@ module internal Deserializer =
             | TagType.Single ->
                 eatClosingTag xml
                 match ui.Readers.TryFind lower with
-                | Some ([||], ctor) -> ctor [||]
+                // TODO: check array length?
+                | Some caseInfo ->
+                    let _, ctor = caseInfo.Force()
+                    ctor [||]
                 | _ -> null
             | _ -> null
         else null
 
     /// Build a UnionBuilderInfo for the specified union type
     and getUnionBuilderInfo (t : Type) =
-        let mapCase (info : UnionCaseInfo) =
-            let name = info.Name.ToLowerInvariant()
+        // we have to be aware of recursive case definitions
+        let caseInfos = new Dictionary<_, _>()
+        let buildCaseInfo (info : UnionCaseInfo) =
             let ctor = FSharpValue.PreComputeUnionConstructor info
             let readers =
                 info.GetFields()
                 |> Array.map (fun pi -> getReaderFunc pi.PropertyType)
-            name, (readers, ctor)
+            readers, ctor
+        let lookupCaseInfo (info : UnionCaseInfo) =
+            let name = info.Name.ToLowerInvariant()
+            match caseInfos.TryGetValue name with
+            | true, caseInfo -> name, caseInfo
+            | _ ->
+                  let case = lazy buildCaseInfo info
+                  caseInfos.Add(name, case)  
+                  name, case
         let getUnionReaders =
             FSharpType.GetUnionCases t
-            |> Array.map mapCase
+            |> Array.map lookupCaseInfo
             |> Map.ofArray
         { Type = t; Readers = getUnionReaders }
 

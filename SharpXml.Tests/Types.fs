@@ -41,6 +41,10 @@ module Types =
         | Three of string * int
         | Four of string list
 
+    type RecurUnion =
+        | Empty
+        | Entry of RecurUnion * RecurUnion
+
     type CustomList<'T> =
         inherit List<'T>
 

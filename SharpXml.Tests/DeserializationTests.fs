@@ -668,3 +668,10 @@ module DeserializationTests =
 
         result.V1 |> should equal 100
         result.V2 |> should equal [ TestUnion1.Four ["one"; "two"]; TestUnion1.One ]
+
+    [<Test>]
+    let ``Can deserialize recursive discriminated unions``() =
+        let input = "<recurUnion><entry><item1><empty></empty></item1><item2><entry><item1><empty></empty></item1><item2><empty></empty></item2></entry></item2></entry></recurUnion>"
+        let result = deserialize<RecurUnion> input
+
+        result |> should equal (Entry(Empty, Entry(Empty, Empty)))
