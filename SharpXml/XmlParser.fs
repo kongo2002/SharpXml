@@ -119,7 +119,7 @@ module internal XmlParser =
                 if chr = '-'
                 then state <- CommentState.EndHyphen
                 else state <- CommentState.InComment
-            | CommentState.EndHyphen ->
+            | CommentState.EndHyphen | _ ->
                 if chr = '>' then found <- true
         skip
 
