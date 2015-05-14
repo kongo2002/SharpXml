@@ -62,6 +62,7 @@ module ProfilingTests =
         GenericClass<List<Guest>>(V1 = count, V2 = list)
 
     [<Test>]
+    [<Category("Profiling")>]
     let ``SharpXml: Profile simple serialization``() =
         let list = List<Guest>([ Guest(10, FirstName = "foo", LastName = "bar"); Guest(20, FirstName = "ham", LastName = "eggs") ])
         let cls = Booking("testBooking", list)
@@ -69,6 +70,7 @@ module ProfilingTests =
         time (fun () -> serialize cls |> ignore) 10000
 
     [<Test>]
+    [<Category("Profiling")>]
     let ``SharpXml: Profile serialization of class with 100000 subelements``() =
         let count = 100000
         let cls = buildClass count
@@ -76,11 +78,13 @@ module ProfilingTests =
         Console.WriteLine(serialize cls)
 
     [<Test>]
+    [<Category("Profiling")>]
     let ``SharpXml: Profile simple deserialization``() =
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 1000
         time (fun () -> deserialize<TestClass> "<testClass><v1>42</v1><v2>bar</v2></testClass>" |> ignore) 10000
 
     [<Test>]
+    [<Category("Profiling")>]
     let ``DCS: Profile serialization of class with 100000 subelements``() =
         let count = 100000
         let cls = buildClass count
