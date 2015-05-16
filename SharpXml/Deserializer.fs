@@ -766,7 +766,6 @@ module internal Deserializer =
                 | TagType.Single -> inner()
                 | _ -> ()
         inner()
-        eatClosingTag xml
         rb.Ctor objects
 
     /// Reader function for F# tuple types

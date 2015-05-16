@@ -300,8 +300,8 @@ module DeserializationTests =
         out.Foo |> shouldBe Null
 
     [<Test>]
-    let ``Can deserialize lists of F# records``() =
-        let out = deserialize<List<LargerRecord>> "<list><item><largerRecord><value>842</value><id>foobar</id></largerRecord></item><item><largerRecord><value>1</value><id>bar</id></largerRecord></item></list>"
+    let ``Can deserialize lists of F# records #1``() =
+        let out = deserialize<List<LargerRecord>> "<list><item><value>842</value><id>foobar</id></item><item><value>1</value><id>bar</id></item></list>"
 
         out.Count |> should equal 2
 
@@ -315,6 +315,16 @@ module DeserializationTests =
 
         second.Value |> should equal 1
         second.Id |> should equal "bar"
+
+    [<Test>]
+    let ``Can deserialize lists of F# records #2``() =
+        let input = [|{some = "one"}; {some = "two"}; {some = "three"}|]
+        let str = XmlSerializer.SerializeToString input
+        let out = deserialize<StringRecord[]> str
+
+        out.[0].some |> should equal "one"
+        out.[1].some |> should equal "two"
+        out.[2].some |> should equal "three"
 
     [<Test>]
     let ``Can deserialize classes with tuples``() =
