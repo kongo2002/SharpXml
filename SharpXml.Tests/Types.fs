@@ -591,6 +591,8 @@ module Types =
         Value : int
         Name : string }
 
+    type StringRecord = { some : string }
+
     type LargerRecord = {
         Id : string
         Value : int

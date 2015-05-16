@@ -913,11 +913,11 @@ module internal Deserializer =
             let! dictReader = getDictionaryReader t
             let! listReader = getListReader t
             let! staticReader = getStaticParseMethod t
-            let! stringCtor = getStringTypeConstructor t
             let! parseXmlReader = getStaticParseMethod t
             let! recordReader = getFsRecordReader t
             let! tupleReader = getFsTupleReader t
             let! unionReader = getFsUnionReader t
+            let! stringCtor = getStringTypeConstructor t
             let! classReader = getClassReader t
             classReader }
         reader

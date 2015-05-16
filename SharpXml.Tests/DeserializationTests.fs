@@ -270,10 +270,18 @@ module DeserializationTests =
         out.V2 |> List.head |> should equal "one"
 
     [<Test>]
-    let ``Can deserialize F# records``() =
+    let ``Can deserialize F# records #1``() =
         let out = deserialize<TestRecord> "<testRecord><value>842</value><name>foobar</name></testRecord>"
         out.Value |> should equal 842
         out.Name |> should equal "foobar"
+
+    [<Test>]
+    let ``Can deserialize F# records #2``() =
+        let input = { some = "foo" }
+        let str = XmlSerializer.SerializeToString input
+        let out = deserialize<StringRecord> str
+
+        out |> should equal input
 
     [<Test>]
     let ``Can deserialize F# records in random order``() =
