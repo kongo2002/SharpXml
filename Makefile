@@ -21,7 +21,7 @@ SharpXml.Tests/bin/$(BUILD)/SharpXml.Tests.dll: $(SRCS) $(TSRCS)
 	@cd SharpXml.Tests && xbuild /p:Configuration=$(BUILD)
 
 check: SharpXml.Tests/bin/$(BUILD)/SharpXml.Tests.dll
-	@$(NUNIT) -framework=4.0 -exclude=Profiling -noxml -stoponerror -nologo $<
+	@$(NUNIT) -framework=4.0 -exclude=Profiling -noxml -nologo $<
 
 clean:
 	@xbuild /t:Clean /p:Configuration=$(BUILD)
