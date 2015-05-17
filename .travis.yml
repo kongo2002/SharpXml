@@ -3,12 +3,14 @@ language: objective-c
 env:
   global:
     - EnableNuGetPackageRestore=true
+    - NUNIT="mono /NUnit-2.6.4/bin/nunit-console.exe"
   matrix:
     - MONO_VERSION="3.2.3"
 
 install:
   - wget "http://download.xamarin.com/MonoFrameworkMDK/Macx86/MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg"
   - sudo installer -pkg "MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg" -target /
+  - cd / && wget "http://github.com/nunit/nunitv2/releases/download/2.6.4/NUnit-2.6.4.zip" && unzip NUnit-2.6.4.zip
 
 script:
-  - xbuild
+  - make check
