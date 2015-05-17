@@ -5,7 +5,8 @@ env:
     - EnableNuGetPackageRestore=true
     - NUNIT="mono $HOME/NUnit-2.6.4/bin/nunit-console.exe"
   matrix:
-    - MONO_VERSION="3.2.3"
+    - MONO_VERSION="3.2.3" DEBUG=1
+    - MONO_VERSION="3.2.3" DEBUG=0
 
 install:
   - wget "http://download.xamarin.com/MonoFrameworkMDK/Macx86/MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg"
