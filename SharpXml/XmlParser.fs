@@ -33,6 +33,12 @@ module internal XmlParser =
         member x.Value = value
         member x.Length = value.Length
         member x.IsEnd with get() = x.Index >= x.Length
+#if DEBUG
+        member x.StrValue
+            with get() =
+                if x.IsEnd then null
+                else String(value, x.Index, x.Length-x.Index)
+#endif
 
     type TagType =
         | Open = 0
