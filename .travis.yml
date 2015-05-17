@@ -10,7 +10,7 @@ env:
 install:
   - wget "http://download.xamarin.com/MonoFrameworkMDK/Macx86/MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg"
   - sudo installer -pkg "MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg" -target /
-  - cd $HOME && wget "http://github.com/nunit/nunitv2/releases/download/2.6.4/NUnit-2.6.4.zip" && unzip NUnit-2.6.4.zip
+  - wget "http://github.com/nunit/nunitv2/releases/download/2.6.4/NUnit-2.6.4.zip" && unzip NUnit-2.6.4.zip -d $HOME
 
 script:
   - make check
