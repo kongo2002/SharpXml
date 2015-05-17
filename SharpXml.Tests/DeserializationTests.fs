@@ -34,6 +34,12 @@ module DeserializationTests =
     let deserialize<'a> input =
         XmlSerializer.DeserializeFromString<'a>(input)
 
+    let testInput<'a> (input : 'a) =
+        let str = XmlSerializer.SerializeToString input
+        let parsed = XmlSerializer.DeserializeFromString<'a> str
+
+        parsed |> should equal input
+
     [<SetUp>]
     let init() =
         // this is important if some unit tests use
@@ -249,14 +255,14 @@ module DeserializationTests =
         out.V2 |> should equal "bar"
 
     [<Test>]
-    let ``Can correctly skip single/empty fields``() =
+    let ``Can skip single/empty fields``() =
         let out = deserialize<GenericClass<LinkedList<string>>> "<genericClass><v1 /><v2><item>one</item><item>two</item></v2></genericClass>"
         out.V1 |> should equal 0
         out.V2.Count |> should equal 2
         Seq.head out.V2 |> should equal "one"
 
     [<Test>]
-    let ``Can correctly skip empty elements in untyped collections``() =
+    let ``Can skip empty elements in untyped collections``() =
         let out = deserialize<GenericClass<ArrayList>> "<genericClass><v1 /><v2><item /><item>one</item><item /></v2></genericClass>"
         out.V1 |> should equal 0
         out.V2.Count |> should equal 1
@@ -357,7 +363,7 @@ module DeserializationTests =
         second |> snd |> should equal 50
 
     [<Test>]
-    let ``Can correctly skip unknown elements``() =
+    let ``Can skip unknown elements``() =
         let testString = @"<items><item><recipient>unknown</recipient><message>foobar</message><reference>2414059</reference></item></items>"
         let out = deserialize<List<Types.UnknownPropertyClass>> testString
         out.Count |> should equal 1
@@ -365,7 +371,7 @@ module DeserializationTests =
         out.[0].Message |> should equal "foobar"
 
     [<Test>]
-    let ``Can correctly skip unknown collection elements``() =
+    let ``Can skip unknown collection elements``() =
         let testString = @"<items><item><recipient><item>unknown</item></recipient><message>foobar</message><reference>2414059</reference></item></items>"
         let out = deserialize<List<Types.UnknownPropertyClass>> testString
         out.Count |> should equal 1
@@ -594,7 +600,7 @@ module DeserializationTests =
         result.V2 |> should equal [| ""; "" |]
 
     [<Test>]
-    let ``Can correctly deserialize while leaving non-existing properties null``() =
+    let ``Can deserialize while leaving non-existing properties null``() =
         XmlConfig.Instance.UseAttributes <- true
 
         let input = "<genericClass><v1>105</v1></genericClass>"
@@ -604,7 +610,7 @@ module DeserializationTests =
         result.V2 |> shouldBe Null
 
     [<Test>]
-    let ``Can correctly deserialize while leaving non-existing classes null``() =
+    let ``Can deserialize while leaving non-existing classes null``() =
         XmlConfig.Instance.UseAttributes <- true
 
         let input = "<genericClass><v1>105</v1></genericClass>"
@@ -614,7 +620,7 @@ module DeserializationTests =
         result.V2 |> shouldBe Null
 
     [<Test>]
-    let ``Can correctly deserialize while leaving empty classes empty``() =
+    let ``Can deserialize while leaving empty classes empty``() =
         XmlConfig.Instance.UseAttributes <- true
 
         let input = "<genericClass><v1>105</v1><v2></v2></genericClass>"
@@ -625,7 +631,7 @@ module DeserializationTests =
 
 
     [<Test>]
-    let ``Can correctly deserialize while leaving empty single-tag classes empty``() =
+    let ``Can deserialize while leaving empty single-tag classes empty``() =
         XmlConfig.Instance.UseAttributes <- true
 
         let input = "<genericClass><v1>105</v1><v2 /></genericClass>"
@@ -635,7 +641,7 @@ module DeserializationTests =
         result.V2 |> shouldBe notNull
 
     [<Test>]
-    let ``Can correctly deserialize discriminated unions #1``() =
+    let ``Can deserialize discriminated unions #1``() =
         let input = "<genericClass><v1>100</v1><v2><one></one></v2></genericClass>"
         let result = deserialize<GenericClass<TestUnion1>> input
 
@@ -643,7 +649,7 @@ module DeserializationTests =
         result.V2 |> should equal TestUnion1.One
 
     [<Test>]
-    let ``Can correctly deserialize discriminated unions #2``() =
+    let ``Can deserialize discriminated unions #2``() =
         let input = "<genericClass><v1>100</v1><v2><one/></v2></genericClass>"
         let result = deserialize<GenericClass<TestUnion1>> input
 
@@ -651,7 +657,19 @@ module DeserializationTests =
         result.V2 |> should equal TestUnion1.One
 
     [<Test>]
-    let ``Can correctly deserialize discriminated unions #3``() =
+    let ``Can deserialize records with discriminated union members``() =
+        let input = { name1 = "foo"; blob1 = Tuple1("one", 1)}
+
+        testInput input
+        testInput [input; input; input; input]
+
+        let input2 = { name2 = "bar"; blob2 = Tuple1("two", 2); other = Tuple1("three", 3)}
+
+        testInput input2
+        testInput [input2; input2; input2; input2]
+
+    [<Test>]
+    let ``Can deserialize discriminated unions #3``() =
         let input = "<genericClass><v1>100</v1><v2><two>239</two></v2></genericClass>"
         let result = deserialize<GenericClass<TestUnion1>> input
 
@@ -659,7 +677,7 @@ module DeserializationTests =
         result.V2 |> should equal (TestUnion1.Two 239)
 
     [<Test>]
-    let ``Can correctly deserialize discriminated unions #4``() =
+    let ``Can deserialize discriminated unions #4``() =
         let input = "<genericClass><v1>100</v1><v2><three><item1>first</item1><item2>2</item2></three></v2></genericClass>"
         let result = deserialize<GenericClass<TestUnion1>> input
 
@@ -667,7 +685,7 @@ module DeserializationTests =
         result.V2 |> should equal (TestUnion1.Three ("first", 2))
 
     [<Test>]
-    let ``Can correctly deserialize discriminated unions #5``() =
+    let ``Can deserialize discriminated unions #5``() =
         let input = "<genericClass><v1>100</v1><v2><four><item>1</item><item>2</item></four></v2></genericClass>"
         let result = deserialize<GenericClass<TestUnion1>> input
 
@@ -675,7 +693,7 @@ module DeserializationTests =
         result.V2 |> should equal (TestUnion1.Four ["1"; "2"])
 
     [<Test>]
-    let ``Can correctly deserialize lists of different discriminated unions``() =
+    let ``Can deserialize lists of different discriminated unions``() =
         let input = "<genericClass><v1>100</v1><v2><item><one /></item><item><four><item>one</item><item>two</item></four></item><item><one></one></item></v2></genericClass>"
         let result = deserialize<GenericClass<TestUnion1 list>> input
 

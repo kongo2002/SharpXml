@@ -599,6 +599,12 @@ module Types =
         Foo : string
         Bar : string }
 
+    type Union1 =
+        | Tuple1 of string * int
+
+    type Record1 = { name1 : string; blob1 : Union1 }
+    type Record2 = { name2 : string; blob2 : Union1; other: Union1 }
+
     [<DataContract(Name = "ContractClass2", Namespace = "")>]
     type ContractClass2() =
 
