@@ -848,6 +848,7 @@ module internal Deserializer =
                                 | _ -> ()
                         readers
                         |> Array.iteri parseTupleLike
+                        eatClosingTag xml
                     // we have to eat the enclosing close tag
                     eatClosingTag xml
                     ctor parts
