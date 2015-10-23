@@ -571,8 +571,8 @@ without errors.
 
 - XML namespaces are ignored as well
 
-- XML parsing is not completely XML 1.0/1.1 compliant. I.e. `CDATA` sections are
-  not supported yet while comment parsing is just rudimentary implemented.
+- XML parsing is not completely XML 1.0/1.1 compliant. I.e. comment parsing is
+  just rudimentary implemented.
 
 In order to provide a better view on how fault-tolerant *SharpXml* works I will
 give an example of a *very bad formatted* XML input that will be deserialized
